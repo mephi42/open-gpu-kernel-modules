@@ -24,7 +24,6 @@
 #include "mem_mgr/system_mem.h"
 #include "vgpu/rpc.h"
 #include "gpu/mem_mgr/mem_desc.h"
-#include "gpu/disp/kern_disp.h"
 #include "gpu/mem_mgr/mem_mgr.h"
 #include "core/locks.h"
 #include "os/os.h"
@@ -44,7 +43,7 @@
 #include "class/cl003e.h" // NV01_MEMORY_SYSTEM
 
 static NvU64
-_sysmemGetNextPageSize
+_sysmemGetNextSmallestPageSize
 (
     OBJGPU *pGpu,
     NvU32  *pAttr,
@@ -168,7 +167,7 @@ sysmemConstruct_IMPL
 
     NV_ASSERT_OR_RETURN(pRmClient != NULL, NV_ERR_INVALID_CLIENT);
 
-    if (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->pGpuArch->bGpuArchIsZeroFb)
     {
         NV_ASSERT_FAILED("System memory can't be allocated on GSP without 0FB");
         return NV_ERR_NOT_SUPPORTED;
@@ -210,7 +209,6 @@ sysmemConstruct_IMPL
 
     // Unsure if we need to keep separate copies, but keeping old behavior for now.
     sizeOut = pAllocData->size;
-    offsetOut = pAllocData->offset;
 
     {
         //
@@ -339,7 +337,7 @@ sysmemConstruct_IMPL
             if (bRetry)
             {
                 NvU64 pageSize;
-                pageSize = _sysmemGetNextPageSize(pGpu, &pAllocData->attr, &pAllocData->attr2);
+                pageSize = _sysmemGetNextSmallestPageSize(pGpu, &pAllocData->attr, &pAllocData->attr2);
                 if (pageSize == 0)
                 {
                     NV_CHECK_OK_OR_GOTO(rmStatus, LEVEL_ERROR, rmStatus, failed_destroy_memdesc);
@@ -365,29 +363,6 @@ sysmemConstruct_IMPL
 
     offsetOut = 0;
 
-    if (FLD_TEST_DRF(OS32, _ATTR2, _NISO_DISPLAY, _YES, pAllocData->attr2))
-    {
-        KernelDisplay *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
-        NvU64 physAddrStart;
-        NvU64 physAddrEnd;
-
-        NV_ASSERT_OR_ELSE(pKernelDisplay != NULL,
-            rmStatus = NV_ERR_INVALID_STATE; goto failed_free_memdesc);
-        NV_ASSERT_OR_ELSE(pKernelDisplay->pStaticInfo != NULL,
-            rmStatus = NV_ERR_INVALID_STATE; goto failed_free_memdesc);
-
-        if (pKernelDisplay->pStaticInfo->bFbRemapperEnabled)
-        {
-            KernelMemorySystem *pKernelMemorySystem = GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu);
-
-            physAddrStart = memdescGetPhysAddr(pMemDesc, AT_GPU, 0);
-            physAddrEnd = memdescGetPhysAddr(pMemDesc, AT_GPU, pAllocData->limit);
-
-            NV_CHECK_OK_OR_GOTO(rmStatus, LEVEL_INFO,
-                kmemsysCheckDisplayRemapperRange_HAL(pGpu, pKernelMemorySystem, physAddrStart, physAddrEnd),
-                failed_free_memdesc);
-        }
-    }
 
     // ClientDB can set the pagesize for memdesc.
     // With GPU SMMU mapping, this needs to be set on the SMMU memdesc.
@@ -422,9 +397,7 @@ sysmemConstruct_IMPL
         }
         else if (RMCFG_FEATURE_MODS_FEATURES)
         {
-            StandardMemory *pStdMemory = staticCast(pSystemMemory, StandardMemory);
-
-            if (stdmemGetSysmemPageSize_HAL(pGpu, pStdMemory) > RM_PAGE_SIZE)
+            if (osGetPageSize() > RM_PAGE_SIZE)
             {
                 bLargePageNonContigAllocSupported = NV_TRUE;
             }
@@ -738,7 +711,7 @@ sysmemAllocResources
     {
         if ((FLD_TEST_DRF(OS32, _ATTR, _PAGE_SIZE, _BIG, pVidHeapAlloc->attr) ||
              FLD_TEST_DRF(OS32, _ATTR, _PAGE_SIZE, _HUGE, pVidHeapAlloc->attr)) &&
-            (stdmemGetSysmemPageSize_HAL(pGpu, staticCast(pSystemMemory, StandardMemory)) == RM_PAGE_SIZE))
+            (osGetPageSize() == RM_PAGE_SIZE))
         {
             bContig = NV_TRUE;
         }

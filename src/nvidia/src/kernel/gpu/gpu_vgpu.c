@@ -288,7 +288,7 @@ gpuConstructDeviceInfoTable_VF
         NV2080_CTRL_INTERNAL_DEVICE_INFO *pSrc =
             &pVSI->deviceInfoTable.deviceInfoTable[i];
 
-        pGpu->pDeviceInfoTable[i] = (DEVICE_INFO2_ENTRY){
+        pGpu->pDeviceInfoTable[i] = (DEVICE_INFO_ENTRY){
             .faultId                = pSrc->faultId,
             .instanceId             = pSrc->instanceId,
             .typeEnum               = pSrc->typeEnum,

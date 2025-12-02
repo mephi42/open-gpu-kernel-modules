@@ -30,25 +30,6 @@
 #include "utils/nvbitvector.h"
 
 #include "ctrl/ctrl2080/ctrl2080nvlink.h" // rmcontrol params
-
-MAKE_BITVECTOR(NV2080_NVLINK_BIT_VECTOR, NV2080_CTRL_NVLINK_MAX_LINKS);
-
 NV_STATUS nvlinkCtrlCmdBusGetNvlinkCaps(OBJGPU *pGpu, NV2080_CTRL_CMD_NVLINK_GET_NVLINK_CAPS_PARAMS *pParams);
-
-NV_STATUS
-convertMaskToBitVector(NvU64 inputLinkMask, NV2080_NVLINK_BIT_VECTOR *pLocalLinkMask);
-
-NV_STATUS
-convertBitVectorToLinkMask32(NV2080_NVLINK_BIT_VECTOR *pBitVector, NvU32 *linkMask);
-
-NV_STATUS
-convertBitVectorToLinkMasks(NV2080_NVLINK_BIT_VECTOR *pLocalLinkMask,
-                            void *pOutputLinkMask1, NvU32 outputLinkMask1Size,
-                            NV2080_CTRL_NVLINK_LINK_MASK *pOutputLinkMask2);
-
-NV_STATUS
-convertLinkMasksToBitVector(const void *pLinkMask1, NvU32 linkMask1Size,
-                            const NV2080_CTRL_NVLINK_LINK_MASK *pLinkMask2,
-                            NV2080_NVLINK_BIT_VECTOR *pOutputBitVector);
 
 #endif // COMMON_NVLINK_H

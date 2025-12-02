@@ -272,7 +272,7 @@ static void __nvoc_init_funcTable_KernelIoctrl_1(KernelIoctrl *pThis, RmHalspecO
 
     // kioctrlGetMinionEnableDefault -- halified (2 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000380UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kioctrlGetMinionEnableDefault__ = &kioctrlGetMinionEnableDefault_d69453;
     }
@@ -283,7 +283,7 @@ static void __nvoc_init_funcTable_KernelIoctrl_1(KernelIoctrl *pThis, RmHalspecO
 
     // kioctrlMinionConstruct -- halified (2 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000380UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kioctrlMinionConstruct__ = &kioctrlMinionConstruct_ac1694;
     }
@@ -329,10 +329,19 @@ NV_STATUS __nvoc_objCreate_KernelIoctrl(KernelIoctrl **ppThis, Dynamic *pParent,
     RmHalspecOwner *pRmhalspecowner;
     GpuHalspecOwner *pGpuhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(KernelIoctrl), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(KernelIoctrl));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(KernelIoctrl));
@@ -340,7 +349,7 @@ NV_STATUS __nvoc_objCreate_KernelIoctrl(KernelIoctrl **ppThis, Dynamic *pParent,
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelIoctrl_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -353,13 +362,15 @@ NV_STATUS __nvoc_objCreate_KernelIoctrl(KernelIoctrl **ppThis, Dynamic *pParent,
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pRmhalspecowner = dynamicCast(pParent, RmHalspecOwner)) == NULL)
         pRmhalspecowner = objFindAncestorOfType(RmHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelIoctrl_cleanup);
     if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
         pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelIoctrl_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__KernelIoctrl(pThis, pRmhalspecowner, pGpuhalspecowner);
     status = __nvoc_ctor_KernelIoctrl(pThis, pRmhalspecowner, pGpuhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_KernelIoctrl_cleanup;
@@ -367,24 +378,28 @@ NV_STATUS __nvoc_objCreate_KernelIoctrl(KernelIoctrl **ppThis, Dynamic *pParent,
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_KernelIoctrl_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(KernelIoctrl));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

@@ -45,8 +45,6 @@
 #include "resource_desc.h"
 #include "platform/sli/sli.h"
 
-#include "mem_mgr/fla_mem.h"
-
 #include "vgpu/vgpu_version.h"
 #include "virtualization/kernel_vgpu_mgr.h"
 
@@ -434,6 +432,11 @@ CliGetSystemP2pCaps
                   gpuIds[localGpuIndex]);
         rmStatus = NV_ERR_INVALID_ARGUMENT;
         goto done;
+    }
+
+    if (pGpuLocal->getProperty(pGpuLocal, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY))
+    {
+        return NV_ERR_NOT_SUPPORTED;
     }
 
     rmStatus = p2pGetCapsStatus(gpuMask, &p2pWriteCapStatus,
@@ -1133,6 +1136,22 @@ cliresCtrlCmdSystemGetChipsetInfo_IMPL
         pChipsetInfo->flags = FLD_SET_DRF(0000, _CTRL_SYSTEM_CHIPSET_FLAG, _HAS_RESIZABLE_BAR_ISSUE, _NO, pChipsetInfo->flags);
     }
 
+    pChipsetInfo->flags = FLD_SET_DRF(0000, _CTRL_SYSTEM_CHIPSET_FLAG,
+                                      _BAR1_UNALIGNED_ACCESS, _YES, pChipsetInfo->flags);
+
+#if defined(NVCPU_AARCH64)
+    //
+    // Unaligned accesses on Aarch64 platforms are supported only when the BAR
+    // is not mapped as Device type. When PDB_PROP_CL_DISABLE_IOMAP_WC is set,
+    // it is mapped as Device type.
+    //
+    if (pCl->getProperty(pCl, PDB_PROP_CL_DISABLE_IOMAP_WC))
+    {
+        pChipsetInfo->flags = FLD_SET_DRF(0000, _CTRL_SYSTEM_CHIPSET_FLAG,
+                                          _BAR1_UNALIGNED_ACCESS, _NO, pChipsetInfo->flags);
+    }
+#endif
+
     return NV_OK;
 }
 
@@ -1747,29 +1766,6 @@ cliresCtrlCmdGpuDetachIds_IMPL
 done:
     portMemFree(pGpuAttachedIds);
     return status;
-}
-
-NV_STATUS
-cliresCtrlCmdGpuGetSvmSize_IMPL
-(
-    RmClientResource *pRmCliRes,
-    NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS *pSvmSizeGetParams
-)
-{
-    OBJGPU *pGpu = NULL;
-
-    // error check incoming gpu id
-    pGpu = gpumgrGetGpuFromId(pSvmSizeGetParams->gpuId);
-    if (pGpu == NULL)
-    {
-        NV_PRINTF(LEVEL_WARNING, "GET_SVM_SIZE: bad gpuid: 0x%x\n",
-                  pSvmSizeGetParams->gpuId);
-        return NV_ERR_INVALID_ARGUMENT;
-    }
-
-    // Get the SVM size in MB.
-    pSvmSizeGetParams->svmSize = 0;
-    return NV_OK;
 }
 
 NV_STATUS
@@ -2912,6 +2908,8 @@ cliresCtrlCmdSystemNVPCFGetPowerModeInfo_IMPL
             header.entrySize  = NVPCF_DYNAMIC_PARAMS_2X_ENTRY_SIZE_1C;
             header.entryCount = 0;
 
+            ct_assert(CONTROLLER_SBIOS_TABLE_MAX_VERSION == NVPCF_CONTROLLER_STATIC_TABLE_MAX_VERSION);
+
             bRequireDcSysPowerLimitsTable =
                 (pParams->version >= NVPCF_CONTROLLER_STATIC_TABLE_VERSION_22);
             bAllowDcRestOfSystemReserveOverride =
@@ -3049,7 +3047,7 @@ cliresCtrlCmdSystemNVPCFGetPowerModeInfo_IMPL
 
                 if (bSupportDcTsp)
                 {
-                    pParams->dcTspLongTimescaleLimitmA = (NvU32)DRF_VAL(PCF_DYNAMIC_PARAMS_ENTRY_2X,
+                    pParams->dcTspLongTimescaleLimitOverridemA = (NvU32)DRF_VAL(PCF_DYNAMIC_PARAMS_ENTRY_2X,
                             _OUTPUT_PARAM5, _CMD0_UNSIGNED, entriesOut.param5);
                     pParams->dcTspShortTimescaleLimitmA = (NvU32)DRF_VAL(PCF_DYNAMIC_PARAMS_ENTRY_2X,
                             _OUTPUT_PARAM6, _CMD0_UNSIGNED, entriesOut.param6);
@@ -3396,61 +3394,6 @@ nvpcf2xGetSystemPowerTable_exit:
     }
     return status;
 
-}
-
-static void
-getHwbcInfo
-(
-    NV0000_CTRL_SYSTEM_HWBC_INFO *pHwbcInfo,
-    OBJHWBC *pHWBC,
-    NvU32 *pIndex
-)
-{
-    if (pHWBC->pFirstChild)
-        getHwbcInfo(pHwbcInfo, pHWBC->pFirstChild, pIndex);
-    if (pHWBC->pSibling)
-        getHwbcInfo(pHwbcInfo, pHWBC->pSibling, pIndex);
-
-    if (HWBC_NVIDIA_BR04 == pHWBC->bcRes)
-    {
-        if (*pIndex >= NV0000_CTRL_SYSTEM_MAX_HWBCS)
-        {
-            //
-            // Should never happen! Return whatever info we've
-            // gathered till now.
-            //
-            NV_ASSERT(*pIndex < NV0000_CTRL_SYSTEM_MAX_HWBCS);
-            return;
-        }
-        pHwbcInfo[*pIndex].hwbcId = pHWBC->hwbcId;
-        pHwbcInfo[*pIndex].firmwareVersion = pHWBC->fwVersion;
-        pHwbcInfo[*pIndex].subordinateBus = pHWBC->maxBus;
-        pHwbcInfo[*pIndex].secondaryBus = pHWBC->minBus;
-        (*pIndex)++;
-    }
-}
-
-NV_STATUS
-cliresCtrlCmdSystemGetHwbcInfo_IMPL
-(
-    RmClientResource *pRmCliRes,
-    NV0000_CTRL_SYSTEM_GET_HWBC_INFO_PARAMS *pParams
-)
-{
-    NV0000_CTRL_SYSTEM_HWBC_INFO *pHwbcInfo = pParams->hwbcInfo;
-    OBJSYS *pSys = SYS_GET_INSTANCE();
-    OBJCL  *pCl  = SYS_GET_CL(pSys);
-    NvU32   index = 0;
-
-    if (pCl->pHWBC)
-        getHwbcInfo(pHwbcInfo, pCl->pHWBC, &index);
-
-    for (; index < NV0000_CTRL_SYSTEM_MAX_HWBCS; index++)
-    {
-        pHwbcInfo[index].hwbcId = NV0000_CTRL_SYSTEM_HWBC_INVALID_ID;
-    }
-
-    return NV_OK;
 }
 
 /*!
@@ -4972,12 +4915,6 @@ cliresCtrlCmdClientGetAddrSpaceType_IMPL
     if (pMemory != NULL)
     {
         NV_ASSERT_OK_OR_RETURN(memGetMapAddrSpace(pMemory, &callContext, pParams->mapFlags, &memType));
-
-        // Soon FlaMemory is deprecated. This is just a hack to keep compatibility.
-        if ((memType == ADDR_FBMEM) && (dynamicCast(pMemory, FlaMemory) != NULL))
-        {
-            memType = ADDR_FABRIC_V2;
-        }
     }
     else
     {

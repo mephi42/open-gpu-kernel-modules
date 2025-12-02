@@ -3306,6 +3306,8 @@ bool DeviceImpl::setModeList(DisplayPort::DpModesetParams *modeList, unsigned nu
 
     maxModeBwRequired = 0;
 
+    DP_PRINTF(DP_NOTICE, "DP-DEV> setModeList: numModes: %d", numModes);
+
     for (unsigned modeItr = 0; modeItr < numModes; modeItr++)
     {
         connector->beginCompoundQuery();
@@ -3335,9 +3337,8 @@ bool DeviceImpl::setModeList(DisplayPort::DpModesetParams *modeList, unsigned nu
 
     DP_PRINTF(DP_INFO, "Computed Max mode BW: %" NvU64_fmtu " Mbps", maxModeBwRequired / (1000 * 1000));
 
-    connector->updateDpTunnelBwAllocation();
+    return connector->updateDpTunnelBwAllocation();
 
-    return true;
 }
 
 void
@@ -3359,43 +3360,41 @@ DeviceHDCPDetection::start()
 NativeDPCDHDCPCAPRead:
 
         BCaps bCaps = {0};
+        unsigned char hdcp22BCAPS[HDCP22_BCAPS_SIZE];
 
-        parent->hal->getBCaps(bCaps, parent->BCAPS);
-        *(parent->nvBCaps) = *(parent->BCAPS);
-
+        // Check if hdcp2.x only device and probe hdcp22Bcaps.
+        parent->hal->getHdcp22BCaps(bCaps, hdcp22BCAPS);
         if (bCaps.HDCPCapable)
         {
-            NvU8 tempBKSV[HDCP_KSV_SIZE] = {0};
-            if (parent->hal->getBKSV(tempBKSV))
-            {
-                if (hdcpValidateKsv(tempBKSV, HDCP_KSV_SIZE))
-                {
-                    for (unsigned i=0; i<HDCP_KSV_SIZE; i++)
-                        parent->BKSV[i] = tempBKSV[i];
-                }
-            }
+            parent->nvBCaps[0] = FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET,
+                                               _HDCP_CAPABLE, bCaps.HDCPCapable,
+                                               parent->nvBCaps[0]) |
+                                 FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET, _HDCP_REPEATER,
+                                               bCaps.repeater, parent->nvBCaps[0]);
+
+            //
+            // No need to validate 1.x bksv here and hdcp22 authentication would
+            // validate certificate with bksv in uproc.
+            //
             parent->isHDCPCap = True;
             waivePendingHDCPCapDoneNotification();
             return;
         }
-        else
-        {
-            unsigned char hdcp22BCAPS[HDCP22_BCAPS_SIZE];
-
-            // Check if hdcp2.x only device and probe hdcp22Bcaps.
-            parent->hal->getHdcp22BCaps(bCaps, hdcp22BCAPS);
-            if (bCaps.HDCPCapable)
-            {
-                parent->nvBCaps[0] = FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET,
-                                                   _HDCP_CAPABLE, bCaps.HDCPCapable,
-                                                   parent->nvBCaps[0]) |
-                                   FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET, _HDCP_REPEATER,
-                                                   bCaps.repeater, parent->nvBCaps[0]);
-
-                //
-                // No need to validate 1.x bksv here and hdcp22 authentication would
-                // validate certificate with bksv in uproc.
-                //
+	else
+	{
+           parent->hal->getBCaps(bCaps, parent->BCAPS);
+           *(parent->nvBCaps) = *(parent->BCAPS);
+           if (bCaps.HDCPCapable)
+           {
+                NvU8 tempBKSV[HDCP_KSV_SIZE] = {0};
+                if (parent->hal->getBKSV(tempBKSV))
+                {
+                    if (hdcpValidateKsv(tempBKSV, HDCP_KSV_SIZE))
+                    {
+                        for (unsigned i=0; i<HDCP_KSV_SIZE; i++)
+                            parent->BKSV[i] = tempBKSV[i];
+                    }
+                }
                 parent->isHDCPCap = True;
                 waivePendingHDCPCapDoneNotification();
                 return;
@@ -3427,6 +3426,27 @@ DeviceHDCPDetection::messageCompleted
 }
 
 void
+DeviceHDCPDetection::readRemoteHdcp1xCaps
+(
+    void
+)
+{
+    Address parentAddress = parent->address.parent();
+    //For DP1.4 atomic messaging, HDCP detection can be delayed, so lowering the priority.
+    remoteBKSVReadMessage.setMessagePriority(NV_DP_SBMSG_PRIORITY_LEVEL_DEFAULT);
+    remoteBKSVReadMessage.set(parentAddress, parent->address.tail(), NV_DPCD_HDCP_BKSV_OFFSET, HDCP_KSV_SIZE);
+    bksvReadCompleted = false;
+    bBKSVReadMessagePending = true;
+    messageManager->post(&remoteBKSVReadMessage, this);
+    //For DP1.4 atomic messaging, HDCP detection can be delayed, so lowering the priority.
+    remoteBCapsReadMessage.setMessagePriority(NV_DP_SBMSG_PRIORITY_LEVEL_DEFAULT);
+    remoteBCapsReadMessage.set(parentAddress, parent->address.tail(), NV_DPCD_HDCP_BCAPS_OFFSET, HDCP_BCAPS_SIZE);
+    bCapsReadCompleted = false;
+    bBCapsReadMessagePending = true;
+    messageManager->post(&remoteBCapsReadMessage, this);
+}    
+
+void
 DeviceHDCPDetection::handleRemoteDpcdReadDownReply
 (
     MessageManager::Message *from
@@ -3438,7 +3458,55 @@ DeviceHDCPDetection::handleRemoteDpcdReadDownReply
     Address::StringBuffer sb;
     DP_USED(sb);
 
-    if (from == &remoteBKSVReadMessage)
+    if (from == &remote22BCapsReadMessage)
+    {
+        bCapsReadCompleted = true;
+        bBCapsReadMessagePending = false;
+        DP_PRINTF(DP_NOTICE, "DP-QM> REMOTE_DPCD_READ(22BCaps) {%p} at '%s' completed",
+            (MessageManager::Message *)&remote22BCapsReadMessage,
+            parent->address.toString(sb));
+
+        if (remote22BCapsReadMessage.replyNumOfBytesReadDPCD() != HDCP22_BCAPS_SIZE)
+        {
+            DP_ASSERT(0 && "Incomplete 22BCaps in remote DPCD read message");
+            parent->isHDCPCap = False;
+
+            // Destruct only when no message is pending
+            if (!(bBKSVReadMessagePending || bBCapsReadMessagePending))
+            {
+                parent->isDeviceHDCPDetectionAlive = false;
+                delete this;
+            }
+            return;
+        }
+
+        DP_ASSERT(remote22BCapsReadMessage.replyPortNumber() == parent->address.tail());
+        if (!!(*remote22BCapsReadMessage.replyGetData() & 0x2))
+        {
+            unsigned char hdcp22BCAPS;
+            bksvReadCompleted = true;
+            bBKSVReadMessagePending = false;
+
+            hdcp22BCAPS = *remote22BCapsReadMessage.replyGetData();
+
+            parent->nvBCaps[0] = FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET,
+                _HDCP_CAPABLE, (hdcp22BCAPS & 0x2) ? 1 : 0,
+                parent->nvBCaps[0]) |
+                FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET, _HDCP_REPEATER,
+                (hdcp22BCAPS & 0x1) ? 1 : 0, parent->nvBCaps[0]);
+
+            // hdcp22 will validate certificate's bksv directly.
+            isBCapsHDCP = isValidBKSV = true;
+
+            DP_PRINTF(DP_NOTICE, "DP-QM> Device at '%s' is with valid 22BCAPS : %x",
+                parent->address.toString(sb), *remote22BCapsReadMessage.replyGetData());
+        }
+        else
+        {
+            readRemoteHdcp1xCaps();
+        }
+    }
+    else if (from == &remoteBKSVReadMessage)
     {
         bksvReadCompleted = true;
         bBKSVReadMessagePending = false;
@@ -3525,59 +3593,6 @@ DeviceHDCPDetection::handleRemoteDpcdReadDownReply
                     *(parent->nvBCaps) = *(parent->BCAPS);
                 }
             }
-            else
-            {
-                DP_PRINTF(DP_NOTICE, "DP-QM> Device at '%s' is without valid BKSV and BCAPS, thus try 22BCAPS", parent->address.toString(sb));
-
-                Address parentAddress = parent->address.parent();
-                remote22BCapsReadMessage.setMessagePriority(NV_DP_SBMSG_PRIORITY_LEVEL_DEFAULT);
-                remote22BCapsReadMessage.set(parentAddress, parent->address.tail(), NV_DPCD_HDCP22_BCAPS_OFFSET, HDCP22_BCAPS_SIZE);
-                bCapsReadCompleted = false;
-                bBCapsReadMessagePending = true;
-                messageManager->post(&remote22BCapsReadMessage, this);
-            }
-        }
-    }
-    else if (from == &remote22BCapsReadMessage)
-    {
-        bCapsReadCompleted = true;
-        bBCapsReadMessagePending = false;
-        DP_PRINTF(DP_NOTICE, "DP-QM> REMOTE_DPCD_READ(22BCaps) {%p} at '%s' completed",
-                  (MessageManager::Message *)&remote22BCapsReadMessage,
-                  parent->address.toString(sb));
-
-        if (remote22BCapsReadMessage.replyNumOfBytesReadDPCD() != HDCP22_BCAPS_SIZE)
-        {
-            DP_ASSERT(0 && "Incomplete 22BCaps in remote DPCD read message");
-            parent->isHDCPCap = False;
-
-            // Destruct only when no message is pending
-            if (!(bBKSVReadMessagePending || bBCapsReadMessagePending))
-            {
-                parent->isDeviceHDCPDetectionAlive = false;
-                delete this;
-            }
-            return;
-        }
-
-        DP_ASSERT(remote22BCapsReadMessage.replyPortNumber() == parent->address.tail());
-        if (!!(*remote22BCapsReadMessage.replyGetData() & 0x2))
-        {
-            unsigned char hdcp22BCAPS;
-
-            hdcp22BCAPS = *remote22BCapsReadMessage.replyGetData();
-
-            parent->nvBCaps[0] = FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET,
-                                               _HDCP_CAPABLE, (hdcp22BCAPS & 0x2) ? 1 : 0,
-                                               parent->nvBCaps[0]) |
-                               FLD_SET_DRF_NUM(_DPCD, _HDCP_BCAPS_OFFSET, _HDCP_REPEATER,
-                                               (hdcp22BCAPS & 0x1) ? 1 : 0, parent->nvBCaps[0]);
-
-            // hdcp22 will validate certificate's bksv directly.
-            isBCapsHDCP = isValidBKSV = true;
-
-            DP_PRINTF(DP_NOTICE, "DP-QM> Device at '%s' is with valid 22BCAPS : %x",
-                  parent->address.toString(sb), *remote22BCapsReadMessage.replyGetData());
         }
     }
 
@@ -3694,11 +3709,23 @@ DeviceHDCPDetection::messageFailed
             timer->queueCallback(this, "22BCaps", DPCD_REMOTE_DPCD_READ_MESSAGE_COOLDOWN_BKSV);
             return;
         }
-        //
-        // If message failed is called after all retries have expired or due to
-        // any other reason then reset the bBCapsReadMessagePending flag
-        //
-        bBCapsReadMessagePending = false;
+        else
+        {
+            //
+            // If message failed is called after all retries have expired (or) due to
+            // any other reason like NakNoResources/NakUndefined/NakDpcdFail etc
+            // then reset the bBCapsReadMessagePending flag and try to read HDCP1X
+            // capability
+            //        
+            Address::StringBuffer sb;
+            DP_USED(sb);
+            DP_PRINTF(DP_ERROR, "DP-QM> Message REMOTE_DPC_READ(22BCaps) {%p} at '%s' failed.",
+              from, parent->address.toString(sb));
+            bBCapsReadMessagePending = false;
+            tryRemote1XCaps = true;
+            timer->queueCallback(this, "22BCaps-Try1X", DPCD_REMOTE_DPCD_READ_MESSAGE_COOLDOWN_BKSV);
+            return;        
+        }
     }
 
     parent->isHDCPCap = False;
@@ -3748,6 +3775,12 @@ DeviceHDCPDetection::expired
         else if (retryRemote22BCapsReadMessage)
         {
             retryRemote22BCapsReadMessage = false;
+            bBCapsReadMessagePending = false;
+        }
+        else if (tryRemote1XCaps)
+        {
+            tryRemote1XCaps = false;
+            bBKSVReadMessagePending = false;
             bBCapsReadMessagePending = false;
         }
 
@@ -3805,6 +3838,12 @@ DeviceHDCPDetection::expired
 
         bBCapsReadMessagePending = true;
         messageManager->post(&remote22BCapsReadMessage, this);
+    }
+
+    if (tryRemote1XCaps)
+    {
+        tryRemote1XCaps = false;
+        readRemoteHdcp1xCaps();
     }
 
 }

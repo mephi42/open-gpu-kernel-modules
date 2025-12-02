@@ -221,9 +221,11 @@ typedef struct UvmGpuChannelInstanceInfo_tag
     // Ampere+ GPUs
     volatile NvU32 *pChramChannelRegister;
 
-    // Out: Address of the Runlist PRI Base Register required to ring the
-    // doorbell after clearing the faulted bit.
-    volatile NvU32 *pRunlistPRIBaseRegister;
+    // Out: Address of the doorbell.
+    volatile NvU32 *workSubmissionOffset;
+
+    // Out: channel handle required to ring the doorbell.
+    NvU32 workSubmissionToken;
 
     // Out: SMC engine id to which the GR channel is bound, or zero if the GPU
     // does not support SMC or it is a CE channel
@@ -365,6 +367,9 @@ typedef struct
     // True if the CE supports encryption
     NvBool secure:1;
 
+    // True if the CE can be used for fast scrub
+    NvBool scrub:1;
+
     // Mask of physical CEs assigned to this LCE
     //
     // The value returned by RM for this field may change when a GPU is
@@ -383,6 +388,7 @@ typedef enum
 {
     UVM_LINK_TYPE_NONE,
     UVM_LINK_TYPE_PCIE,
+    UVM_LINK_TYPE_PCIE_BAR1,
     UVM_LINK_TYPE_NVLINK_1,
     UVM_LINK_TYPE_NVLINK_2,
     UVM_LINK_TYPE_NVLINK_3,
@@ -539,6 +545,12 @@ typedef struct UvmGpuP2PCapsParams_tag
     // Size is 0 if bar1 p2p is not supported.
     NvU64 bar1DmaAddress[2];
     NvU64 bar1DmaSize[2];
+
+    // True if GPU i can use PCIe atomics on locations in GPU[i-1]
+    // BAR1. This implies that GPU[i] can issue PCIe atomics,
+    // GPU[i-1] can accept PCIe atomics, and the bus interconnect
+    // between the two GPUs can correctly route PCIe atomics.
+    NvBool bar1PcieAtomics[2];
 } UvmGpuP2PCapsParams;
 
 // Platform-wide information
@@ -806,11 +818,7 @@ typedef NV_STATUS (*uvmEventStopDevice_t) (const NvProcessorUuid *pGpuUuidStruct
         NV_OK if the UVM driver handled the interrupt
         NV_ERR_NO_INTR_PENDING if the interrupt is not for the UVM driver
 */
-#if defined (__linux__)
 typedef NV_STATUS (*uvmEventIsrTopHalf_t) (const NvProcessorUuid *pGpuUuidStruct);
-#else
-typedef void (*uvmEventIsrTopHalf_t) (void);
-#endif
 
 /*******************************************************************************
     uvmEventDrainP2P
@@ -847,15 +855,19 @@ typedef NV_STATUS (*uvmEventDrainP2P_t) (const NvProcessorUuid *pGpuUuidStruct);
 */
 typedef NV_STATUS (*uvmEventResumeP2P_t) (const NvProcessorUuid *pGpuUuidStruct);
 
-struct UvmOpsUvmEvents
+struct UvmEventsLinux
 {
-    uvmEventSuspend_t     suspend;
-    uvmEventResume_t      resume;
-    uvmEventStartDevice_t startDevice;
-    uvmEventStopDevice_t  stopDevice;
-    uvmEventIsrTopHalf_t  isrTopHalf;
+    uvmEventIsrTopHalf_t isrTopHalf;
+    uvmEventSuspend_t suspend;
+    uvmEventResume_t resume;
     uvmEventDrainP2P_t drainP2P;
     uvmEventResumeP2P_t resumeP2P;
+};
+
+struct UvmEventsWindows
+{
+    uvmEventStartDevice_t startDevice;
+    uvmEventStopDevice_t stopDevice;
 };
 
 #define UVM_CSL_SIGN_AUTH_TAG_SIZE_BYTES 32
@@ -1014,6 +1026,22 @@ typedef struct UvmGpuAccessCntrConfig_tag
     NvU32 threshold;
 } UvmGpuAccessCntrConfig;
 
+typedef enum
+{
+    UVM_ACCESS_BITS_DUMP_MODE_AGGREGATE = 0,
+    UVM_ACCESS_BITS_DUMP_MODE_DIFF = 1,
+    UVM_ACCESS_BITS_DUMP_MODE_CURRENT = 2,
+} UVM_ACCESS_BITS_DUMP_MODE;
+
+typedef struct UvmGpuAccessBitsBufferAlloc_tag
+{
+    NvHandle accessBitsBufferHandle;
+    NvBool bDirtyBits;
+    NvU32 granularity;
+    NV_DECLARE_ALIGNED(NvU64 enabledMask[64], 8);
+    NV_DECLARE_ALIGNED(NvU64 currentBits[64], 8);
+} UvmGpuAccessBitsBufferAlloc;
+
 //
 // When modifying this enum, make sure they are compatible with the mirrored
 // MEMORY_PROTECTION enum in phys_mem_allocator.h.
@@ -1051,6 +1079,7 @@ typedef UvmGpuPagingChannel *gpuPagingChannelHandle;
 typedef UvmGpuPagingChannelInfo gpuPagingChannelInfo;
 typedef UvmGpuPagingChannelAllocParams gpuPagingChannelAllocParams;
 typedef UvmPmaAllocationOptions gpuPmaAllocationOptions;
+typedef UvmGpuAccessBitsBufferAlloc gpuAccessBitsBufferAlloc;
 
 typedef struct UvmCslIv
 {

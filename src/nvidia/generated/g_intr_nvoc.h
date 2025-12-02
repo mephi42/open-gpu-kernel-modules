@@ -389,7 +389,7 @@ struct Intr {
     NvU32 displayLowLatencyIntrVector;
     NvU64 intrTopEnMask;
     InterruptTable intrTable;
-    IntrServiceRecord intrServiceTable[179];
+    IntrServiceRecord intrServiceTable[180];
     InterruptEntry *(vectorToMcIdx[1]);
     NvLength vectorToMcIdxCounts[1];
     NvBool bDefaultNonstallNotify;
@@ -408,7 +408,7 @@ struct Intr {
     NvU32 intrEn0Orig;
     NvBool halIntrEnabled;
     NvU32 saveIntrEn0;
-    struct __nvoc_inner_struc_Intr_1__ longIntrStats[179];
+    struct __nvoc_inner_struc_Intr_1__ longIntrStats[180];
 };
 
 
@@ -1941,6 +1941,8 @@ static inline NvU32 intrReadRegLeafEnSet_13cd8d(OBJGPU *pGpu, struct Intr *pIntr
 
 NvU32 intrReadRegLeafEnSet_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
+NvU32 intrReadRegLeafEnSet_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
+
 NvU32 intrReadRegLeafEnSet_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
 NvU32 intrReadRegLeaf_CPU_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
@@ -1952,6 +1954,8 @@ static inline NvU32 intrReadRegLeaf_13cd8d(OBJGPU *pGpu, struct Intr *pIntr, NvU
 
 NvU32 intrReadRegLeaf_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
+NvU32 intrReadRegLeaf_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
+
 NvU32 intrReadRegLeaf_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
 NvU32 intrReadRegTopEnSet_CPU_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
@@ -1961,8 +1965,6 @@ NvU32 intrReadRegTopEnSet_CPU_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3
 static inline NvU32 intrReadRegTopEnSet_b2b553(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4) {
     return 0;
 }
-
-NvU32 intrReadRegTopEnSet_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
 NvU32 intrReadRegTopEnSet_GSP_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
@@ -1977,6 +1979,8 @@ static inline NvU32 intrReadRegTop_13cd8d(OBJGPU *pGpu, struct Intr *pIntr, NvU3
 
 NvU32 intrReadRegTop_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
+NvU32 intrReadRegTop_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
+
 NvU32 intrReadRegTop_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, struct THREAD_STATE_NODE *arg4);
 
 void intrWriteRegLeafEnSet_CPU_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
@@ -1986,6 +1990,8 @@ static inline void intrWriteRegLeafEnSet_f2d351(OBJGPU *pGpu, struct Intr *pIntr
 }
 
 void intrWriteRegLeafEnSet_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
+
+void intrWriteRegLeafEnSet_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
 void intrWriteRegLeafEnSet_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
@@ -1997,6 +2003,8 @@ static inline void intrWriteRegLeafEnClear_f2d351(OBJGPU *pGpu, struct Intr *pIn
 
 void intrWriteRegLeafEnClear_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
+void intrWriteRegLeafEnClear_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
+
 void intrWriteRegLeafEnClear_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
 void intrWriteRegLeaf_CPU_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
@@ -2007,6 +2015,8 @@ static inline void intrWriteRegLeaf_f2d351(OBJGPU *pGpu, struct Intr *pIntr, NvU
 
 void intrWriteRegLeaf_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
+void intrWriteRegLeaf_GSP_GH100(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
+
 void intrWriteRegLeaf_GSP_GB202(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
 void intrWriteRegTopEnSet_CPU_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
@@ -2016,8 +2026,6 @@ void intrWriteRegTopEnSet_CPU_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3
 static inline void intrWriteRegTopEnSet_d44104(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5) {
     return;
 }
-
-void intrWriteRegTopEnSet_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
 void intrWriteRegTopEnSet_GSP_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
@@ -2030,8 +2038,6 @@ void intrWriteRegTopEnClear_CPU_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 ar
 static inline void intrWriteRegTopEnClear_d44104(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5) {
     return;
 }
-
-void intrWriteRegTopEnClear_GSP_TU102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 
 void intrWriteRegTopEnClear_GSP_GA102(OBJGPU *pGpu, struct Intr *pIntr, NvU32 arg3, NvU32 arg4, struct THREAD_STATE_NODE *arg5);
 

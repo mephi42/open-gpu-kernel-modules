@@ -66,7 +66,7 @@ serverInterMap_Prologue
     NV_STATUS   rmStatus = NV_OK;
     NvU64       offset = pParams->offset;
     NvU64       length = pParams->length;
-
+    NvU32       gpuMask = 0;
     MEMORY_DESCRIPTOR *pSrcMemDesc = NULL;
     NvHandle    hBroadcastDevice;
     NvBool      bSubdeviceHandleProvided;
@@ -128,10 +128,6 @@ serverInterMap_Prologue
         }
     }
 
-    rmStatus = serverResLock_Prologue(pServer, LOCK_ACCESS_WRITE, pParams->pLockInfo, pReleaseFlags);
-    if (rmStatus != NV_OK)
-        return rmStatus;
-
     pPrivate->pGpu = pGpu;
 
     API_GPU_FULL_POWER_SANITY_CHECK(pGpu, NV_TRUE, NV_FALSE);
@@ -150,6 +146,19 @@ serverInterMap_Prologue
 
     pSrcMemDesc = memInterMapParams.pSrcMemDesc;
     NV_ASSERT_OR_RETURN(pSrcMemDesc != NULL, NV_ERR_INVALID_OBJECT_HANDLE);
+
+    if (memInterMapParams.pGpu != NULL)
+    {
+        gpuMask |= gpumgrGetGpuMask(memInterMapParams.pGpu);
+    }
+    if (memInterMapParams.pSrcGpu != NULL)
+    {
+        gpuMask |= gpumgrGetGpuMask(memInterMapParams.pSrcGpu);
+    }
+
+    rmStatus = serverResLock_Prologue(pServer, LOCK_ACCESS_WRITE, pParams->pLockInfo, pReleaseFlags, gpuMask);
+    if (rmStatus != NV_OK)
+        return rmStatus;
 
     pPrivate->pSrcGpu = memInterMapParams.pSrcGpu;
     pPrivate->hMemoryDevice = memInterMapParams.hMemoryDevice;

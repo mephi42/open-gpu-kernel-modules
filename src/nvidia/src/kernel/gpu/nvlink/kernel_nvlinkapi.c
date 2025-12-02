@@ -53,10 +53,9 @@ subdeviceCtrlCmdNvlinkGetErrorRecoveries_IMPL
                                      kmigmgrIsMIGNvlinkP2PSupported(pGpu, pKernelMIGManager));
     NV_STATUS  status  = NV_OK;
     NvU32      i;
-    NV2080_NVLINK_BIT_VECTOR localLinkMask;
-    NV2080_NVLINK_BIT_VECTOR enabledLinkMask;
-    NV2080_NVLINK_BIT_VECTOR matchingLinkMask;
-    NvU64 links = 0;
+    NVLINK_BIT_VECTOR localLinkMask;
+    NVLINK_BIT_VECTOR *pEnabledLinkMask;
+    NVLINK_BIT_VECTOR matchingLinkMask;
 
     if ((pKernelNvlink == NULL) || !bMIGNvLinkP2PSupported)
     {
@@ -68,14 +67,12 @@ subdeviceCtrlCmdNvlinkGetErrorRecoveries_IMPL
         convertLinkMasksToBitVector(&pParams->linkMask, sizeof(pParams->linkMask),
                                     &pParams->links, &localLinkMask));
 
-    links = knvlinkGetEnabledLinkMask(pGpu, pKernelNvlink);
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        convertMaskToBitVector(links, &enabledLinkMask));
+    pEnabledLinkMask = knvlinkGetEnabledLinkMask(pGpu, pKernelNvlink);
 
     NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, bitVectorClrAll(&matchingLinkMask));
 
     NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        bitVectorAnd(&matchingLinkMask, &localLinkMask, &enabledLinkMask));
+        bitVectorAnd(&matchingLinkMask, &localLinkMask, pEnabledLinkMask));
 
     FOR_EACH_IN_BITVECTOR(&matchingLinkMask, i)
     {
@@ -114,11 +111,10 @@ subdeviceCtrlCmdNvlinkSetPowerState_IMPL
     NvBool bMIGNvLinkP2PSupported = ((pKernelMIGManager != NULL) &&
                                      kmigmgrIsMIGNvlinkP2PSupported(pGpu, pKernelMIGManager));
     NV_STATUS status  = NV_OK;
-    NV2080_NVLINK_BIT_VECTOR localLinkMask;
-    NV2080_NVLINK_BIT_VECTOR enabledLinkMask;
-    NV2080_NVLINK_BIT_VECTOR matchingLinkMask;
+    NVLINK_BIT_VECTOR localLinkMask;
+    NVLINK_BIT_VECTOR matchingLinkMask;
     NvU64 tmpLinkMask;
-    NvU64 links;
+    NVLINK_BIT_VECTOR *pEnabledLinkMask;
 
     if ((pKernelNvlink == NULL) || !bMIGNvLinkP2PSupported)
     {
@@ -130,12 +126,10 @@ subdeviceCtrlCmdNvlinkSetPowerState_IMPL
         convertLinkMasksToBitVector(&pParams->linkMask, sizeof(pParams->linkMask),
                                     &pParams->links, &localLinkMask));
 
-    links = knvlinkGetEnabledLinkMask(pGpu, pKernelNvlink);
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        convertMaskToBitVector(links, &enabledLinkMask));
+    pEnabledLinkMask = knvlinkGetEnabledLinkMask(pGpu, pKernelNvlink);
 
     NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        bitVectorAnd(&matchingLinkMask, &localLinkMask, &enabledLinkMask));
+        bitVectorAnd(&matchingLinkMask, &localLinkMask, pEnabledLinkMask));
 
     // Verify the mask of links requested are enabled on the GPU
     if (!bitVectorTestEqual(&localLinkMask, &matchingLinkMask))

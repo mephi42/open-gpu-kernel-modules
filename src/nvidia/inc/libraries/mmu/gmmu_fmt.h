@@ -25,6 +25,14 @@
 
 #include <ctrl/ctrl90f1.h>
 
+#if (defined(NVRM) || defined(RMCFG_FEATURE_PLATFORM_GSP)) && !defined(NVWATCH)
+#include <rmconfig.h>
+#else
+#if !defined(RMCFG_CHIP_ENABLED)
+#define RMCFG_CHIP_x 0
+#endif
+#endif //(defined(NVRM) || defined(RMCFG_FEATURE_PLATFORM_GSP)) && !defined(NVWATCH)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

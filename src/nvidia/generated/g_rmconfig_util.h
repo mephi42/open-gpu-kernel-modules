@@ -7,7 +7,7 @@
 // Profile:  shipping-gpus-openrm
 // Template: templates/gt_rmconfig_util.h
 //
-// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD102, AD103, AD104, AD106, AD107, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
+// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD10X, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
 //
 
 #ifndef _G_RMCFG_UTIL_H_
@@ -158,8 +158,8 @@ NvBool rmcfg_IsKEPLER_CLASSIC_GPUSorBetter(POBJGPU pGpu);
 NvBool rmcfg_IsdMAXWELLorBetter(POBJGPU pGpu);
 NvBool rmcfg_IsMAXWELL_CLASSIC_GPUSorBetter(POBJGPU pGpu);
 NvBool rmcfg_IsdPASCALorBetter(POBJGPU pGpu);
-NvBool rmcfg_IsCOMPUTE(POBJGPU pGpu);
 NvBool rmcfg_IsPASCAL_CLASSIC_GPUSorBetter(POBJGPU pGpu);
+NvBool rmcfg_IsCOMPUTE(POBJGPU pGpu);
 NvBool rmcfg_IsdVOLTAorBetter(POBJGPU pGpu);
 NvBool rmcfg_IsVOLTA_CLASSIC_GPUSorBetter(POBJGPU pGpu);
 NvBool rmcfg_IsdTURING(POBJGPU pGpu);

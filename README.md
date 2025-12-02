@@ -1,7 +1,7 @@
 # NVIDIA Linux Open GPU Kernel Module Source
 
 This is the source release of the NVIDIA Linux open GPU kernel modules,
-version 580.105.08.
+version 590.44.01.
 
 
 ## How to Build
@@ -17,7 +17,7 @@ as root:
 
 Note that the kernel modules built here must be used with GSP
 firmware and user-space NVIDIA GPU driver components from a corresponding
-580.105.08 driver release.  This can be achieved by installing
+590.44.01 driver release.  This can be achieved by installing
 the NVIDIA GPU driver from the .run file using the `--no-kernel-modules`
 option.  E.g.,
 
@@ -185,7 +185,7 @@ table below).
 For details on feature support and limitations, see the NVIDIA GPU driver
 end user README here:
 
-https://us.download.nvidia.com/XFree86/Linux-x86_64/580.105.08/README/kernel_open.html
+https://us.download.nvidia.com/XFree86/Linux-x86_64/590.44.01/README/kernel_open.html
 
 For vGPU support, please refer to the README.vgpu packaged in the vGPU Host
 Package for more details.
@@ -313,6 +313,7 @@ Subsystem Device ID.
 | NVIDIA GeForce RTX 2080 Super with Max-Q Design         | 1E93 1D05 1089 |
 | Quadro RTX 5000                                         | 1EB0           |
 | Quadro RTX 4000                                         | 1EB1           |
+| EIZO Quadro MED-XN92                                    | 1EB1 15C3 12A0 |
 | Quadro RTX 5000                                         | 1EB5           |
 | Quadro RTX 5000 with Max-Q Design                       | 1EB5 1025 1375 |
 | Quadro RTX 5000 with Max-Q Design                       | 1EB5 1025 1401 |

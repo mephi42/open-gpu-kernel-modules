@@ -430,7 +430,7 @@ kmemsysAllocComprResources_KERNEL
     if (!memmgrIsScrubOnFreeEnabled(pMemoryManager))
     {
         if (!(IS_SIMULATION(pGpu) || IsDFPGA(pGpu) || (IS_EMULATION(pGpu) && RMCFG_FEATURE_PLATFORM_MODS)
-            ||(pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+            ||(pGpu->pGpuArch->bGpuArchIsZeroFb)
             ||(RMCFG_FEATURE_PLATFORM_WINDOWS && !pGpu->getProperty(pGpu, PDB_PROP_GPU_IN_TCC_MODE))
             ||hypervisorIsVgxHyper()
             ||IS_GFID_VF(gfid)
@@ -554,7 +554,7 @@ kmemsysSwizzIdToMIGMemSize_IMPL
     }
 
     if ((*pSizeInBytes == 0) &&
-        !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) &&
+        !pGpu->pGpuArch->bGpuArchIsZeroFb &&
         !pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB))
     {
         NV_PRINTF(LEVEL_ERROR, "Insufficient memory\n");
@@ -626,7 +626,7 @@ kmemsysGetMIGGPUInstanceMemInfo_IMPL
 
     // Not supported in vGPU or ZERO_FB configs
     NV_CHECK_OR_RETURN(LEVEL_SILENT,
-                       !(IS_VIRTUAL(pGpu) || (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))),
+                       !(IS_VIRTUAL(pGpu) || (pGpu->pGpuArch->bGpuArchIsZeroFb)),
                        NV_OK);
 
     //
@@ -735,7 +735,7 @@ kmemsysPopulateMIGGPUInstanceMemConfig_KERNEL
 
     // Not needed in vGPU or zero_fb configs
     NV_CHECK_OR_RETURN(LEVEL_SILENT,
-                       !(IS_VIRTUAL(pGpu) || (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))),
+                       !(IS_VIRTUAL(pGpu) || (pGpu->pGpuArch->bGpuArchIsZeroFb)),
                        NV_OK);
 
     // Nothing to do if MIG is not supported

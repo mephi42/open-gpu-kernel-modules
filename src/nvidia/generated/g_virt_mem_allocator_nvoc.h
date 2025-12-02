@@ -652,12 +652,6 @@ RmPhysAddr dmaPageArrayGetPhysAddr(DMA_PAGE_ARRAY *pPageArray, NvU32 pageIndex);
 #define DMA_ALLOC_VASPACE_USE_RM_INTERNAL_VALIMITS  NVBIT(10)
 
 //
-// Internal device allocation flags
-//
-#define NV_DEVICE_INTERNAL_ALLOCATION_FLAGS_NONE                         0
-#define NV_DEVICE_INTERNAL_ALLOCATION_FLAGS_ENABLE_PRIVILEGED_VASPACE    NVBIT(0)
-
-//
 // UVM privileged region
 //
 #define UVM_KERNEL_PRIVILEGED_REGION_START      (0xFFF8000000ULL)

@@ -166,8 +166,6 @@ NV_STATUS uvm_test_set_prefetch_faults_reenable_lapse(UVM_TEST_SET_PREFETCH_FAUL
 
 NV_STATUS uvm_test_check_channel_va_space(UVM_TEST_CHECK_CHANNEL_VA_SPACE_PARAMS *params, struct file *filp);
 
-NV_STATUS uvm_test_pmm_reverse_map(UVM_TEST_PMM_REVERSE_MAP_PARAMS *params, struct file *filp);
-
 NV_STATUS uvm_test_pmm_chunk_with_elevated_page(UVM_TEST_PMM_CHUNK_WITH_ELEVATED_PAGE_PARAMS *params,
                                                 struct file *filp);
 NV_STATUS uvm_test_va_space_inject_error(UVM_TEST_VA_SPACE_INJECT_ERROR_PARAMS *params, struct file *filp);
@@ -190,6 +188,7 @@ NV_STATUS uvm_test_register_unload_state_buffer(UVM_TEST_REGISTER_UNLOAD_STATE_B
                                                 struct file *filp);
 NV_STATUS uvm_test_rb_tree_directed(UVM_TEST_RB_TREE_DIRECTED_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_rb_tree_random(UVM_TEST_RB_TREE_RANDOM_PARAMS *params, struct file *filp);
+NV_STATUS uvm_test_dump_access_bits(UVM_TEST_DUMP_ACCESS_BITS_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_sec2_sanity(UVM_TEST_SEC2_SANITY_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_sec2_cpu_gpu_roundtrip(UVM_TEST_SEC2_CPU_GPU_ROUNDTRIP_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_cpu_chunk_api(UVM_TEST_CPU_CHUNK_API_PARAMS *params, struct file *filp);

@@ -90,19 +90,16 @@
 // These defines assume RISCV with -mabi=lp64/lp64f/lp64d
 #    define LOG_INT_MAX     NV_S32_MAX
 #    define LOG_UINT_MAX    NV_U32_MAX
-#    define LOG_LONG_MAX    NV_S64_MAX
-#    define LOG_ULONG_MAX   NV_U64_MAX
 #    define LOG_INTMAX_MAX  NV_S64_MAX
 #    define LOG_UINTMAX_MAX NV_U64_MAX
 #    define LOG_LLONG_MAX   NV_S64_MAX
 #    define LOG_ULLONG_MAX  NV_U64_MAX
 #    define LOG_SIZE_MAX    NV_U64_MAX
+
+// Note: this is a WAR and not really used.
 #    define NL_ARGMAX  32
 
 /* Some useful macros */
-#    define MAX(a, b) ((int)(a) > (int)(b) ? (int)(a) : (int)(b))
-#    define MIN(a, b) ((int)(a) < (int)(b) ? (int)(a) : (int)(b))
-
 #    define IS_DIGIT(c) (((c) >= '0') && ((c) <= '9'))
 
 /* Convenient bit representation for modifier flags, which all fall
@@ -114,16 +111,6 @@
 #    define MARK_POS (1U << ('+' - ' '))
 #    define GROUPED  (1U << ('\'' - ' '))
 #    define FLAGMASK (ALT_FORM | ZERO_PAD | LEFT_ADJ | PAD_POS | MARK_POS | GROUPED)
-#    if LOG_UINT_MAX == LOG_ULONG_MAX
-#        define LOG_LONG_IS_INT
-#    endif
-#    if LOG_SIZE_MAX != LOG_ULONG_MAX || LOG_UINTMAX_MAX != LOG_ULLONG_MAX
-#        define LOG_ODD_TYPES
-#    endif
-
-#if defined(LOG_LONG_IS_INT) || defined(LOG_ODD_TYPES)
-#error "Type sizes don't match RISCV lp64 ABI!"
-#endif // defined(LOG_LONG_IS_INT) || defined(LOG_ODD_TYPES)
 
 /* State machine to accept length modifiers + conversion specifiers.
  * Result is 0 on failure, or an argument type to pop on success. */
@@ -138,41 +125,34 @@ enum
     LOG_ZTPRE,
     LOG_JPRE,
     LOG_STOP,
+
+    //
+    // Note: for our use-case (no va_args processing),
+    // LOG_PTR through LOG_UIPTR could be merged into a
+    // single LOG_SPECIFIER state.
+    //
     LOG_PTR,
     LOG_INT,
     LOG_UINT,
     LOG_ULLONG,
-#    ifndef LOG_LONG_IS_INT
     LOG_LONG,
     LOG_ULONG,
-#    else
-#        define LOG_LONG  LOG_INT
-#        define LOG_ULONG LOG_UINT
-#    endif
     LOG_SHORT,
     LOG_USHORT,
     LOG_CHAR,
     LOG_UCHAR,
-#    ifdef LOG_ODD_TYPES
     LOG_LLONG,
     LOG_SIZET,
     LOG_IMAX,
     LOG_UMAX,
     LOG_PDIFF,
     LOG_UIPTR,
-#    else
-#        define LOG_LLONG LOG_ULLONG
-#        define LOG_SIZET LOG_ULONG
-#        define LOG_IMAX  LOG_LLONG
-#        define LOG_UMAX  LOG_ULLONG
-#        define LOG_PDIFF LOG_LONG
-#        define LOG_UIPTR LOG_ULONG
-#    endif
+
     LOG_NOARG,
     LOG_MAXSTATE
 };
-#    define S(i,x) states[i][(x) - 'A']
-static unsigned char states[]['z' - 'A' + 1] = {
+#    define S(i,x) states[(NvU32)i][(x) - 'A']
+static NvU8 states[]['z' - 'A' + 1] = {
     {
         0,
     },
@@ -197,7 +177,7 @@ static unsigned char states[]['z' - 'A' + 1] = {
     {
         0,
     },};
-#    define OOB(x) ((unsigned)(x) - 'A' > 'z' - 'A')
+#    define OOB(x) ((NvU32)(x) - 'A' > 'z' - 'A')
 union arg
 {
     NvU64 i;
@@ -211,79 +191,79 @@ static void states_init(void)
 {
     {
         /* 0: bare types */
-        S(0,'d') = LOG_INT,   S(0,'i') = LOG_INT,   S(0,'o') = LOG_UINT,  S(0,'u') = LOG_UINT,    S(0,'x') = LOG_UINT,
-        S(0,'X') = LOG_UINT,  S(0,'c') = LOG_CHAR,  S(0,'C') = LOG_INT,   S(0,'s') = LOG_PTR,     S(0,'S') = LOG_PTR,
-        S(0,'p') = LOG_UIPTR, S(0,'n') = LOG_PTR,   S(0,'a') = LOG_UIPTR, /* NVIDIA decoded address extension */
-        S(0,'m') = LOG_NOARG, S(0,'l') = LOG_LPRE,  S(0,'h') = LOG_HPRE,  S(0,'L') = LOG_BIGLPRE, S(0,'z') = LOG_ZTPRE,
-        S(0,'j') = LOG_JPRE,  S(0,'t') = LOG_ZTPRE;
+        S(LOG_BARE,'d') = LOG_INT,   S(LOG_BARE,'i') = LOG_INT,   S(LOG_BARE,'o') = LOG_UINT,  S(LOG_BARE,'u') = LOG_UINT,    S(LOG_BARE,'x') = LOG_UINT,
+        S(LOG_BARE,'X') = LOG_UINT,  S(LOG_BARE,'c') = LOG_CHAR,  S(LOG_BARE,'C') = LOG_INT,   S(LOG_BARE,'s') = LOG_PTR,     S(LOG_BARE,'S') = LOG_PTR,
+        S(LOG_BARE,'p') = LOG_UIPTR, S(LOG_BARE,'n') = LOG_PTR,   S(LOG_BARE,'a') = LOG_UIPTR, /* NVIDIA decoded address extension */
+        S(LOG_BARE,'m') = LOG_NOARG, S(LOG_BARE,'l') = LOG_LPRE,  S(LOG_BARE,'h') = LOG_HPRE,  S(LOG_BARE,'L') = LOG_BIGLPRE, S(LOG_BARE,'z') = LOG_ZTPRE,
+        S(LOG_BARE,'j') = LOG_JPRE,  S(LOG_BARE,'t') = LOG_ZTPRE;
     }
     {
         /* 1: l-prefixed */
-        S(1,'d') = LOG_LONG,
-        S(1,'i') = LOG_LONG,
-        S(1,'o') = LOG_ULONG,
-        S(1,'u') = LOG_ULONG,
-        S(1,'x') = LOG_ULONG,
-        S(1,'X') = LOG_ULONG,
-        S(1,'c') = LOG_INT,
-        S(1,'s') = LOG_PTR,
-        S(1,'n') = LOG_PTR,
-        S(1,'l') = LOG_LLPRE;
+        S(LOG_LPRE,'d') = LOG_LONG,
+        S(LOG_LPRE,'i') = LOG_LONG,
+        S(LOG_LPRE,'o') = LOG_ULONG,
+        S(LOG_LPRE,'u') = LOG_ULONG,
+        S(LOG_LPRE,'x') = LOG_ULONG,
+        S(LOG_LPRE,'X') = LOG_ULONG,
+        S(LOG_LPRE,'c') = LOG_INT,
+        S(LOG_LPRE,'s') = LOG_PTR,
+        S(LOG_LPRE,'n') = LOG_PTR,
+        S(LOG_LPRE,'l') = LOG_LLPRE;
     }
     {
         /* 2: ll-prefixed */
-        S(2,'d') = LOG_LLONG,
-        S(2,'i') = LOG_LLONG,
-        S(2,'o') = LOG_ULLONG,
-        S(2,'u') = LOG_ULLONG,
-        S(2,'x') = LOG_ULLONG,
-        S(2,'X') = LOG_ULLONG,
-        S(2,'n') = LOG_PTR;
+        S(LOG_LLPRE,'d') = LOG_LLONG,
+        S(LOG_LLPRE,'i') = LOG_LLONG,
+        S(LOG_LLPRE,'o') = LOG_ULLONG,
+        S(LOG_LLPRE,'u') = LOG_ULLONG,
+        S(LOG_LLPRE,'x') = LOG_ULLONG,
+        S(LOG_LLPRE,'X') = LOG_ULLONG,
+        S(LOG_LLPRE,'n') = LOG_PTR;
     }
     {
         /* 3: h-prefixed */
-        S(3,'d') = LOG_SHORT,
-        S(3,'i') = LOG_SHORT,
-        S(3,'o') = LOG_USHORT,
-        S(3,'u') = LOG_USHORT,
-        S(3,'x') = LOG_USHORT,
-        S(3,'X') = LOG_USHORT,
-        S(3,'n') = LOG_PTR,
-        S(3,'h') = LOG_HHPRE;
+        S(LOG_HPRE,'d') = LOG_SHORT,
+        S(LOG_HPRE,'i') = LOG_SHORT,
+        S(LOG_HPRE,'o') = LOG_USHORT,
+        S(LOG_HPRE,'u') = LOG_USHORT,
+        S(LOG_HPRE,'x') = LOG_USHORT,
+        S(LOG_HPRE,'X') = LOG_USHORT,
+        S(LOG_HPRE,'n') = LOG_PTR,
+        S(LOG_HPRE,'h') = LOG_HHPRE;
     }
     {
         /* 4: hh-prefixed */
-        S(4,'d') = LOG_CHAR,
-        S(4,'i') = LOG_CHAR,
-        S(4,'o') = LOG_UCHAR,
-        S(4,'u') = LOG_UCHAR,
-        S(4,'x') = LOG_UCHAR,
-        S(4,'X') = LOG_UCHAR,
-        S(4,'n') = LOG_PTR;
+        S(LOG_HHPRE,'d') = LOG_CHAR,
+        S(LOG_HHPRE,'i') = LOG_CHAR,
+        S(LOG_HHPRE,'o') = LOG_UCHAR,
+        S(LOG_HHPRE,'u') = LOG_UCHAR,
+        S(LOG_HHPRE,'x') = LOG_UCHAR,
+        S(LOG_HHPRE,'X') = LOG_UCHAR,
+        S(LOG_HHPRE,'n') = LOG_PTR;
     }
     {
         /* 5: L-prefixed */
-        S(5,'n') = LOG_PTR;
+        S(LOG_BIGLPRE,'n') = LOG_PTR;
     }
     {
         /* 6: z- or t-prefixed (assumed to be same size) */
-        S(6,'d') = LOG_PDIFF,
-        S(6,'i') = LOG_PDIFF,
-        S(6,'o') = LOG_SIZET,
-        S(6,'u') = LOG_SIZET,
-        S(6,'x') = LOG_SIZET,
-        S(6,'X') = LOG_SIZET,
-        S(6,'n') = LOG_PTR;
+        S(LOG_ZTPRE,'d') = LOG_PDIFF,
+        S(LOG_ZTPRE,'i') = LOG_PDIFF,
+        S(LOG_ZTPRE,'o') = LOG_SIZET,
+        S(LOG_ZTPRE,'u') = LOG_SIZET,
+        S(LOG_ZTPRE,'x') = LOG_SIZET,
+        S(LOG_ZTPRE,'X') = LOG_SIZET,
+        S(LOG_ZTPRE,'n') = LOG_PTR;
     }
     {
         /* 7: j-prefixed */
-        S(7,'d') = LOG_IMAX,
-        S(7,'i') = LOG_IMAX,
-        S(7,'o') = LOG_UMAX,
-        S(7,'u') = LOG_UMAX,
-        S(7,'x') = LOG_UMAX,
-        S(7,'X') = LOG_UMAX,
-        S(7,'n') = LOG_PTR;
+        S(LOG_JPRE,'d') = LOG_IMAX,
+        S(LOG_JPRE,'i') = LOG_IMAX,
+        S(LOG_JPRE,'o') = LOG_UMAX,
+        S(LOG_JPRE,'u') = LOG_UMAX,
+        S(LOG_JPRE,'x') = LOG_UMAX,
+        S(LOG_JPRE,'X') = LOG_UMAX,
+        S(LOG_JPRE,'n') = LOG_PTR;
     }
 }
 
@@ -476,11 +456,8 @@ static char *fmt_o(NvU64 x, char *s)
 }
 static char *fmt_u(NvU64 x, char *s)
 {
-    unsigned long y;
-    for (; x > LOG_ULONG_MAX; x /= 10)
+    for (; x > 0; x /= 10)
         *--s = '0' + x % 10;
-    for (y = x; y; y /= 10)
-        *--s = '0' + y % 10;
     return s;
 }
 static int getint(char **s)
@@ -492,7 +469,7 @@ static int getint(char **s)
 }
 
 #if !defined(NVRM)
-static const char* printfLevelToString(NvU32 level)
+static const char *printfLevelToString(NvU32 level)
 {
     switch (level)
     {
@@ -625,7 +602,7 @@ static int libos_printf_a(
                 if (err == 0)
                 {
                     len = snprintf(logDecode->curLineBufPtr, remain,
-                                   "%04d-%02d-%02d %d:%02d:%02d ",
+                                   "%04d-%02d-%02d %02d:%02d:%02d ",
                                    tmStruct.tm_year + 1900,    // years since 1900
                                    tmStruct.tm_mon + 1,        // months since January - [0,11]
                                    tmStruct.tm_mday,           // day of the month - [1,31]
@@ -896,33 +873,7 @@ static int libos_printf_a(
         switch (t)
         {
         case 'n':
-#if !LIBOS_LOG_DECODE_ENABLE
             // We can't support %n when decoding, these pointers do not exist here!
-            switch (ps)
-            {
-            case LOG_BARE:
-                *(int *)arg.p = cnt;
-                break;
-            case LOG_LPRE:
-                *(long *)arg.p = cnt;
-                break;
-            case LOG_LLPRE:
-                *(long long *)arg.p = cnt;
-                break;
-            case LOG_HPRE:
-                *(unsigned short *)arg.p = cnt;
-                break;
-            case LOG_HHPRE:
-                *(unsigned char *)arg.p = cnt;
-                break;
-            case LOG_ZTPRE:
-                *(size_t *)arg.p = cnt;
-                break;
-            case LOG_JPRE:
-                *(NvU64 *)arg.p = cnt;
-                break;
-            }
-#endif // !LIBOS_LOG_DECODE_ENABLE
             continue;
         case 'p':
             t = 'x';
@@ -973,7 +924,7 @@ static int libos_printf_a(
                 a = z;
                 break;
             }
-            p = MAX(p, z - a + !arg.i);
+            p = NV_MAX(p, (int)(NvSPtr)(z - a + !arg.i));
             break;
         case 'c':
             *(a = z - (p = 1)) = arg.i;
@@ -1061,7 +1012,7 @@ static int libos_printf_a(
 
 
             symDecodedLineLen = portStringLength(symDecodedLine);
-            symDecodedLineLen = MIN(symDecodedLineLen, sizeof(symDecodedLine) - 1); // just in case
+            symDecodedLineLen = NV_MIN(symDecodedLineLen, sizeof(symDecodedLine) - 1); // just in case
 
 #ifdef NVWATCH
             // Windbg nvwatch uses DML, so > becomes &gt;
@@ -1209,6 +1160,12 @@ static libosLogMetadata *_getLoggingMetadata(LIBOS_LOG_DECODE *logDecode, LIBOS_
     {
         metadataVA = pLogLocal->physicLogBuffer[idx];
         *taskId = LIBOS_LOG_TASK_UNKNOWN;
+    }
+
+    if (metadataVA < pLogLocal->loggingBaseAddress ||
+        metadataVA >= pLogLocal->loggingBaseAddress + pLogLocal->loggingSize)
+    {
+        return NULL;
     }
 
     pMetadata = (libosLogMetadata *) LibosElfMapVirtual(&pLogLocal->elfImage, metadataVA, sizeof(libosLogMetadata));
@@ -2275,13 +2232,11 @@ void libosLogAddLog(LIBOS_LOG_DECODE *logDecode, void *buffer, NvU64 bufferSize,
 static NvBool _checkIsElfContainer(LibosElfImage *image)
 {
     // Container ELF will contain a section denoting that it is a container!
-    if (LibosElfFindSectionByName(image, ".fwIsContainerElf") == NULL)
-        return NV_FALSE;
-
-    return NV_TRUE;
+    LibosElfSectionHeaderPtr shdr = LibosElfFindSectionByName(image, ".fwIsContainerElf");
+    return shdr.raw != NULL;
 }
 
-static void _libosLogInitLogBuffer(LIBOS_LOG_DECODE_LOG *pLog, LibosElf64Header *elf, NvU64 elfSize)
+static void _libosLogInitLogBuffer(LIBOS_LOG_DECODE_LOG *pLog, void *elf, NvU64 elfSize)
 {
     pLog->elf = elf;
 
@@ -2289,9 +2244,28 @@ static void _libosLogInitLogBuffer(LIBOS_LOG_DECODE_LOG *pLog, LibosElf64Header 
     {
         LibosElfImageConstruct(&pLog->elfImage, elf, elfSize);
         LibosDebugResolverConstruct(&pLog->resolver, &pLog->elfImage);
-        LibosElf64SectionHeader *shdr = LibosElfFindSectionByName(&pLog->elfImage, ".logging");
-        if (shdr != NULL)
-            pLog->loggingBaseAddress = shdr->addr;
+
+        // Prioritize .logging_metadata first for clients that don't merge their sections
+        LibosElfSectionHeaderPtr shdr = LibosElfFindSectionByName(&pLog->elfImage, ".logging_metadata");
+
+        if (shdr.raw == NULL)
+        {
+            shdr = LibosElfFindSectionByName(&pLog->elfImage, ".logging");
+        }
+
+        if (shdr.raw != NULL)
+        {
+            if (LibosElfGetClass(&pLog->elfImage) == ELFCLASS32)
+            {
+                pLog->loggingBaseAddress = shdr.shdr32->addr;
+                pLog->loggingSize = shdr.shdr32->size;
+            }
+            else
+            {
+                pLog->loggingBaseAddress = shdr.shdr64->addr;
+                pLog->loggingSize = shdr.shdr64->size;
+            }
+        }
     }
 }
 
@@ -2303,18 +2277,17 @@ static void libosLogInitLogBuffer(LIBOS_LOG_DECODE_LOG *pLog, LibosElfImage *pIm
     if (pElfSectionName)
         portStringCopy(pLog->elfSectionName, sizeof(pLog->elfSectionName), pElfSectionName, sizeof(pLog->elfSectionName));
 
-    LibosElf64SectionHeader *sectionHdr;
-    NvU8 *sectionData = NULL, *sectionDataEnd;
-    NvU64 sectionSize = 0;
+    LibosElfSectionHeaderPtr sectionHdr;
+    NvU8 *sectionData = NULL, *sectionDataEnd = NULL;
+    sectionHdr.raw = NULL;
 
     // Initialize each log buffer with its own task's logging ELF
     sectionHdr = LibosElfFindSectionByName(pImage, (const char *) pLog->elfSectionName);
-    if (sectionHdr != NULL)
+    if (sectionHdr.raw != NULL)
     {
         LibosElfMapSection(pImage, sectionHdr, &sectionData, &sectionDataEnd);
-        sectionSize = sectionHdr->size;
+        _libosLogInitLogBuffer(pLog, sectionData, sectionDataEnd - sectionData);
     }
-    _libosLogInitLogBuffer(pLog, (LibosElf64Header *) sectionData, sectionSize);
 }
 
 /**
@@ -2328,7 +2301,7 @@ static void libosLogInitLogBuffer(LIBOS_LOG_DECODE_LOG *pLog, LibosElfImage *pIm
  * buffer without proper task prefix. So we need resolvers initialized by this function
  *
  */
-void libosLogInitGspMergedLogResolver(LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvU64 elfSize, NvU32 gpuArch, NvU32 gpuImpl)
+void libosLogInitGspMergedLogResolver(LIBOS_LOG_DECODE *logDecode, void *elf, NvU64 elfSize, NvU32 gpuArch, NvU32 gpuImpl)
 {
     NvU32 numTaskLogInfos = 0;
     const nv_firmware_task_log_info_t *pTaskLogInfos = nv_firmware_get_task_log_infos(&numTaskLogInfos);
@@ -2355,7 +2328,7 @@ void libosLogInitGspMergedLogResolver(LIBOS_LOG_DECODE *logDecode, LibosElf64Hea
     }
 }
 
-void libosLogInit(LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvU64 elfSize)
+void libosLogInit(LIBOS_LOG_DECODE *logDecode, void *elf, NvU64 elfSize)
 {
     NvU64 scratchBufferSize = 0;
     NvU64 i;
@@ -2430,7 +2403,7 @@ void libosLogInit(LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvU64 elfS
 }
 
 void libosLogInitEx(
-    LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvBool bSynchronousBuffer,
+    LIBOS_LOG_DECODE *logDecode, void *elf, NvBool bSynchronousBuffer,
     NvBool bPtrSymbolResolve, NvBool bDecodeStrShdr, NvU64 elfSize)
 {
     // Set extended config

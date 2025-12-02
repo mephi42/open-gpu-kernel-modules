@@ -51,6 +51,7 @@ extern "C" {
 #include "gpu/gpu.h"
 
 #include "mem_mgr/mem.h"
+#include "kernel/gpu_mgr/gpu_mgr.h"
 
 #include "mem_mgr/mem_list.h"
 
@@ -455,12 +456,11 @@ typedef struct _def_fb_mem_node
 } FB_MEM_NODE, *PFB_MEM_NODE;
 
 // defines for MemoryManager::fbsrReservedRanges
-#define MAX_FBSR_RESERVED_REGIONS                   5  // Max. Memory descriptors for RM Instance memory
+#define MAX_FBSR_RESERVED_REGIONS                   4  // Max. Memory descriptors for RM Instance memory
 #define FBSR_RESERVED_INST_MEMORY_BEFORE_BAR2PTE    0  // Described on Kernel-RM and Physical-RM (Monolithic / GSP offload)
 #define FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE     1  // Described on Kernel-RM and Physical-RM (Monolithic / GSP offload)
-#define FBSR_RESERVED_INST_MEMORY_GSP_HEAP          2  // Allocated on Kernel-RM and sent to Physical-RM (GSP offload)
-#define FBSR_RESERVED_INST_MEMORY_GSP_NON_WPR       3  // Described on Physical-RM (GSP offload)
-#define FBSR_RESERVED_INST_MEMORY_VGA_WORKSPACE     4  // Described on Physical-RM (GSP offload)
+#define FBSR_RESERVED_INST_MEMORY_GSP_NON_WPR       2  // Described on Physical-RM (GSP offload)
+#define FBSR_RESERVED_INST_MEMORY_VGA_WORKSPACE     3  // Described on Physical-RM (GSP offload)
 
 /*!
  * MemoryManager provides the root memory management of GPU video memory.
@@ -548,7 +548,7 @@ struct MemoryManager {
     struct OBJENGSTATE *__nvoc_pbase_OBJENGSTATE;    // engstate super
     struct MemoryManager *__nvoc_pbase_MemoryManager;    // memmgr
 
-    // Vtable with 85 per-object function pointers
+    // Vtable with 87 per-object function pointers
     NvU64 (*__memmgrDeterminePageSize__)(struct MemoryManager * /*this*/, NvHandle, NvU64, NvU32, NvU32, NvU32 *, NvU32 *);  // halified (2 hals) body
     NV_STATUS (*__memmgrFreeHwResources__)(OBJGPU *, struct MemoryManager * /*this*/, FB_ALLOC_INFO *);  // halified (2 hals) body
     NV_STATUS (*__memmgrCreateHeap__)(struct MemoryManager * /*this*/);  // halified (2 hals) body
@@ -585,6 +585,7 @@ struct MemoryManager {
     NvU32 (*__memmgrChooseKindZ__)(OBJGPU *, struct MemoryManager * /*this*/, FB_ALLOC_PAGE_FORMAT *);  // halified (4 hals) body
     NvU32 (*__memmgrChooseKindCompressZ__)(OBJGPU *, struct MemoryManager * /*this*/, FB_ALLOC_PAGE_FORMAT *);  // halified (4 hals) body
     NvU32 (*__memmgrChooseKindCompressC__)(OBJGPU *, struct MemoryManager * /*this*/, FB_ALLOC_PAGE_FORMAT *);  // halified (2 hals) body
+    NvU32 (*__memmgrGetPteKindGenericMemoryCompressible__)(OBJGPU *, struct MemoryManager * /*this*/);  // halified (2 hals) body
     NvU32 (*__memmgrGetUncompressedKind__)(OBJGPU *, struct MemoryManager * /*this*/, NvU32, NvBool);  // halified (4 hals) body
     NvU32 (*__memmgrGetCompressedKind__)(struct MemoryManager * /*this*/, NvU32, NvBool);  // halified (4 hals) body
     NV_STATUS (*__memmgrChooseKind__)(OBJGPU *, struct MemoryManager * /*this*/, FB_ALLOC_PAGE_FORMAT *, NvU32, NvU32 *);  // halified (2 hals) body
@@ -592,7 +593,8 @@ struct MemoryManager {
     NvU32 (*__memmgrGetMessageKind__)(OBJGPU *, struct MemoryManager * /*this*/);  // halified (2 hals) body
     NvU32 (*__memmgrGetDefaultPteKindForNoHandle__)(OBJGPU *, struct MemoryManager * /*this*/);  // halified (2 hals) body
     NV_STATUS (*__memmgrGetFlaKind__)(OBJGPU *, struct MemoryManager * /*this*/, NvU32 *);  // halified (2 hals) body
-    NvBool (*__memmgrIsMemDescSupportedByFla__)(OBJGPU *, struct MemoryManager * /*this*/, MEMORY_DESCRIPTOR *);  // halified (3 hals) body
+    NvBool (*__memmgrIsMemDescSupportedByFla__)(OBJGPU *, struct MemoryManager * /*this*/, MEMORY_DESCRIPTOR *);  // halified (3 hals)
+    NvBool (*__memmgrIsValidFlaPageSize__)(OBJGPU *, struct MemoryManager * /*this*/, NvU64, NvBool);  // halified (3 hals) body
     NvU32 (*__memmgrGetHwPteKindFromSwPteKind__)(OBJGPU *, struct MemoryManager * /*this*/, NvU32);  // halified (2 hals) body
     NvU32 (*__memmgrGetSwPteKindFromHwPteKind__)(OBJGPU *, struct MemoryManager * /*this*/, NvU32);  // halified (2 hals) body
     void (*__memmgrGetPteKindForScrubber__)(struct MemoryManager * /*this*/, NvU32 *);  // halified (2 hals) body
@@ -664,7 +666,6 @@ struct MemoryManager {
     NvBool bScrubChannelSetupInProgress;
     NvBool bBug3922001DisableCtxBufOnSim;
     NvBool bPlatformFullyCoherent;
-    NvBool bEnableDynamicGranularityPageArrays;
     NvBool bAllowNoncontiguousAllocation;
     NvBool bLocalEgmSupported;
     struct __nvoc_inner_struc_MemoryManager_1__ localEgmOverride;
@@ -678,7 +679,6 @@ struct MemoryManager {
     NvBool bScrubberInitialized;
     NvBool bAllowSysmemHugePages;
     NvBool bEccScrubOverride;
-    NvU64 sysmemPageSize;
     struct Heap *pHeap;
     NvBool bScrubOnFreeEnabled;
     NvBool bFastScrubberEnabled;
@@ -699,15 +699,16 @@ struct MemoryManager {
     struct __nvoc_inner_struc_MemoryManager_2__ Ram;
     PMEMORY_DESCRIPTOR pReservedConsoleMemDesc;
     NvU32 PteKindOverride;
-    NvU32 zbcSurfaces;
+    NvU32 zbcSurfaces[8];
     NvU64 overrideInitHeapMin;
     NvU64 overrideHeapMax;
     NvU64 rsvdMemorySizeIncrement;
+    NvU64 overrideMaxContextSizeRsvdMemory;
     struct OBJFBSR *pFbsr[8];
     struct OBJFBSR *pActiveFbsr;
     NvU32 fbsrStartMode;
     NvU32 fixedFbsrModesMask;
-    MEMORY_DESCRIPTOR *fbsrReservedRanges[5];
+    MEMORY_DESCRIPTOR *fbsrReservedRanges[4];
     PFB_MEM_NODE pMemHeadNode;
     PFB_MEM_NODE pMemTailNode;
     struct RM_POOL_ALLOC_MEM_RESERVE_INFO *pPageLevelReserve;
@@ -719,7 +720,6 @@ struct MemoryManager {
     NvBool bReservedMemAtBottom;
     NvU64 bug4146226ReserveOffset;
     NvBool bBug4146226ReserveWar;
-    NvBool bug64kPage5123775War;
     NvHandle hThirdPartyP2P;
     NvBool bMonitoredFenceSupported;
     NvBool b64BitSemaphoresSupported;
@@ -728,6 +728,7 @@ struct MemoryManager {
     NvBool bUseVirtualCopyOnSuspend;
     NvBool bLocalizedMemorySupported;
     NvU64 localizedMask;
+    NvHandle hGspHeapSysMemHandle;
 };
 
 
@@ -1205,6 +1206,15 @@ static inline NV_STATUS memmgrGetKindComprForGpu(struct MemoryManager *pMemoryMa
 }
 #else // __nvoc_mem_mgr_h_disabled
 #define memmgrGetKindComprForGpu(pMemoryManager, arg2, pGpu, offset, kind, pComprInfo) memmgrGetKindComprForGpu_KERNEL(pMemoryManager, arg2, pGpu, offset, kind, pComprInfo)
+#endif // __nvoc_mem_mgr_h_disabled
+
+#ifdef __nvoc_mem_mgr_h_disabled
+static inline NvBool memmgrComprMappingSupported(struct MemoryManager *pMemoryManager, NV_ADDRESS_SPACE arg2) {
+    NV_ASSERT_FAILED_PRECOMP("MemoryManager was disabled!");
+    return NV_FALSE;
+}
+#else // __nvoc_mem_mgr_h_disabled
+#define memmgrComprMappingSupported(pMemoryManager, arg2) memmgrComprMappingSupported_88bc07(pMemoryManager, arg2)
 #endif // __nvoc_mem_mgr_h_disabled
 
 NV_STATUS memmgrGetKindComprFromMemDesc_IMPL(struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *arg2, NvU64 offset, NvU32 *kind, COMPR_INFO *pComprInfo);
@@ -1746,6 +1756,24 @@ static inline NV_STATUS memmgrCalculateHeapOffsetWithGSP(OBJGPU *pGpu, struct Me
 #endif // __nvoc_mem_mgr_h_disabled
 
 #ifdef __nvoc_mem_mgr_h_disabled
+static inline NV_STATUS memmgrSaveDisplayFrmReservedRegion(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
+    NV_ASSERT_FAILED_PRECOMP("MemoryManager was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_mem_mgr_h_disabled
+#define memmgrSaveDisplayFrmReservedRegion(pGpu, pMemoryManager) memmgrSaveDisplayFrmReservedRegion_46f6a7(pGpu, pMemoryManager)
+#endif // __nvoc_mem_mgr_h_disabled
+
+#ifdef __nvoc_mem_mgr_h_disabled
+static inline NV_STATUS memmgrRestoreDisplayFrmReservedRegion(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
+    NV_ASSERT_FAILED_PRECOMP("MemoryManager was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_mem_mgr_h_disabled
+#define memmgrRestoreDisplayFrmReservedRegion(pGpu, pMemoryManager) memmgrRestoreDisplayFrmReservedRegion_46f6a7(pGpu, pMemoryManager)
+#endif // __nvoc_mem_mgr_h_disabled
+
+#ifdef __nvoc_mem_mgr_h_disabled
 static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryManager *pMemoryManager, NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("MemoryManager was disabled!");
     return NV_ERR_NOT_SUPPORTED;
@@ -1792,6 +1820,7 @@ static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryM
 #define memmgrAllocateConsoleRegion(pGpu, pMemoryManager) memmgrAllocateConsoleRegion_DISPATCH(pGpu, pMemoryManager)
 #define memmgrAllocateConsoleRegion_HAL(pGpu, pMemoryManager) memmgrAllocateConsoleRegion_DISPATCH(pGpu, pMemoryManager)
 #define memmgrGetKindComprForGpu_HAL(pMemoryManager, arg2, pGpu, offset, kind, pComprInfo) memmgrGetKindComprForGpu(pMemoryManager, arg2, pGpu, offset, kind, pComprInfo)
+#define memmgrComprMappingSupported_HAL(pMemoryManager, arg2) memmgrComprMappingSupported(pMemoryManager, arg2)
 #define memmgrScrubInit_HAL(pGpu, pMemoryManager) memmgrScrubInit(pGpu, pMemoryManager)
 #define memmgrScrubHandlePostSchedulingEnable_FNPTR(pMemoryManager) pMemoryManager->__memmgrScrubHandlePostSchedulingEnable__
 #define memmgrScrubHandlePostSchedulingEnable(pGpu, pMemoryManager) memmgrScrubHandlePostSchedulingEnable_DISPATCH(pGpu, pMemoryManager)
@@ -1904,6 +1933,9 @@ static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryM
 #define memmgrChooseKindCompressC(pGpu, pMemoryManager, arg3) memmgrChooseKindCompressC_DISPATCH(pGpu, pMemoryManager, arg3)
 #define memmgrChooseKindCompressC_HAL(pGpu, pMemoryManager, arg3) memmgrChooseKindCompressC_DISPATCH(pGpu, pMemoryManager, arg3)
 #define memmgrChooseKindCompressCForMS2_HAL(pGpu, pMemoryManager, arg3) memmgrChooseKindCompressCForMS2(pGpu, pMemoryManager, arg3)
+#define memmgrGetPteKindGenericMemoryCompressible_FNPTR(pMemoryManager) pMemoryManager->__memmgrGetPteKindGenericMemoryCompressible__
+#define memmgrGetPteKindGenericMemoryCompressible(pGpu, pMemoryManager) memmgrGetPteKindGenericMemoryCompressible_DISPATCH(pGpu, pMemoryManager)
+#define memmgrGetPteKindGenericMemoryCompressible_HAL(pGpu, pMemoryManager) memmgrGetPteKindGenericMemoryCompressible_DISPATCH(pGpu, pMemoryManager)
 #define memmgrGetUncompressedKind_FNPTR(pMemoryManager) pMemoryManager->__memmgrGetUncompressedKind__
 #define memmgrGetUncompressedKind(pGpu, pMemoryManager, kind, releaseReacquire) memmgrGetUncompressedKind_DISPATCH(pGpu, pMemoryManager, kind, releaseReacquire)
 #define memmgrGetUncompressedKind_HAL(pGpu, pMemoryManager, kind, releaseReacquire) memmgrGetUncompressedKind_DISPATCH(pGpu, pMemoryManager, kind, releaseReacquire)
@@ -1927,9 +1959,12 @@ static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryM
 #define memmgrGetFlaKind_FNPTR(pMemoryManager) pMemoryManager->__memmgrGetFlaKind__
 #define memmgrGetFlaKind(pGpu, pMemoryManager, arg3) memmgrGetFlaKind_DISPATCH(pGpu, pMemoryManager, arg3)
 #define memmgrGetFlaKind_HAL(pGpu, pMemoryManager, arg3) memmgrGetFlaKind_DISPATCH(pGpu, pMemoryManager, arg3)
-#define memmgrIsMemDescSupportedByFla_FNPTR(pMemoryManager) pMemoryManager->__memmgrIsMemDescSupportedByFla__
-#define memmgrIsMemDescSupportedByFla(pGpu, pMemoryManager, pMemDesc) memmgrIsMemDescSupportedByFla_DISPATCH(pGpu, pMemoryManager, pMemDesc)
-#define memmgrIsMemDescSupportedByFla_HAL(pGpu, pMemoryManager, pMemDesc) memmgrIsMemDescSupportedByFla_DISPATCH(pGpu, pMemoryManager, pMemDesc)
+#define memmgrIsMemDescSupportedByFla_FNPTR(arg_this) arg_this->__memmgrIsMemDescSupportedByFla__
+#define memmgrIsMemDescSupportedByFla(arg1, arg_this, arg3) memmgrIsMemDescSupportedByFla_DISPATCH(arg1, arg_this, arg3)
+#define memmgrIsMemDescSupportedByFla_HAL(arg1, arg_this, arg3) memmgrIsMemDescSupportedByFla_DISPATCH(arg1, arg_this, arg3)
+#define memmgrIsValidFlaPageSize_FNPTR(pMemoryManager) pMemoryManager->__memmgrIsValidFlaPageSize__
+#define memmgrIsValidFlaPageSize(pGpu, pMemoryManager, pageSize, bIsMulticast) memmgrIsValidFlaPageSize_DISPATCH(pGpu, pMemoryManager, pageSize, bIsMulticast)
+#define memmgrIsValidFlaPageSize_HAL(pGpu, pMemoryManager, pageSize, bIsMulticast) memmgrIsValidFlaPageSize_DISPATCH(pGpu, pMemoryManager, pageSize, bIsMulticast)
 #define memmgrGetHwPteKindFromSwPteKind_FNPTR(pMemoryManager) pMemoryManager->__memmgrGetHwPteKindFromSwPteKind__
 #define memmgrGetHwPteKindFromSwPteKind(pGpu, pMemoryManager, pteKind) memmgrGetHwPteKindFromSwPteKind_DISPATCH(pGpu, pMemoryManager, pteKind)
 #define memmgrGetHwPteKindFromSwPteKind_HAL(pGpu, pMemoryManager, pteKind) memmgrGetHwPteKindFromSwPteKind_DISPATCH(pGpu, pMemoryManager, pteKind)
@@ -2049,6 +2084,8 @@ static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryM
 #define memmgrDuplicateFromScanoutCarveoutRegion_FNPTR(pMemoryManager) pMemoryManager->__memmgrDuplicateFromScanoutCarveoutRegion__
 #define memmgrDuplicateFromScanoutCarveoutRegion(pGpu, pMemoryManager, pMemDesc) memmgrDuplicateFromScanoutCarveoutRegion_DISPATCH(pGpu, pMemoryManager, pMemDesc)
 #define memmgrDuplicateFromScanoutCarveoutRegion_HAL(pGpu, pMemoryManager, pMemDesc) memmgrDuplicateFromScanoutCarveoutRegion_DISPATCH(pGpu, pMemoryManager, pMemDesc)
+#define memmgrSaveDisplayFrmReservedRegion_HAL(pGpu, pMemoryManager) memmgrSaveDisplayFrmReservedRegion(pGpu, pMemoryManager)
+#define memmgrRestoreDisplayFrmReservedRegion_HAL(pGpu, pMemoryManager) memmgrRestoreDisplayFrmReservedRegion(pGpu, pMemoryManager)
 #define memmgrGetCarveoutRegionInfo_HAL(pGpu, pMemoryManager, pParams) memmgrGetCarveoutRegionInfo(pGpu, pMemoryManager, pParams)
 #define memmgrIsMemoryIoCoherent_FNPTR(pMemoryManager) pMemoryManager->__memmgrIsMemoryIoCoherent__
 #define memmgrIsMemoryIoCoherent(pGpu, pMemoryManager, pAllocData) memmgrIsMemoryIoCoherent_DISPATCH(pGpu, pMemoryManager, pAllocData)
@@ -2252,6 +2289,10 @@ static inline NvU32 memmgrChooseKindCompressC_DISPATCH(OBJGPU *pGpu, struct Memo
     return pMemoryManager->__memmgrChooseKindCompressC__(pGpu, pMemoryManager, arg3);
 }
 
+static inline NvU32 memmgrGetPteKindGenericMemoryCompressible_DISPATCH(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
+    return pMemoryManager->__memmgrGetPteKindGenericMemoryCompressible__(pGpu, pMemoryManager);
+}
+
 static inline NvU32 memmgrGetUncompressedKind_DISPATCH(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 kind, NvBool releaseReacquire) {
     return pMemoryManager->__memmgrGetUncompressedKind__(pGpu, pMemoryManager, kind, releaseReacquire);
 }
@@ -2280,8 +2321,12 @@ static inline NV_STATUS memmgrGetFlaKind_DISPATCH(OBJGPU *pGpu, struct MemoryMan
     return pMemoryManager->__memmgrGetFlaKind__(pGpu, pMemoryManager, arg3);
 }
 
-static inline NvBool memmgrIsMemDescSupportedByFla_DISPATCH(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *pMemDesc) {
-    return pMemoryManager->__memmgrIsMemDescSupportedByFla__(pGpu, pMemoryManager, pMemDesc);
+static inline NvBool memmgrIsMemDescSupportedByFla_DISPATCH(OBJGPU *arg1, struct MemoryManager *arg_this, MEMORY_DESCRIPTOR *arg3) {
+    return arg_this->__memmgrIsMemDescSupportedByFla__(arg1, arg_this, arg3);
+}
+
+static inline NvBool memmgrIsValidFlaPageSize_DISPATCH(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU64 pageSize, NvBool bIsMulticast) {
+    return pMemoryManager->__memmgrIsValidFlaPageSize__(pGpu, pMemoryManager, pageSize, bIsMulticast);
 }
 
 static inline NvU32 memmgrGetHwPteKindFromSwPteKind_DISPATCH(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 pteKind) {
@@ -2491,6 +2536,11 @@ static inline NV_STATUS memmgrReserveConsoleRegion_56cd7a(OBJGPU *pGpu, struct M
 NV_STATUS memmgrGetKindComprForGpu_KERNEL(struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *arg2, OBJGPU *pGpu, NvU64 offset, NvU32 *kind, COMPR_INFO *pComprInfo);
 
 
+static inline NvBool memmgrComprMappingSupported_88bc07(struct MemoryManager *pMemoryManager, NV_ADDRESS_SPACE arg2) {
+    return NV_TRUE;
+}
+
+
 static inline NV_STATUS memmgrScrubInit_56cd7a(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
     return NV_OK;
 }
@@ -2656,6 +2706,16 @@ NV_STATUS memmgrReserveVgaWorkspaceMemDescForFbsr_TU102(OBJGPU *pGpu, struct Mem
 
 
 static inline NV_STATUS memmgrCalculateHeapOffsetWithGSP_46f6a7(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 *offset) {
+    return NV_ERR_NOT_SUPPORTED;
+}
+
+
+static inline NV_STATUS memmgrSaveDisplayFrmReservedRegion_46f6a7(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
+    return NV_ERR_NOT_SUPPORTED;
+}
+
+
+static inline NV_STATUS memmgrRestoreDisplayFrmReservedRegion_46f6a7(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
     return NV_ERR_NOT_SUPPORTED;
 }
 
@@ -2930,6 +2990,12 @@ static inline NvU32 memmgrChooseKindCompressC_474d46(OBJGPU *pGpu, struct Memory
     NV_ASSERT_OR_RETURN_PRECOMP(0, 0);
 }
 
+NvU32 memmgrGetPteKindGenericMemoryCompressible_TU102(OBJGPU *pGpu, struct MemoryManager *pMemoryManager);
+
+static inline NvU32 memmgrGetPteKindGenericMemoryCompressible_4a4dee(OBJGPU *pGpu, struct MemoryManager *pMemoryManager) {
+    return 0;
+}
+
 NvU32 memmgrGetUncompressedKind_TU102(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 kind, NvBool releaseReacquire);
 
 NvU32 memmgrGetUncompressedKind_GB202(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 kind, NvBool releaseReacquire);
@@ -2980,12 +3046,20 @@ static inline NV_STATUS memmgrGetFlaKind_46f6a7(OBJGPU *pGpu, struct MemoryManag
     return NV_ERR_NOT_SUPPORTED;
 }
 
-NvBool memmgrIsMemDescSupportedByFla_GA100(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *pMemDesc);
+NvBool memmgrIsMemDescSupportedByFla_GA100(OBJGPU *arg1, struct MemoryManager *arg2, MEMORY_DESCRIPTOR *arg3);
 
-NvBool memmgrIsMemDescSupportedByFla_GB100(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *pMemDesc);
+NvBool memmgrIsMemDescSupportedByFla_GB100(OBJGPU *arg1, struct MemoryManager *arg2, MEMORY_DESCRIPTOR *arg3);
 
-static inline NvBool memmgrIsMemDescSupportedByFla_46f6a7(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, MEMORY_DESCRIPTOR *pMemDesc) {
+static inline NvBool memmgrIsMemDescSupportedByFla_46f6a7(OBJGPU *arg1, struct MemoryManager *arg2, MEMORY_DESCRIPTOR *arg3) {
     return NV_ERR_NOT_SUPPORTED;
+}
+
+NvBool memmgrIsValidFlaPageSize_GA100(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU64 pageSize, NvBool bIsMulticast);
+
+NvBool memmgrIsValidFlaPageSize_GB100(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU64 pageSize, NvBool bIsMulticast);
+
+static inline NvBool memmgrIsValidFlaPageSize_3dd2c9(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU64 pageSize, NvBool bIsMulticast) {
+    return NV_FALSE;
 }
 
 NvU32 memmgrGetHwPteKindFromSwPteKind_TU102(OBJGPU *pGpu, struct MemoryManager *pMemoryManager, NvU32 pteKind);

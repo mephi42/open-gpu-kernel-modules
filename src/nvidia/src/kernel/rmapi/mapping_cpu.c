@@ -30,7 +30,6 @@
 #include "gpu/subdevice/generic_engine.h"
 #include "gpu/subdevice/subdevice.h"
 #include "gpu/mem_mgr/mem_mgr.h"
-#include "mem_mgr/fla_mem.h"
 
 #include "class/cl0000.h" // NV01_NULL_OBJECT
 
@@ -279,12 +278,6 @@ memMap_IMPL
 
     bIsSysmem = (effectiveAddrSpace == ADDR_SYSMEM) || (effectiveAddrSpace == ADDR_EGM);
 
-    if (dynamicCast(pMemoryInfo, FlaMemory) != NULL)
-    {
-        NV_PRINTF(LEVEL_WARNING, "CPU mapping to FLA memory not allowed\n");
-        return NV_ERR_NOT_SUPPORTED;
-    }
-
     //
     // MEMDESC_FLAGS_MAP_SYSCOH_OVER_BAR1 indicates a special mapping type of HW registers,
     // so map it as device memory (uncached).
@@ -326,6 +319,10 @@ memMap_IMPL
             }
             else
             {
+                NvU64               paddr;
+                NvBool              bContigDesc;
+                ADDRESS_TRANSLATION addressTranslation = AT_CPU;
+                NvU64               pageSize;
 
                 //
                 // Allocating mapping for user mode client
@@ -337,31 +334,35 @@ memMap_IMPL
                 //
                 //   TODO: refactor this to either use the new osMapMemoryArea interface or unify with kernel in osMapSystemMemory
 
-                *((NvU64*) pMapParams->ppCpuVirtAddr) = ((NvU64) pKernelMemorySystem->coherentCpuFbBase) +
+                paddr = ((NvU64) pKernelMemorySystem->coherentCpuFbBase) +
                     ((NvU64) memdescGetPhysAddr(pMemDesc, AT_CPU, pMapParams->offset));
+                *((NvU64*) pMapParams->ppCpuVirtAddr) = paddr;
+                bContigDesc = memdescGetContiguity(pMemDesc, addressTranslation);
+                pageSize = memdescGetPageSize(pMemDesc, addressTranslation);
 
                 //
-                // If NUMA onlining is enabled, we will go through the NUMA APIs and don't need
+                // For FB addresses onlined to kernel, we will go through the NUMA APIs and don't need
                 // to store off more map info.
-                // If NUMA onlining is not enabled, fill in the os map information
-                // so we can map it later (inlcuding the memArea so we can map it disconig)
+                // For FB addresses not onlined to kernel(RM reserved memory region or CDMM mode),
+                // fill in the os map information so we can map it later (including the memArea so we
+                // can map it disconig)
                 //
-                if (!osNumaOnliningEnabled(pGpu->pOsGpuInfo))
+                if (!osNumaOnliningEnabled(pGpu->pOsGpuInfo) ||
+                    !IS_COHERENT_CPU_ATS_OFFSET(pGpu, pKernelMemorySystem,
+                                                paddr,
+                                                bContigDesc ? pMapParams->length :
+                                                NV_MIN(pMapParams->length,
+                                                       NV_ALIGN_UP(pMapParams->offset + 1, pageSize) -
+                                                       pMapParams->offset)))
                 {
                     MemoryArea memArea;
                     NvU64    i;
-                    NvU64    pageSize;
                     NvU64    mapGranularity;
                     NvU64    offset;
                     NvU64    mapRangeEndPlus1;
                     NvU64    numRanges = 0;
-                    NvBool   bContigDesc;
-                    ADDRESS_TRANSLATION addressTranslation;
                     MemoryRange mapRange = mrangeMake(pMapParams->offset, pMapParams->length);
 
-                    addressTranslation = AT_CPU;
-                    pageSize = memdescGetPageSize(pMemDesc, addressTranslation);
-                    bContigDesc = memdescGetContiguity(pMemDesc, addressTranslation);
                     mapRangeEndPlus1 = mapRange.start + mapRange.size;
                     // TODO: simplify for dynamic page granularity
                     mapGranularity = bContigDesc ? mapRange.size : pageSize;

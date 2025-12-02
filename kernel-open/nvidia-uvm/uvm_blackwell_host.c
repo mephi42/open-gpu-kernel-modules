@@ -352,9 +352,8 @@ void uvm_hal_blackwell_host_l2_invalidate(uvm_push_t *push, uvm_aperture_t apert
     uvm_gpu_t *gpu = uvm_push_get_gpu(push);
     NvU32 aperture_value;
 
-    if (!gpu->parent->is_integrated_gpu) {
+    if (!gpu->parent->is_integrated_gpu)
         return uvm_hal_ampere_host_l2_invalidate(push, aperture);
-    }
 
     switch (aperture) {
         case UVM_APERTURE_SYS:
@@ -369,9 +368,9 @@ void uvm_hal_blackwell_host_l2_invalidate(uvm_push_t *push, uvm_aperture_t apert
     uvm_hal_membar(gpu, push, UVM_MEMBAR_SYS);
     // Flush dirty
     NV_PUSH_4U(C96F, MEM_OP_A, 0,
-               MEM_OP_B, 0,
-               MEM_OP_C, 0,
-               MEM_OP_D, HWCONST(C96F, MEM_OP_D, OPERATION, L2_FLUSH_DIRTY));
+                     MEM_OP_B, 0,
+                     MEM_OP_C, 0,
+                     MEM_OP_D, HWCONST(C96F, MEM_OP_D, OPERATION, L2_FLUSH_DIRTY));
     // Invalidate
     NV_PUSH_4U(C96F, MEM_OP_A, 0,
                MEM_OP_B, 0,

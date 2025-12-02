@@ -2849,13 +2849,14 @@ bool libspdm_import_fips_selftest_context_to_spdm_context(void *spdm_context,
                                                           void *fips_selftest_context,
                                                           size_t fips_selftest_context_size)
 {
-    libspdm_fips_selftest_context *libspdm_fips_selftest_context;
+    // NVIDIA_EDIT: Need to use libspdm_fips_selftest_context_t to avoid shadows a global declaration error.
+    libspdm_fips_selftest_context *p_fips_selftest_context;
     libspdm_context_t *libspdm_context;
 
     libspdm_context = spdm_context;
-    libspdm_fips_selftest_context = fips_selftest_context;
+    p_fips_selftest_context = fips_selftest_context;
 
-    if ((libspdm_context == NULL) || (libspdm_fips_selftest_context == NULL)) {
+    if ((libspdm_context == NULL) || (p_fips_selftest_context == NULL)) {
         return false;
     }
     if (fips_selftest_context_size != sizeof(libspdm_fips_selftest_context)) {
@@ -2864,7 +2865,7 @@ bool libspdm_import_fips_selftest_context_to_spdm_context(void *spdm_context,
 
     libspdm_copy_mem(&(libspdm_context->fips_selftest_context),
                      sizeof(libspdm_fips_selftest_context),
-                     libspdm_fips_selftest_context, sizeof(libspdm_fips_selftest_context));
+                     p_fips_selftest_context, sizeof(libspdm_fips_selftest_context));
     return true;
 }
 
@@ -2882,20 +2883,22 @@ bool libspdm_export_fips_selftest_context_from_spdm_context(void *spdm_context,
                                                             void *fips_selftest_context,
                                                             size_t fips_selftest_context_size)
 {
-    libspdm_fips_selftest_context *libspdm_fips_selftest_context;
+    // NVIDIA_EDIT:
+    // libspdm_fips_selftest_context *libspdm_fips_selftest_context;
+    libspdm_fips_selftest_context *p_fips_selftest_context;
     libspdm_context_t *libspdm_context;
 
     libspdm_context = spdm_context;
-    libspdm_fips_selftest_context = fips_selftest_context;
+    p_fips_selftest_context = fips_selftest_context;
 
-    if ((libspdm_context == NULL) || (libspdm_fips_selftest_context == NULL)) {
+    if ((libspdm_context == NULL) || (p_fips_selftest_context == NULL)) {
         return false;
     }
     if (fips_selftest_context_size != sizeof(libspdm_fips_selftest_context)) {
         return false;
     }
 
-    libspdm_copy_mem(libspdm_fips_selftest_context,
+    libspdm_copy_mem(p_fips_selftest_context,
                      sizeof(libspdm_fips_selftest_context),
                      &(libspdm_context->fips_selftest_context),
                      sizeof(libspdm_fips_selftest_context));

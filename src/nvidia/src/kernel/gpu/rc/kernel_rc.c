@@ -511,7 +511,7 @@ krcCheckBusError_KERNEL
 
     // Corelogic AER
     if (pCl != NULL && clPcieReadAerCapability(pGpu, pCl, &clAer) == NV_OK &&
-        (clAer.UncorrErrStatusReg != 0 || 
+        (clAer.UncorrErrStatusReg != 0 ||
          (clAer.RooErrStatus & ~CL_AER_ROOT_ERROR_STATUS_ERR_COR_SUBCLASS_MASK) != 0))
     {
         NV_PRINTF(LEVEL_NOTICE,
@@ -663,4 +663,93 @@ void krcDumpNvLog(OBJGPU *pGpu,
         }
     }
 #endif //!(DEBUG || DEVELOP)
+}
+
+/*!
+ * !!!
+ * This function touches registers that usually only GSP-RM touches to halt all engines
+ * and should be called only when GSP is known to be in a bad state and isn't running.
+ * Otherwise, Kernel-RM and GSP-RM could get out of sync.
+ * !!!
+ *
+ * This function is called on critical FW crash to RC and notify an error code to
+ * all user-mode and (optionally) kernel-mode channels, allowing the user mode
+ * apps to fail deterministically.
+ *
+ * @param[in] exceptType           Error code to send to the RC notifiers
+ * @param[in] bSkipKernelChannels  Don't RC and notify kernel channels
+ *
+ */
+void
+krcRcAndNotifyAllChannels_IMPL
+(
+    OBJGPU   *pGpu,
+    KernelRc *pKernelRc,
+    NvU32     exceptType,
+    NvBool    bSkipKernelChannels
+)
+{
+    //
+    // Bug 4503046: UVM currently attributes all errors as global and fails
+    // operations on all GPUs, in addition to the current failing GPU. Right now, the only
+    // case where we should also RC kernel channels is when the GPU has fallen off the bus.
+    //
+
+    KernelFifo       *pKernelFifo = GPU_GET_KERNEL_FIFO(pGpu);
+    KernelChannel    *pKernelChannel;
+    CHANNEL_ITERATOR  chanIt;
+    RMTIMEOUT         timeout;
+
+    NV_ASSERT_OR_RETURN_VOID(pKernelFifo != NULL);
+
+    NV_PRINTF(LEVEL_ERROR, "RC all %schannels for critical error %d.\n",
+              bSkipKernelChannels ? MAKE_NV_PRINTF_STR("user ") : MAKE_NV_PRINTF_STR(""),
+              exceptType);
+
+    // Pass 1: halt all channels.
+    kfifoGetChannelIterator(pGpu, pKernelFifo, &chanIt, INVALID_RUNLIST_ID);
+    while (kfifoGetNextKernelChannel(pGpu, pKernelFifo, &chanIt, &pKernelChannel) == NV_OK)
+    {
+        if (kchannelCheckIsKernel(pKernelChannel) && bSkipKernelChannels)
+        {
+            continue;
+        }
+
+        kfifoStartChannelHalt(pGpu, pKernelFifo, pKernelChannel);
+    }
+
+    //
+    // Pass 2: Wait for the halts to complete, and RC notify the channels.
+    // The channel halts require a preemption, which may not be able to complete
+    // since the GSP is no longer servicing interrupts. Wait for up to the
+    // default GPU timeout value for the preemptions to complete.
+    //
+    gpuSetTimeout(pGpu, GPU_TIMEOUT_DEFAULT, &timeout, 0);
+    kfifoGetChannelIterator(pGpu, pKernelFifo, &chanIt, INVALID_RUNLIST_ID);
+    while (kfifoGetNextKernelChannel(pGpu, pKernelFifo, &chanIt, &pKernelChannel) == NV_OK)
+    {
+        if (kchannelCheckIsKernel(pKernelChannel) && bSkipKernelChannels)
+        {
+            continue;
+        }
+
+        kfifoCompleteChannelHalt(pGpu, pKernelFifo, pKernelChannel, &timeout);
+
+        NV_ASSERT_OK(
+            krcErrorSetNotifier(pGpu, pKernelRc,
+                                pKernelChannel,
+                                exceptType,
+                                kchannelGetEngineType(pKernelChannel),
+                                RC_NOTIFIER_SCOPE_CHANNEL));
+
+        NV_ASSERT_OK(
+            krcErrorSendEventNotifications_HAL(pGpu, pKernelRc,
+                                               pKernelChannel,
+                                               kchannelGetEngineType(pKernelChannel),
+                                               0,
+                                               exceptType,
+                                               RC_NOTIFIER_SCOPE_CHANNEL,
+                                               0,
+                                               NV_FALSE));
+    }
 }

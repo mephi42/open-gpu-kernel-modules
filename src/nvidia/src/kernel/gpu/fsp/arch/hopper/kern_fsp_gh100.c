@@ -30,6 +30,7 @@
 #include "gpu/fsp/kern_fsp.h"
 #include "gpu/fsp/kern_fsp_retval.h"
 #include "gpu/gsp/kernel_gsp.h"
+#include "gpu/gsp/gsp_init_args.h"
 #include "gpu/mem_mgr/mem_mgr.h"
 #include "gpu/pmu/kern_pmu.h"
 #include "gpu/spdm/spdm.h"
@@ -1435,13 +1436,8 @@ kfspPrepareBootCommands_GH100
         {
             frtsOffsetFromEnd += kfspGetExtraReservedMemorySize_HAL(pGpu, pKernelFsp) +
                 kpmuReservedMemorySizeGet(GPU_GET_KERNEL_PMU(pGpu));
-
-            //
-            // 2M alignment seems to be required? Should be NOP unless kpmuReserve
-            // is non 0 and GH100 WAR is needed
-            //
-            frtsOffsetFromEnd = NV_ALIGN_UP(frtsOffsetFromEnd, 0x200000U);
         }
+
         KernelGsp *pKernelGsp = GPU_GET_KERNEL_GSP(pGpu);
 
         //
@@ -1449,12 +1445,26 @@ kfspPrepareBootCommands_GH100
         // This is done to avoid memory with an ECC error that caused the first boot
         // attempt failure. This value will be 0 during normal boot.
         //
-        // Align the margin size to 2MB, as there's potentially an undocumented alignment
-        // requirement (the previous value should already be 2MB-aligned) and the extra
-        // padding won't hurt.
-        //
         if (pKernelGsp != NULL)
-            frtsOffsetFromEnd += NV_ALIGN_UP64(kgspGetWprEndMargin(pGpu, pKernelGsp), 0x200000U);
+        {
+            frtsOffsetFromEnd += kgspGetWprEndMargin(pGpu, pKernelGsp);
+        }
+        //
+        // Ensure that FRTS offset from end is aligned to WPR granularity,
+        // which is sized to 128K, hence using the MMU-related 128K constant define.
+        //
+        // TODO: we use several different constants in our code to refer to WPR's
+        // 128K alignment requirement, they need to be unified.
+        //
+        // Note that we can safely assume that FB size is aligned to this value,
+        // since FB size always has 1MB granularity.
+        //
+        // FRTS size itself is also aligned to WPR granularity (FRTS is expected to be 1MB),
+        // so this will guarantee that a WPR can be created where FRTS starts.
+        //
+        // This also helps us with placing PMU's backing store in the PMU reservation.
+        //
+        frtsOffsetFromEnd = NV_ALIGN_UP(frtsOffsetFromEnd, WPR_ALIGNMENT);
 
         pKernelFsp->pCotPayload->frtsVidmemOffset = frtsOffsetFromEnd;
         pKernelFsp->pCotPayload->frtsVidmemSize = frtsSize;

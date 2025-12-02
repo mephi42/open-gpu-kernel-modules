@@ -740,6 +740,8 @@ static void RmIsrBottomHalf(
     while ((pGpu = gpumgrGetNextGpu(gpuMask, &gpuInstance)) != NULL)
     {
 
+        gpumgrSetCurrentGpuInstance(pGpu->gpuInstance);
+
         pIntr = GPU_GET_INTR(pGpu);
         pDisp = GPU_GET_DISP(pGpu);
 
@@ -763,6 +765,7 @@ static void RmIsrBottomHalf(
             }
         }
 
+        gpumgrSetCurrentGpuInstance(NV_U32_MAX);
     }
 
     gpuInstance = 0;

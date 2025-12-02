@@ -334,7 +334,7 @@ _kmemsysGetFbInfos
             }
             case NV2080_CTRL_FB_INFO_INDEX_TOTAL_RAM_SIZE:
             {
-                if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+                if (pGpu->pGpuArch->bGpuArchIsZeroFb)
                 {
                     data = 0;
                     NV_PRINTF(LEVEL_INFO,
@@ -373,7 +373,7 @@ _kmemsysGetFbInfos
             }
             case NV2080_CTRL_FB_INFO_INDEX_RAM_SIZE:
             {
-                if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+                if (pGpu->pGpuArch->bGpuArchIsZeroFb)
                 {
                     data = 0;
                     NV_PRINTF(LEVEL_INFO,
@@ -409,7 +409,7 @@ _kmemsysGetFbInfos
             }
             case NV2080_CTRL_FB_INFO_INDEX_USABLE_RAM_SIZE:
             {
-                if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+                if (pGpu->pGpuArch->bGpuArchIsZeroFb)
                 {
                     data = 0;
                     NV_PRINTF(LEVEL_INFO,
@@ -455,7 +455,7 @@ _kmemsysGetFbInfos
                 {
                     NvU64 size;
 
-                    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+                    if (pGpu->pGpuArch->bGpuArchIsZeroFb)
                     {
                         data = 0;
                         NV_PRINTF(LEVEL_INFO,
@@ -520,6 +520,13 @@ _kmemsysGetFbInfos
             }
             case NV2080_CTRL_FB_INFO_INDEX_HEAP_FREE:
             {
+                if (pGpu->pGpuArch->bGpuArchIsZeroFb)
+                {
+                    data = 0;
+                    NV_PRINTF(LEVEL_INFO,
+                              "[zero-FB, No local HEAP] HEAP_SIZE = 0\n");
+                    break;
+                }
                 if (bIsClientMIGMonitor || bIsClientMIGProfiler)
                 {
                     NvU64 val = 0;
@@ -716,7 +723,7 @@ _kmemsysGetFbInfos
             case NV2080_CTRL_FB_INFO_INDEX_FB_IS_BROKEN:
             {
                 data = (pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB) &&
-                        !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB)) ? 1 : 0;
+                        !pGpu->pGpuArch->bGpuArchIsZeroFb) ? 1 : 0;
                 break;
             }
             case NV2080_CTRL_FB_INFO_INDEX_L2CACHE_ONLY_MODE:
@@ -858,7 +865,7 @@ _kmemsysGetFbInfos
             }
             case NV2080_CTRL_FB_INFO_INDEX_IS_ZERO_FB:
             {
-                if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+                if (pGpu->pGpuArch->bGpuArchIsZeroFb)
                 {
                     data = 1;
                 }
@@ -1312,6 +1319,67 @@ subdeviceCtrlCmdFbGetStaticBar1Info_IMPL
     }
 
     return status;
+}
+
+/*!
+ * @brief This call can be used to get uGPU memory info
+ *
+ * Lock Requirements:
+ *      Assert that API and GPUs lock held on entry
+ *
+ * @param[in] pSubdevice Subdevice
+ * @param[in] pParams    pointer to control parameters
+ *
+ * @return NV_OK When successful
+ *         NV_ERR_INVALID_STATE or NV_ERR_NOT_SUPPORTED Otherwise
+ */
+NV_STATUS
+subdeviceCtrlCmdFbGetUgpuMemoryInfo_IMPL
+(
+    Subdevice *pSubdevice,
+    NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_PARAMS *pParams
+)
+{
+    OBJGPU             *pGpu = GPU_RES_GET_GPU(pSubdevice);
+
+    // Silence build error, since rmDeviceGpuLockIsOwner does not "use" its parameter.
+    (void)(pGpu);
+
+    NV_ASSERT_OR_RETURN(rmapiLockIsOwner() && rmDeviceGpuLockIsOwner(pGpu->gpuInstance),
+        NV_ERR_INVALID_LOCK_STATE);
+    
+    MemoryManager      *pMemoryManager = GPU_GET_MEMORY_MANAGER(pGpu);
+    Heap               *pHeap = GPU_GET_HEAP(pGpu);
+    NvBool              bIsPmaEnabled = memmgrIsPmaInitialized(pMemoryManager);
+
+    ct_assert(PMA_MAX_LOCALIZED_REGION_COUNT <= NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_MAX_UGPUS);
+
+    if (bIsPmaEnabled)
+    {
+        pmaGetTotalMemory(pHeap->pPmaObject, &pParams->totalMemory);
+        pmaGetFreeMemory(pHeap->pPmaObject, &pParams->freeMemory);
+        for (NvU32 i = 0; i < NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_MAX_UGPUS; ++i)
+        {
+            if (i < PMA_MAX_LOCALIZED_REGION_COUNT)
+            {
+                pmaGetUgpuTotalMemory(pHeap->pPmaObject, i, &pParams->ugpuTotalMemory[i]);
+                pmaGetUgpuFreeMemory(pHeap->pPmaObject, i, &pParams->ugpuFreeMemory[i]);
+            }
+            else
+            {
+                pParams->ugpuTotalMemory[i] = 0;
+                pParams->ugpuFreeMemory[i] = 0;
+            }
+        }
+    }
+    else
+    {
+        // Localized allocations require PMA.
+        return NV_ERR_NOT_SUPPORTED;
+    }
+
+    return NV_OK;
+
 }
 
 static NV_STATUS

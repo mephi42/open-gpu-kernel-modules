@@ -105,9 +105,15 @@
 #include "conftest/patches.h"
 #include "detect-self-hosted.h"
 
+#if defined(NV_BPMP_MRQ_HAS_STRAP_SET) && defined(NV_PM_RUNTIME_AVAILABLE)
+#include <soc/tegra/bpmp-abi.h>
+#endif
+
 #define RM_THRESHOLD_TOTAL_IRQ_COUNT     100000
 #define RM_THRESHOLD_UNAHNDLED_IRQ_COUNT 99900
 #define RM_UNHANDLED_TIMEOUT_US          100000
+
+#define TEGRA264_STRAP_NV_FUSE_CTRL_OPT_GPU 1U
 
 MODULE_LICENSE("Dual MIT/GPL");
 
@@ -522,6 +528,9 @@ nvlink_drivers_init(void)
     return rc;
 }
 
+int nv_init_page_pools(void);
+void nv_destroy_page_pools(void);
+
 static void
 nv_module_state_exit(nv_stack_t *sp)
 {
@@ -531,6 +540,8 @@ nv_module_state_exit(nv_stack_t *sp)
 
     nv_kthread_q_stop(&nv_deferred_close_kthread_q);
     nv_kthread_q_stop(&nv_kthread_q);
+
+    nv_destroy_page_pools();
 
     nv_lock_destroy_locks(sp, nv);
 }
@@ -549,6 +560,12 @@ nv_module_state_init(nv_stack_t *sp)
     }
 
     rc = nv_kthread_q_init(&nv_kthread_q, "nv_queue");
+    if (rc != 0)
+    {
+        goto exit;
+    }
+
+    rc = nv_init_page_pools();
     if (rc != 0)
     {
         goto exit;
@@ -585,6 +602,7 @@ nv_module_state_init(nv_stack_t *sp)
 exit:
     if (rc < 0)
     {
+        nv_destroy_page_pools();
         nv_lock_destroy_locks(sp, nv);
     }
 
@@ -1481,16 +1499,8 @@ static int nv_start_device(nv_state_t *nv, nvidia_stack_t *sp)
         goto failed_release_irq;
     }
 
-    {
-        const NvU8 *uuid = rm_get_gpu_uuid_raw(sp, nv);
-
-        if (uuid != NULL)
-        {
-#if defined(NV_UVM_ENABLE)
-            nv_uvm_notify_start_device(uuid);
-#endif
-        }
-    }
+    /* Generate and cache the UUID for future callers */
+    (void)rm_get_gpu_uuid_raw(sp, nv);
 
     if (!(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
     {
@@ -1675,6 +1685,7 @@ static int nv_open_device(nv_state_t *nv, nvidia_stack_t *sp)
     nv_assert_not_in_gpu_exclusion_list(sp, nv);
 
     NV_ATOMIC_INC(nvl->usage_count);
+
     return 0;
 }
 
@@ -2037,18 +2048,6 @@ static void nv_stop_device(nv_state_t *nv, nvidia_stack_t *sp)
      */
     rm_ref_dynamic_power(sp, nv, NV_DYNAMIC_PM_FINE);
 
-#if defined(NV_UVM_ENABLE)
-    {
-        const NvU8* uuid;
-        // Inform UVM before disabling adapter. Use cached copy
-        uuid = nv_get_cached_uuid(nv);
-        if (uuid != NULL)
-        {
-            // this function cannot fail
-            nv_uvm_notify_stop_device(uuid);
-        }
-    }
-#endif
     /* Adapter is already shutdown as part of nvidia_pci_remove */
     if (!nv->removed)
     {
@@ -2373,6 +2372,7 @@ out:
     return rc;
 }
 
+
 int
 nvidia_ioctl(
     struct inode *inode,
@@ -2415,7 +2415,7 @@ nvidia_ioctl(
             goto done_early;
         }
 
-        if (NV_COPY_FROM_USER(&ioc_xfer, arg_ptr, sizeof(ioc_xfer)))
+        if (copy_from_user(&ioc_xfer, arg_ptr, sizeof(ioc_xfer)))
         {
             nv_printf(NV_DBG_ERRORS,
                     "NVRM: failed to copy in ioctl XFER data!\n");
@@ -2443,7 +2443,7 @@ nvidia_ioctl(
         goto done_early;
     }
 
-    if (NV_COPY_FROM_USER(arg_copy, arg_ptr, arg_size))
+    if (copy_from_user(arg_copy, arg_ptr, arg_size))
     {
         nv_printf(NV_DBG_ERRORS, "NVRM: failed to copy in ioctl data!\n");
         status = -EFAULT;
@@ -2503,7 +2503,7 @@ nvidia_ioctl(
     {
         case NV_ESC_QUERY_DEVICE_INTR:
         {
-            nv_ioctl_query_device_intr *query_intr = arg_copy;
+            nv_ioctl_query_device_intr_t *query_intr = arg_copy;
 
             NV_ACTUAL_DEVICE_ONLY(nv);
 
@@ -2773,7 +2773,7 @@ done_early:
     {
         if (status != -EFAULT)
         {
-            if (NV_COPY_TO_USER(arg_ptr, arg_copy, arg_size))
+            if (copy_to_user(arg_ptr, arg_copy, arg_size))
             {
                 nv_printf(NV_DBG_ERRORS, "NVRM: failed to copy out ioctl data\n");
                 status = -EFAULT;
@@ -4497,16 +4497,18 @@ nvidia_suspend(
     }
     nv = NV_STATE_PTR(nvl);
 
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     /* Handle GenPD suspend sequence for Tegra PCI iGPU */
-    if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled == NV_TRUE)
+    if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled)
     {
         /* Turn on the GPU power before saving PCI configuration */
         pm_runtime_forbid(dev);
 
+        dev_pm_genpd_suspend(dev);
+
         /*
          * If a PCI device is attached to a GenPD power domain,
-         * resume_early callback in PCI framework will not be
+         * pci_pm_resume_noirq callback in PCI framework will not be
          * executed during static resume. That leads to the PCI
          * configuration couldn't be properly restored.
          *
@@ -4582,7 +4584,7 @@ nvidia_resume(
 {
     NV_STATUS status = NV_OK;
     struct pci_dev *pci_dev;
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     struct pci_bus *bus;
     struct pci_host_bridge *bridge;
     struct device *ctrl;
@@ -4601,9 +4603,9 @@ nvidia_resume(
     }
     nv = NV_STATE_PTR(nvl);
 
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     /* Handle GenPD resume sequence for Tegra PCI iGPU */
-    if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled == NV_TRUE)
+    if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled)
     {
         // Get PCI controller device
         bus  = pci_dev->bus;
@@ -4621,6 +4623,8 @@ nvidia_resume(
         nv_printf(NV_DBG_INFO,
             "NVRM: restore GPU pm_domain after suspend\n");
         dev->pm_domain = ctrl->pm_domain;
+
+        dev_pm_genpd_resume(dev);
 
         pm_runtime_allow(dev);
     }
@@ -4726,7 +4730,7 @@ nv_suspend_devices(
     {
         nv = NV_STATE_PTR(nvl);
         dev = nvl->dev;
-        if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled == NV_TRUE)
+        if (dev_is_pci(dev) && nv->is_tegra_pci_igpu_rg_enabled)
         {
             nv_printf(NV_DBG_INFO,
                 "NVRM: GPU suspend through procfs is forbidden with Tegra iGPU\n");
@@ -4979,32 +4983,35 @@ int nv_pmops_runtime_suspend(
     struct device *dev
 )
 {
+    int err = 0;
 #if defined(CONFIG_PM_DEVFREQ)
     struct pci_dev *pci_dev = to_pci_dev(dev);
     nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
-#endif
-    int err = 0;
 
-    err = nvidia_transition_dynamic_power(dev, NV_TRUE);
-    if (err)
-    {
-        return err;
-    }
-
-#if defined(CONFIG_PM_DEVFREQ)
     if (nvl->devfreq_suspend != NULL)
     {
         err = nvl->devfreq_suspend(dev);
         if (err)
         {
-            goto nv_pmops_runtime_suspend_exit;
+            return err;
         }
+    }
+#endif
+
+    err = nvidia_transition_dynamic_power(dev, NV_TRUE);
+    if (err)
+    {
+        goto nv_pmops_runtime_suspend_exit;
     }
 
     return err;
 
 nv_pmops_runtime_suspend_exit:
-    nvidia_transition_dynamic_power(dev, NV_FALSE);
+#if defined(CONFIG_PM_DEVFREQ)
+    if (nvl->devfreq_resume != NULL)
+    {
+        nvl->devfreq_resume(dev);
+    }
 #endif
     return err;
 }
@@ -5013,11 +5020,17 @@ int nv_pmops_runtime_resume(
     struct device *dev
 )
 {
+    int err = 0;
 #if defined(CONFIG_PM_DEVFREQ)
     struct pci_dev *pci_dev = to_pci_dev(dev);
     nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
 #endif
-    int err;
+
+    err = nvidia_transition_dynamic_power(dev, NV_FALSE);
+    if (err)
+    {
+        return err;
+    }
 
 #if defined(CONFIG_PM_DEVFREQ)
     if (nvl->devfreq_resume != NULL)
@@ -5030,22 +5043,13 @@ int nv_pmops_runtime_resume(
     }
 #endif
 
-    err = nvidia_transition_dynamic_power(dev, NV_FALSE);
+    return err;
+
 #if defined(CONFIG_PM_DEVFREQ)
-    if (err)
-    {
-        goto nv_pmops_runtime_resume_exit;
-    }
-
-    return err;
-
 nv_pmops_runtime_resume_exit:
-    if (nvl->devfreq_suspend != NULL)
-    {
-        nvl->devfreq_suspend(dev);
-    }
-#endif
+    nvidia_transition_dynamic_power(dev, NV_TRUE);
     return err;
+#endif
 }
 #endif /* defined(CONFIG_PM) */
 
@@ -5101,8 +5105,6 @@ NV_STATUS NV_API_CALL nv_set_primary_vga_status(
     nv_state_t *nv
 )
 {
-    /* IORESOURCE_ROM_SHADOW wasn't added until 2.6.10 */
-#if defined(IORESOURCE_ROM_SHADOW)
     nv_linux_state_t *nvl;
     struct pci_dev *pci_dev;
 
@@ -5112,9 +5114,6 @@ NV_STATUS NV_API_CALL nv_set_primary_vga_status(
     nv->primary_vga = ((NV_PCI_RESOURCE_FLAGS(pci_dev, PCI_ROM_RESOURCE) &
         IORESOURCE_ROM_SHADOW) == IORESOURCE_ROM_SHADOW);
     return NV_OK;
-#else
-    return NV_ERR_NOT_SUPPORTED;
-#endif
 }
 
 NvBool NV_API_CALL nv_requires_dma_remap(
@@ -5856,7 +5855,7 @@ NvBool NV_API_CALL nv_pci_tegra_register_power_domain
     NvBool attach
 )
 {
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
     struct pci_dev *pci_dev = nvl->pci_dev;
     struct device_node *node = pci_dev->dev.of_node;
@@ -5891,7 +5890,7 @@ NvBool NV_API_CALL nv_pci_tegra_pm_init
     nv_state_t *nv
 )
 {
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
     struct pci_dev *pci_dev = nvl->pci_dev;
     struct pci_bus *bus = pci_dev->bus;
@@ -5918,8 +5917,9 @@ NvBool NV_API_CALL nv_pci_tegra_pm_init
     // Use autosuspend for GPU with idleness threshold 500 ms
     pm_runtime_set_autosuspend_delay(&pci_dev->dev, 500);
     pm_runtime_use_autosuspend(&pci_dev->dev);
-#endif
     return NV_TRUE;
+#endif
+    return NV_FALSE;
 }
 
 void NV_API_CALL nv_pci_tegra_pm_deinit
@@ -5927,7 +5927,7 @@ void NV_API_CALL nv_pci_tegra_pm_deinit
     nv_state_t *nv
 )
 {
-#if defined(NV_PM_RUNTIME_AVAILABLE)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
     struct pci_dev *pci_dev = nvl->pci_dev;
     struct pci_bus *bus = pci_dev->bus;
@@ -6297,6 +6297,82 @@ void NV_API_CALL nv_get_screen_info(
     }
 }
 
+void NV_API_CALL nv_set_gpu_pg_mask
+(
+    nv_state_t *nv
+)
+{
+/*
+ * This function is used to set the GPU PG mask for the Tegra PCI iGPU.
+ * After sending the PG mask to BPMP, GPU needs a FLR(function level reset) or
+ * a GPU reset to make PG mask effective.
+ *
+ * As Tegra iGPU rail-ungate itself is a GPU reset or GPU cold-boot, GPU PG mask could
+ * rely on it and it would be triggered when runtime PM is enabled.
+ *
+ * Make sure the GPU PG feature is allowable only when runtime PM is supported here.
+ */
+#if defined(NV_BPMP_MRQ_HAS_STRAP_SET)
+#if defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
+    struct mrq_strap_request request;
+    NvS32 ret, api_ret;
+    NV_STATUS status = NV_ERR_NOT_SUPPORTED;
+
+
+    /*
+     * Only certain Tegra which supports Rail-Gating could use this feature
+     * because making PG mask effective requires a GPU FLR or GPU cold-boot.
+     */
+    if (!nv->is_tegra_pci_igpu_rg_enabled || (nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: gpu_pg_mask is not supported.\n");
+        return;
+    }
+
+    // overlay the gpu_pg_mask from module parameter
+    if (NVreg_TegraGpuPgMask != NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT) {
+        nv_printf(NV_DBG_INFO, "NVRM: overlay gpu_pg_mask with module parameter.\n");
+        nv->tegra_pci_igpu_pg_mask = NVreg_TegraGpuPgMask;
+    }
+
+    if (nv->tegra_pci_igpu_pg_mask == NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT) {
+        nv_printf(NV_DBG_INFO, "NVRM: Using default gpu_pg_mask. "\
+                                    "There's no need to send BPMP MRQ.\n");
+        return;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.cmd = STRAP_SET;
+    request.id = TEGRA264_STRAP_NV_FUSE_CTRL_OPT_GPU;
+    request.value = nv->tegra_pci_igpu_pg_mask;
+
+    status = nv_bpmp_send_mrq(nv,
+                           MRQ_STRAP,
+                           &request,
+                           sizeof(request),
+                           NULL,
+                           0,
+                           &ret,
+                           &api_ret);
+
+    if (status != NV_OK)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: failed to call bpmp_send_mrq\n");
+        return;
+    }
+    if (api_ret)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: BPMP call for gpu_pg_mask %d failed, rv = %d\n",\
+                                                    nv->tegra_pci_igpu_pg_mask, api_ret);
+        return;
+    }
+
+    nv_printf(NV_DBG_INFO, "NVRM: set gpu_pg_mask %d success\n", nv->tegra_pci_igpu_pg_mask);
+#else
+    nv_printf(NV_DBG_INFO, "NVRM: gpu_pg_mask configuration is not supported\n");
+#endif // defined(NV_PM_RUNTIME_AVAILABLE) && defined(NV_PM_DOMAIN_AVAILABLE)
+#endif // defined(NV_BPMP_MRQ_HAS_STRAP_SET)
+}
 
 module_init(nvidia_init_module);
 module_exit(nvidia_exit_module);

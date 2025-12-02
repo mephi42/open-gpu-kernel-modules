@@ -60,7 +60,6 @@
 #include <class/cl84a0.h>               // NV01_MEMORY_LIST_FBMEM
 #include <class/cl84a0.h>               // NV01_MEMORY_LIST_OBJECT
 #include <class/cl00f1.h>               // NV_IMEX_SESSION
-#include <class/cl00f3.h>               // NV01_MEMORY_FLA
 #include <class/cl00e0.h>               // NV_MEMORY_EXPORT
 #include <class/cl0050.h>               // NV_CE_UTILS
 #include <class/cl00f8.h>               // NV_MEMORY_FABRIC
@@ -76,6 +75,7 @@
 #include <nvos.h>                       // NV01_EVENT_KERNEL_CALLBACK_EX
 #include <class/cl0004.h>               // NV01_TIMER
 #include <class/cl0090.h>               // KERNEL_GRAPHICS_CONTEXT
+#include <class/cl008f.h>               // KERNEL_WATCHDOG
 #include <class/cl0100.h>               // LOCK_STRESS_OBJECT
 #include <class/cl0101.h>               // LOCK_TEST_RELAXED_DUP_OBJECT
 #include <class/cl506f.h>               // NV50_CHANNEL_GPFIFO
@@ -399,10 +399,6 @@
 #define NV_IMEX_SESSION                          (0x000000f1)
 #endif
 
-#ifndef NV01_MEMORY_FLA
-#define NV01_MEMORY_FLA                          (0x000000f3)
-#endif
-
 #ifndef NV_MEMORY_EXPORT
 #define NV_MEMORY_EXPORT                         (0x000000e0)
 #endif
@@ -485,6 +481,10 @@
 
 #ifndef KERNEL_GRAPHICS_CONTEXT
 #define KERNEL_GRAPHICS_CONTEXT                  (0x00000090)
+#endif
+
+#ifndef KERNEL_WATCHDOG
+#define KERNEL_WATCHDOG                          (0x0000008f)
 #endif
 
 #ifndef LOCK_STRESS_OBJECT

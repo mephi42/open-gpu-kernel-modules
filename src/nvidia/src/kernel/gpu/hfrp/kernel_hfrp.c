@@ -388,20 +388,23 @@ khfrpConstructEngine_IMPL
 {
     NvU32 data32;
 
+    // regkey can only disable DSTATE HFRP
     if (osReadRegistryDword(pGpu, NV_REG_STR_RM_ENABLE_DSTATE_HFRP, &data32) == NV_OK &&
-        data32 == NV_REG_STR_RM_ENABLE_DSTATE_HFRP_TRUE)
-    {
-        pKernelHfrp->setProperty(pKernelHfrp, PDB_PROP_KHFRP_IS_ENABLED, NV_TRUE);
-    }
-    else
+        data32 == NV_REG_STR_RM_ENABLE_DSTATE_HFRP_FALSE)
     {
         pKernelHfrp->setProperty(pKernelHfrp, PDB_PROP_KHFRP_IS_ENABLED, NV_FALSE);
         return NV_OK;
     }
 
+    // regkey can only disable HDA DSTATE HFRP
+    if (osReadRegistryDword(pGpu, NV_REG_STR_RM_ENABLE_HDA_DSTATE_HFRP, &data32) == NV_OK &&
+        data32 == NV_REG_STR_RM_ENABLE_HDA_DSTATE_HFRP_FALSE)
+    {
+        pKernelHfrp->setProperty(pKernelHfrp, PDB_PROP_KHFRP_HDA_IS_ENABLED, NV_FALSE);
+    }
+
     khfrpCommonConstruct(pKernelHfrp);
 
-//    khfrpIoApertureConstruct(pGpu, pKernelHfrp);
     return NV_OK;
 }
 
@@ -758,7 +761,8 @@ khfrpPollOnIrqRm_IMPL
     OBJGPU *pGpu = ENG_GET_GPU(pKernelHfrp);
     RMTIMEOUT timeout;
     NvU32 data = bData ? 1U : 0U;
-    gpuSetTimeout(pGpu, GPU_TIMEOUT_DEFAULT, &timeout, 0);
+    gpuSetTimeout(pGpu, GPU_TIMEOUT_DEFAULT, &timeout,
+        (GPU_TIMEOUT_FLAGS_BYPASS_THREAD_STATE | GPU_TIMEOUT_FLAGS_DEFAULT));
     while (khfrpReadBit(pKernelHfrp, irqRegAddr, bitIndex) != data)
     {
         if (gpuCheckTimeout(pGpu, &timeout) == NV_ERR_TIMEOUT)
@@ -787,6 +791,7 @@ khfrpPostCommandBlocking_IMPL
     HFRP_MAILBOX_IO_INFO *pMailboxIoInfo;
     NV_STATUS status;
     NV_STATUS status1;
+    OBJGPU *pGpu = ENG_GET_GPU(pKernelHfrp);
 
     if (pKernelHfrp->getProperty(pKernelHfrp, PDB_PROP_KHFRP_IS_ENABLED) == NV_FALSE)
     {
@@ -816,6 +821,7 @@ khfrpPostCommandBlocking_IMPL
         return status;
     }
     
+    pGpu->setProperty(pGpu, PDB_PROP_GPU_HFRP_IS_KERNEL_OBJECT_ACTIVE_WAR, NV_TRUE);
     khfrpWriteBit_IMPL(pKernelHfrp, pMailboxIoInfo->hfrpIrqInSetAddr,
                     HFRP_IRQ_DOORBELL_BIT_INDEX, 1U);
 
@@ -828,6 +834,7 @@ khfrpPostCommandBlocking_IMPL
             khfrpFreeSequenceId_IMPL(pKernelHfrp, sequenceId);
             NV_PRINTF(LEVEL_INFO,
                       "Timed out while waiting to receive response for the command posted\n");
+            pGpu->setProperty(pGpu, PDB_PROP_GPU_HFRP_IS_KERNEL_OBJECT_ACTIVE_WAR, NV_FALSE);
             return status;
         }
 
@@ -835,10 +842,12 @@ khfrpPostCommandBlocking_IMPL
         if (status == NV_ERR_INVALID_STATE)
         {
             khfrpFreeSequenceId_IMPL(pKernelHfrp, sequenceId);
+            pGpu->setProperty(pGpu, PDB_PROP_GPU_HFRP_IS_KERNEL_OBJECT_ACTIVE_WAR, NV_FALSE);
             return status;
         }
         if (khfrpIsSequenceIdFree_IMPL(pKernelHfrp, sequenceId))
         {
+            pGpu->setProperty(pGpu, PDB_PROP_GPU_HFRP_IS_KERNEL_OBJECT_ACTIVE_WAR, NV_FALSE);
             return status1;
         }
     }

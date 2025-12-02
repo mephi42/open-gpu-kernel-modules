@@ -138,18 +138,24 @@ void krcWatchdogTimerProc
     void   *data
 )
 {
-    //
-    // These calls shouldn't occur during a hibernate/standby enter or resume
-    // sequence or if the GPU is lost, which will cause a system hang.
-    //
-    if (gpuIsGpuFullPower(pGpu) &&
-        !pGpu->getProperty(pGpu, PDB_PROP_GPU_IS_LOST))
+    KernelWatchdog *pKernelWatchdog = (KernelWatchdog *)data;
+    
+    // TODO: (Bug 4154640) Below functions are not ready to support KernelWatchdog, so bail out if pKernelWatchdog is not NULL
+    if (pKernelWatchdog == NULL)
     {
-        KernelRc *pKernelRc = GPU_GET_KERNEL_RC(pGpu);
+        //
+        // These calls shouldn't occur during a hibernate/standby enter or resume
+        // sequence or if the GPU is lost, which will cause a system hang.
+        //
+        if (gpuIsGpuFullPower(pGpu) &&
+            !pGpu->getProperty(pGpu, PDB_PROP_GPU_IS_LOST))
+        {
+            KernelRc *pKernelRc = GPU_GET_KERNEL_RC(pGpu);
 
-        krcWatchdog_HAL(pGpu, pKernelRc);
-        krcWatchdogCallbackVblankRecovery(pGpu, pKernelRc);
-        krcWatchdogCallbackPerf_HAL(pGpu, pKernelRc);
+            krcWatchdog_HAL(pGpu, pKernelRc);
+            krcWatchdogCallbackVblankRecovery(pGpu, pKernelRc);
+            krcWatchdogCallbackPerf_HAL(pGpu, pKernelRc);
+        }
     }
 }
 
@@ -198,7 +204,7 @@ krcWatchdog_IMPL
         //
         if (!(pKernelRc->watchdog.flags & WATCHDOG_FLAGS_INITIALIZED))
         {
-            rmStatus = krcWatchdogInit_HAL(pGpu, pKernelRc);
+            rmStatus = krcWatchdogInit_HAL(pGpu, pKernelRc, NULL);
 
             if (rmStatus!= NV_OK)
             {
@@ -220,7 +226,7 @@ krcWatchdog_IMPL
             pKernelRc->watchdog.errorContext->status = 0;
 
             // reinit the pushbuffer image and kickoff again
-            krcWatchdogInitPushbuffer_HAL(pGpu, pKernelRc);
+            krcWatchdogInitPushbuffer_HAL(pGpu, pKernelRc, NULL);
 
             // Run Immediately
             pKernelRc->watchdogPersistent.nextRunTime = 0;
@@ -337,7 +343,7 @@ krcWatchdog_IMPL
             SLI_LOOP_END;
 
             // Set the put pointer on our buffer.
-            krcWatchdogWriteNotifierToGpfifo(pGpu, pKernelRc);
+            krcWatchdogWriteNotifierToGpfifo(pGpu, pKernelRc, NULL);
         }
     }
 }

@@ -197,6 +197,8 @@ typedef struct
         unsigned                          max_resets;
 
         NvU64                                 pin_ns;
+
+        NvS8                              lapse_stat;
     } params;
 
     uvm_va_space_t                         *va_space;
@@ -262,12 +264,21 @@ static unsigned uvm_perf_thrashing_pin_threshold = UVM_PERF_THRASHING_PIN_THRESH
 
 // TODO: Bug 1768615: [uvm] Automatically tune default values for thrashing
 // detection/prevention parameters
-#define UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT 500
+#define UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT 500ULL
 #define UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT_EMULATION (UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT * 800)
+
+#define UVM_PERF_THRASHING_LAPSE_USEC_MAX (UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT * 1000)
+#define UVM_PERF_THRASHING_LAPSE_USEC_MIN (UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT / 100)
 
 // Lapse of time in microseconds that determines if two consecutive events on
 // the same page can be considered thrashing
 static unsigned uvm_perf_thrashing_lapse_usec = UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT;
+
+#define UVM_PERF_LAPSE_VOTE_THRESHOLD   32
+
+// Number of lapse intervals greater than uvm_perf_thrashing_lapse_usec,
+// big enough to consider readjusting.
+static unsigned int uvm_perf_lapse_vote_threshold = UVM_PERF_LAPSE_VOTE_THRESHOLD;
 
 #define UVM_PERF_THRASHING_NAP_DEFAULT 1
 #define UVM_PERF_THRASHING_NAP_MAX     100
@@ -309,6 +320,7 @@ module_param(uvm_perf_thrashing_enable,        uint, S_IRUGO);
 module_param(uvm_perf_thrashing_threshold,     uint, S_IRUGO);
 module_param(uvm_perf_thrashing_pin_threshold, uint, S_IRUGO);
 module_param(uvm_perf_thrashing_lapse_usec,    uint, S_IRUGO);
+module_param(uvm_perf_lapse_vote_threshold,    uint, S_IRUGO);
 module_param(uvm_perf_thrashing_nap,           uint, S_IRUGO);
 module_param(uvm_perf_thrashing_epoch,         uint, S_IRUGO);
 module_param(uvm_perf_thrashing_pin,           uint, S_IRUGO);
@@ -324,6 +336,7 @@ static bool g_uvm_perf_thrashing_enable;
 static unsigned g_uvm_perf_thrashing_threshold;
 static unsigned g_uvm_perf_thrashing_pin_threshold;
 static NvU64 g_uvm_perf_thrashing_lapse_usec;
+static unsigned g_uvm_perf_lapse_vote_threshold;
 static NvU64 g_uvm_perf_thrashing_nap;
 static NvU64 g_uvm_perf_thrashing_epoch;
 static NvU64 g_uvm_perf_thrashing_pin;
@@ -1607,6 +1620,29 @@ static uvm_perf_thrashing_hint_t get_hint_for_migration_thrashing(va_space_thras
     return hint;
 }
 
+static void adjust_thrashing_lapse(va_space_thrashing_info_t *ti, NvU64 lapse)
+{
+    // If lapse is non-default, i.e. provided by user explicitly, don't adjust it
+    if (g_uvm_perf_thrashing_lapse_usec != UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT)
+        return;
+
+    // Update statistics without if-else conditionals.
+    ti->params.lapse_stat += 2 * !(lapse < ti->params.lapse_ns) - 1;
+
+    // Voting capped exponential adjustment
+    if (ti->params.lapse_stat >= g_uvm_perf_lapse_vote_threshold &&
+        ti->params.lapse_ns < UVM_PERF_THRASHING_LAPSE_USEC_MAX * 1000)
+        ti->params.lapse_ns += min(ti->params.lapse_ns / 8, UVM_PERF_THRASHING_LAPSE_USEC_MAX / 10 * 1000);
+    else
+    if (-ti->params.lapse_stat <= -(int)g_uvm_perf_lapse_vote_threshold &&
+        ti->params.lapse_ns > UVM_PERF_THRASHING_LAPSE_USEC_MIN * 1000)
+        ti->params.lapse_ns -= max(ti->params.lapse_ns / 8, UVM_PERF_THRASHING_LAPSE_USEC_MIN * 1000);
+    else
+        return;
+
+    ti->params.lapse_stat /= 2;
+}
+
 // Function called on fault that tells the fault handler if any operation
 // should be performed to minimize thrashing. The logic is as follows:
 //
@@ -1709,6 +1745,8 @@ uvm_perf_thrashing_hint_t uvm_perf_thrashing_get_hint(uvm_va_block_t *va_block,
     UVM_ASSERT(!uvm_processor_mask_test(&page_thrashing->throttled_processors, requester));
 
     last_time_stamp = page_thrashing_get_time_stamp(page_thrashing);
+
+    adjust_thrashing_lapse(va_space_thrashing, time_stamp - last_time_stamp);
 
     // If the lapse since the last thrashing event is longer than a thrashing
     // lapse we are no longer thrashing
@@ -2011,6 +2049,8 @@ NV_STATUS uvm_perf_thrashing_init(void)
                                          UVM_PERF_THRASHING_PIN_THRESHOLD_MAX);
 
     INIT_THRASHING_PARAMETER_NONZERO(uvm_perf_thrashing_lapse_usec, UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT);
+
+    INIT_THRASHING_PARAMETER_NONZERO(uvm_perf_lapse_vote_threshold, UVM_PERF_THRASHING_LAPSE_USEC_DEFAULT);
 
     INIT_THRASHING_PARAMETER_NONZERO_MAX(uvm_perf_thrashing_nap,
                                          UVM_PERF_THRASHING_NAP_DEFAULT,

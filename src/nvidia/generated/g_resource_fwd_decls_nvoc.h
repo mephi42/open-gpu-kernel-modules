@@ -513,6 +513,17 @@ typedef struct KernelCtxShareApi KernelCtxShareApi;
 #define __nvoc_class_id_KernelCtxShareApi 0x1f9af1
 #endif /* __nvoc_class_id_KernelCtxShareApi */
 
+struct KernelWatchdog;
+
+#ifndef __NVOC_CLASS_KernelWatchdog_TYPEDEF__
+#define __NVOC_CLASS_KernelWatchdog_TYPEDEF__
+typedef struct KernelWatchdog KernelWatchdog;
+#endif /* __NVOC_CLASS_KernelWatchdog_TYPEDEF__ */
+
+#ifndef __nvoc_class_id_KernelWatchdog
+#define __nvoc_class_id_KernelWatchdog 0x7ace3d
+#endif /* __nvoc_class_id_KernelWatchdog */
+
 struct KernelGraphicsContext;
 
 #ifndef __NVOC_CLASS_KernelGraphicsContext_TYPEDEF__
@@ -721,17 +732,6 @@ typedef struct MemoryList MemoryList;
 #ifndef __nvoc_class_id_MemoryList
 #define __nvoc_class_id_MemoryList 0x298f78
 #endif /* __nvoc_class_id_MemoryList */
-
-struct FlaMemory;
-
-#ifndef __NVOC_CLASS_FlaMemory_TYPEDEF__
-#define __NVOC_CLASS_FlaMemory_TYPEDEF__
-typedef struct FlaMemory FlaMemory;
-#endif /* __NVOC_CLASS_FlaMemory_TYPEDEF__ */
-
-#ifndef __nvoc_class_id_FlaMemory
-#define __nvoc_class_id_FlaMemory 0xe61ee1
-#endif /* __nvoc_class_id_FlaMemory */
 
 struct MemoryExport;
 
@@ -1341,6 +1341,7 @@ struct NVOCFwdDeclHack {
     struct KernelChannel *PRIVATE_FIELD(KernelChannel_BLACKWELL_CHANNEL_GPFIFO_B);
     struct UvmChannelRetainer *PRIVATE_FIELD(UvmChannelRetainer_UVM_CHANNEL_RETAINER);
     struct KernelCtxShareApi *PRIVATE_FIELD(KernelCtxShareApi_FERMI_CONTEXT_SHARE_A);
+    struct KernelWatchdog *PRIVATE_FIELD(KernelWatchdog_KERNEL_WATCHDOG);
     struct KernelGraphicsContext *PRIVATE_FIELD(KernelGraphicsContext_KERNEL_GRAPHICS_CONTEXT);
     struct Subdevice *PRIVATE_FIELD(Subdevice_NV20_SUBDEVICE_0);
     struct BinaryApi *PRIVATE_FIELD(BinaryApi_NV2081_BINAPI);
@@ -1362,7 +1363,6 @@ struct NVOCFwdDeclHack {
     struct MemoryList *PRIVATE_FIELD(MemoryList_NV01_MEMORY_LIST_SYSTEM);
     struct MemoryList *PRIVATE_FIELD(MemoryList_NV01_MEMORY_LIST_FBMEM);
     struct MemoryList *PRIVATE_FIELD(MemoryList_NV01_MEMORY_LIST_OBJECT);
-    struct FlaMemory *PRIVATE_FIELD(FlaMemory_NV01_MEMORY_FLA);
     struct MemoryExport *PRIVATE_FIELD(MemoryExport_NV_MEMORY_EXPORT);
     struct MemoryFabricImportV2 *PRIVATE_FIELD(MemoryFabricImportV2_NV_MEMORY_FABRIC_IMPORT_V2);
     struct MemoryFabric *PRIVATE_FIELD(MemoryFabric_NV_MEMORY_FABRIC);

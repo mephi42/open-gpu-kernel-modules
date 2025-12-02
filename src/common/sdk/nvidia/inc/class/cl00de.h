@@ -132,6 +132,7 @@ enum {
 
 typedef struct RUSD_CLK_PUBLIC_DOMAIN_INFO {
     NvU32 targetClkMHz;
+    NvU32 actualClkKHz;
 } RUSD_CLK_PUBLIC_DOMAIN_INFO;
 
 typedef struct RUSD_CLK_PUBLIC_DOMAIN_INFOS {
@@ -352,6 +353,73 @@ typedef struct RUSD_GR_INFO
     NvBool bCtxswLoggingEnabled;
 } RUSD_GR_INFO;
 
+#define RUSD_PROC_UTIL_SAMPLE_COUNT 5
+
+// 
+// RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE is NV2080_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE
+// without subProcessName and pOsPidInfo
+//
+typedef struct {
+    /*!
+     * Percentage during the sample that the engine remains busy. This
+     * is in units of pct*100.
+     */
+    NvU32 util;
+    /*!
+     * Scaling factor to convert utilization from full GPU to per vGPU.
+     */
+    NvU32 vgpuScale;
+    /*!
+     * Process ID of the process that was active on the engine when the
+     * sample was taken. If no process is active then NV2080_GPUMON_PID_INVALID
+     * will be returned.
+     */
+    NvU32 procId;
+    /*!
+     * Process ID of the process in the vGPU VM that was active on the engine when
+     * the sample was taken. If no process is active then NV2080_GPUMON_PID_INVALID
+     * will be returned.
+     */
+    NvU32 subProcessID;
+} RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE;
+
+typedef struct  {
+    NvU64 timeStamp;  // Original is NV2080_CTRL_GPUMON_SAMPLE
+    /*!
+     * FB bandwidth utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE fb;
+    /*!
+     * GR utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE gr;
+    /*!
+     * NV ENCODER utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE nvenc;
+    /*!
+     * NV DECODER utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE nvdec;
+    /*!
+     * NV JPEG utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE nvjpg;
+    /*!
+     * NV OFA utilization sample.
+     */
+    RUSD_CTRL_PERF_GPUMON_ENGINE_UTIL_SAMPLE nvofa;
+} RUSD_CTRL_PERF_GPUMON_PERFMON_UTIL_SAMPLE;
+
+typedef struct {
+    RUSD_CTRL_PERF_GPUMON_PERFMON_UTIL_SAMPLE samples[RUSD_PROC_UTIL_SAMPLE_COUNT];
+} RUSD_PROC_UTIL_INFO;
+
+typedef struct {
+    volatile NvU64 lastModifiedTimestamp;
+    RUSD_PROC_UTIL_INFO info;
+} RUSD_PROC_UTIL;
+
 typedef struct NV00DE_SHARED_DATA {
     NV_DECLARE_ALIGNED(RUSD_BAR1_MEMORY_INFO bar1MemoryInfo, 8);
 
@@ -411,6 +479,10 @@ typedef struct NV00DE_SHARED_DATA {
 
     // POLL_FAN
     NV_DECLARE_ALIGNED(RUSD_FAN_COOLER_STATUS fanCoolerStatus, 8);
+
+    // POLL_PROC_UTIL
+    NV_DECLARE_ALIGNED(RUSD_PROC_UTIL procUtil, 8);
+
 } NV00DE_SHARED_DATA;
 
 //
@@ -424,6 +496,7 @@ typedef struct NV00DE_SHARED_DATA {
 #define NV00DE_RUSD_POLL_THERMAL   0x10
 #define NV00DE_RUSD_POLL_PCI       0x20
 #define NV00DE_RUSD_POLL_FAN       0x40
+#define NV00DE_RUSD_POLL_PROC_UTIL 0x80
 
 typedef struct NV00DE_ALLOC_PARAMETERS {
     NvU64 polledDataMask; // Bitmask of data to request polling at alloc time, 0 if not needed

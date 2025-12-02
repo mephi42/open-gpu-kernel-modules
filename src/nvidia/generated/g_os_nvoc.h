@@ -65,9 +65,10 @@ TYPEDEF_BITVECTOR(MC_ENGINE_BITVECTOR);
 #include "nvi2c.h"          // TODO - should move from sdk to resman/interface
 
 /* ------------------------ OS Includes ------------------------------------- */
-#include "os/nv_memory_type.h"
-#include "os/nv_memory_area.h"
 #include "os/capability.h"
+#include "os/nv_memory_area.h"
+#include "os/nv_memory_type.h"
+#include "os/workitem.h"
 
 /* ------------------------ Forward Declarations ---------------------------- */
 
@@ -393,33 +394,6 @@ typedef NvBool     OSIsISR(void);
 typedef NV_STATUS  OSGetDriverBlock(OS_GPU_INFO *, OS_DRIVER_BLOCK *);
 typedef NvBool     OSIsEqualGUID(void *, void *);
 
-#define OS_QUEUE_WORKITEM_FLAGS_NONE                         0x00000000
-#define OS_QUEUE_WORKITEM_FLAGS_DONT_FREE_PARAMS             NVBIT(0)
-#define OS_QUEUE_WORKITEM_FLAGS_FALLBACK_TO_DPC              NVBIT(1)
-//
-// Lock flags:
-// Only one of the LOCK_GPU flags should be provided. If multiple are,
-// the priority ordering should be GPUS > GROUP_DEVICE > GROUP_SUBDEVICE
-//
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA                    NVBIT(8)
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RW                  NVBIT(9)
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RO                  NVBIT(10)
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_GPUS                    NVBIT(11)
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE        NVBIT(12)
-#define OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE     NVBIT(13)
-//
-// Perform a GPU full power sanity after getting GPU locks.
-// One of the above LOCK_GPU flags must be provided when using this flag.
-//
-#define OS_QUEUE_WORKITEM_FLAGS_FULL_GPU_SANITY              NVBIT(14)
-#define OS_QUEUE_WORKITEM_FLAGS_FOR_PM_RESUME                NVBIT(15)
-
-#define OS_QUEUE_WORKITEM_FLAGS_DROP_ON_UNLOAD_QUEUE_FLUSH   NVBIT(16)
-typedef void       OSWorkItemFunction(NvU32 gpuInstance, void *);
-typedef void       OSSystemWorkItemFunction(void *);
-NV_STATUS  osQueueWorkItem(OBJGPU *pGpu, OSWorkItemFunction pFunction, void *pParams, NvU32 flags);
-
-NV_STATUS  osQueueSystemWorkItem(OSSystemWorkItemFunction, void *);
 
 // MXM ACPI calls
 NV_STATUS  osCallACPI_MXMX(OBJGPU *, NvU32, NvU8 *);
@@ -889,6 +863,8 @@ NV_STATUS osTegraSocParseFixedModeTimings(OS_GPU_INFO *pOsGpuInfo,
                                           NV0073_CTRL_DFP_GET_FIXED_MODE_TIMING_PARAMS *pTimingsPerStream,
                                           NvU8 *pNumTimings);
 
+NV_STATUS osTegraiGpuPerfBoost(OBJGPU *pGpu, NvBool enable, NvU32 duration);
+
 NV_STATUS osGetVersion(NvU32 *pMajorVer,
                        NvU32 *pMinorVer,
                        NvU32 *pBuildNum,
@@ -1046,6 +1022,7 @@ NV_STATUS osGetTegraNumDpAuxInstances(OS_GPU_INFO *pArg1,
                                  NvU32 *pArg2);
 
 NvU32     osTegraSocFuseRegRead(OBJGPU *pGpu, NvU32 addr);
+NV_STATUS osTegraKfuseReadReg(OBJGPU *pGpu, NvU64 base, NvU32 offset, NvU32 size, NvU32 *val);
 
 typedef void (*osTegraTsecCbFunc)(void*, void*);
 

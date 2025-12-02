@@ -38,12 +38,12 @@ extern const struct NVOC_EXPORT_INFO __nvoc_export_info__KernelGsplite;
 // Down-thunk(s) to bridge KernelGsplite methods from ancestors (if any)
 NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateConstructEngine(struct OBJGPU *pGpu, struct OBJENGSTATE *pKernelGsplite, ENGDESCRIPTOR engDesc);    // this
 NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateStateInitUnlocked(struct OBJGPU *pGpu, struct OBJENGSTATE *pKernelGsplite);    // this
+NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateStateInitLocked(struct OBJGPU *pGpu, struct OBJENGSTATE *pKernelGsplite);    // this
 
 // Up-thunk(s) to bridge KernelGsplite methods to ancestors (if any)
 void __nvoc_up_thunk_OBJENGSTATE_kgspliteInitMissing(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate);    // this
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitLocked(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate);    // this
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitUnlocked(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate);    // this
-NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStateInitLocked(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate);    // this
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreLoad(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate, NvU32 arg3);    // this
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStateLoad(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate, NvU32 arg3);    // this
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePostLoad(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate, NvU32 arg3);    // this
@@ -85,14 +85,14 @@ static const struct NVOC_METADATA__KernelGsplite __nvoc_metadata__KernelGsplite 
     .metadata__OBJENGSTATE.vtable.__engstateConstructEngine__ = &__nvoc_down_thunk_KernelGsplite_engstateConstructEngine,    // virtual
     .vtable.__kgspliteStateInitUnlocked__ = &kgspliteStateInitUnlocked_IMPL,    // virtual override (engstate) base (engstate)
     .metadata__OBJENGSTATE.vtable.__engstateStateInitUnlocked__ = &__nvoc_down_thunk_KernelGsplite_engstateStateInitUnlocked,    // virtual
+    .vtable.__kgspliteStateInitLocked__ = &kgspliteStateInitLocked_IMPL,    // virtual override (engstate) base (engstate)
+    .metadata__OBJENGSTATE.vtable.__engstateStateInitLocked__ = &__nvoc_down_thunk_KernelGsplite_engstateStateInitLocked,    // virtual
     .vtable.__kgspliteInitMissing__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteInitMissing,    // virtual inherited (engstate) base (engstate)
     .metadata__OBJENGSTATE.vtable.__engstateInitMissing__ = &engstateInitMissing_IMPL,    // virtual
     .vtable.__kgspliteStatePreInitLocked__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitLocked,    // virtual inherited (engstate) base (engstate)
     .metadata__OBJENGSTATE.vtable.__engstateStatePreInitLocked__ = &engstateStatePreInitLocked_IMPL,    // virtual
     .vtable.__kgspliteStatePreInitUnlocked__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitUnlocked,    // virtual inherited (engstate) base (engstate)
     .metadata__OBJENGSTATE.vtable.__engstateStatePreInitUnlocked__ = &engstateStatePreInitUnlocked_IMPL,    // virtual
-    .vtable.__kgspliteStateInitLocked__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteStateInitLocked,    // virtual inherited (engstate) base (engstate)
-    .metadata__OBJENGSTATE.vtable.__engstateStateInitLocked__ = &engstateStateInitLocked_IMPL,    // virtual
     .vtable.__kgspliteStatePreLoad__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreLoad,    // virtual inherited (engstate) base (engstate)
     .metadata__OBJENGSTATE.vtable.__engstateStatePreLoad__ = &engstateStatePreLoad_IMPL,    // virtual
     .vtable.__kgspliteStateLoad__ = &__nvoc_up_thunk_OBJENGSTATE_kgspliteStateLoad,    // virtual inherited (engstate) base (engstate)
@@ -122,7 +122,7 @@ const struct NVOC_CASTINFO __nvoc_castinfo__KernelGsplite = {
     }
 };
 
-// 2 down-thunk(s) defined to bridge methods in KernelGsplite from superclasses
+// 3 down-thunk(s) defined to bridge methods in KernelGsplite from superclasses
 
 // kgspliteConstructEngine: virtual override (engstate) base (engstate)
 NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateConstructEngine(struct OBJGPU *pGpu, struct OBJENGSTATE *pKernelGsplite, ENGDESCRIPTOR engDesc) {
@@ -134,8 +134,13 @@ NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateStateInitUnlocked(struct OBJGP
     return kgspliteStateInitUnlocked(pGpu, (struct KernelGsplite *)(((unsigned char *) pKernelGsplite) - NV_OFFSETOF(KernelGsplite, __nvoc_base_OBJENGSTATE)));
 }
 
+// kgspliteStateInitLocked: virtual override (engstate) base (engstate)
+NV_STATUS __nvoc_down_thunk_KernelGsplite_engstateStateInitLocked(struct OBJGPU *pGpu, struct OBJENGSTATE *pKernelGsplite) {
+    return kgspliteStateInitLocked(pGpu, (struct KernelGsplite *)(((unsigned char *) pKernelGsplite) - NV_OFFSETOF(KernelGsplite, __nvoc_base_OBJENGSTATE)));
+}
 
-// 12 up-thunk(s) defined to bridge methods in KernelGsplite to superclasses
+
+// 11 up-thunk(s) defined to bridge methods in KernelGsplite to superclasses
 
 // kgspliteInitMissing: virtual inherited (engstate) base (engstate)
 void __nvoc_up_thunk_OBJENGSTATE_kgspliteInitMissing(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate) {
@@ -150,11 +155,6 @@ NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitLocked(struct OBJGPU *
 // kgspliteStatePreInitUnlocked: virtual inherited (engstate) base (engstate)
 NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStatePreInitUnlocked(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate) {
     return engstateStatePreInitUnlocked(pGpu, (struct OBJENGSTATE *)(((unsigned char *) pEngstate) + NV_OFFSETOF(KernelGsplite, __nvoc_base_OBJENGSTATE)));
-}
-
-// kgspliteStateInitLocked: virtual inherited (engstate) base (engstate)
-NV_STATUS __nvoc_up_thunk_OBJENGSTATE_kgspliteStateInitLocked(struct OBJGPU *pGpu, struct KernelGsplite *pEngstate) {
-    return engstateStateInitLocked(pGpu, (struct OBJENGSTATE *)(((unsigned char *) pEngstate) + NV_OFFSETOF(KernelGsplite, __nvoc_base_OBJENGSTATE)));
 }
 
 // kgspliteStatePreLoad: virtual inherited (engstate) base (engstate)
@@ -221,7 +221,7 @@ void __nvoc_init_dataField_KernelGsplite(KernelGsplite *pThis, GpuHalspecOwner *
     PORT_UNREFERENCED_VARIABLE(chipHal_HalVarIdx);
 
     // NVOC Property Hal field -- PDB_PROP_KGSPLITE_IS_MISSING
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->setProperty(pThis, PDB_PROP_KGSPLITE_IS_MISSING, NV_TRUE);
     }
@@ -230,6 +230,7 @@ void __nvoc_init_dataField_KernelGsplite(KernelGsplite *pThis, GpuHalspecOwner *
     {
         pThis->setProperty(pThis, PDB_PROP_KGSPLITE_IS_MISSING, NV_FALSE);
     }
+    pThis->setProperty(pThis, PDB_PROP_KGSPLITE_ENABLE_CMC_NVLOG, NV_FALSE);
 }
 
 NV_STATUS __nvoc_ctor_OBJENGSTATE(OBJENGSTATE* );
@@ -289,10 +290,19 @@ NV_STATUS __nvoc_objCreate_KernelGsplite(KernelGsplite **ppThis, Dynamic *pParen
     KernelGsplite *pThis;
     GpuHalspecOwner *pGpuhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(KernelGsplite), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(KernelGsplite));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(KernelGsplite));
@@ -300,7 +310,7 @@ NV_STATUS __nvoc_objCreate_KernelGsplite(KernelGsplite **ppThis, Dynamic *pParen
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelGsplite_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -313,10 +323,12 @@ NV_STATUS __nvoc_objCreate_KernelGsplite(KernelGsplite **ppThis, Dynamic *pParen
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
         pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelGsplite_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__KernelGsplite(pThis, pGpuhalspecowner);
     status = __nvoc_ctor_KernelGsplite(pThis, pGpuhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_KernelGsplite_cleanup;
@@ -324,24 +336,28 @@ NV_STATUS __nvoc_objCreate_KernelGsplite(KernelGsplite **ppThis, Dynamic *pParen
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_KernelGsplite_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(KernelGsplite));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

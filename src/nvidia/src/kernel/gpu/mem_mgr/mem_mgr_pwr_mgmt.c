@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -31,6 +31,8 @@
 #include "os/nv_memory_type.h"
 #include "gpu/gsp/kernel_gsp.h"
 #include "gpu/gsp/gsp_static_config.h"
+#include "nvos.h"
+#include "class/cl003e.h"
 
 static NV_STATUS _memmgrWalkHeap(OBJGPU *pGpu, MemoryManager *pMemoryManager, OBJFBSR *pFbsr);
 static NV_STATUS _memmgrAllocFbsrReservedRanges(OBJGPU *pGpu, MemoryManager *pMemoryManager);
@@ -50,7 +52,8 @@ memmgrSavePowerMgmtState_KERNEL
     OBJFBSR  *pFbsr;
     NV_STATUS rmStatus = NV_OK;
 
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) ||
+
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb ||
         pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB))
     {
         return NV_OK;
@@ -221,8 +224,10 @@ memmgrRestorePowerMgmtState_KERNEL
     OBJFBSR     *pFbsr         = pMemoryManager->pActiveFbsr;
     NV_STATUS    status        = NV_OK;
     NvBool       bIsGpuLost    = NV_FALSE;
+    RM_API      *pRmApi        = rmapiGetInterface(RMAPI_GPU_LOCK_INTERNAL);
 
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) ||
+
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb ||
         pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB))
     {
         return NV_OK;
@@ -259,8 +264,13 @@ memmgrRestorePowerMgmtState_KERNEL
     NV_CHECK_OK_OR_GOTO(status, LEVEL_ERROR, fbsrEnd_HAL(pGpu, pFbsr), done);
 
 done:
-
     // Cleanup
+    if (pMemoryManager->hGspHeapSysMemHandle)
+    {
+        pRmApi->Free(pRmApi, pMemoryManager->hClient, pMemoryManager->hGspHeapSysMemHandle);
+        pMemoryManager->hGspHeapSysMemHandle = NV01_NULL_OBJECT;
+    }
+
     memmgrFreeFbsrMemory_HAL(pGpu, pMemoryManager);
     pFbsr->bValid = NV_FALSE;
 
@@ -312,7 +322,7 @@ _memmgrAllocFbsrReservedRanges
                         bar2CpuVisiblePteEnd, size);
     }
 
-    if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP] == NULL)
+    if (pMemoryManager->hGspHeapSysMemHandle == NV01_NULL_OBJECT)
     {
         /*
          * Allocate memdesc for AFTER_BAR2PTE and GSP WPR regions.
@@ -322,14 +332,16 @@ _memmgrAllocFbsrReservedRanges
         {
             KernelGsp    *pKernelGsp = GPU_GET_KERNEL_GSP(pGpu);
             GspFwWprMeta *pWprMeta   = pKernelGsp->pWprMeta;
+            NV_MEMORY_ALLOCATION_PARAMS memAllocParams;
+            RM_API *pRmApi = rmapiGetInterface(RMAPI_GPU_LOCK_INTERNAL);
 
             /*
              * Calculate sysmem required to save all GSP allocations
              * This is sum of GSP Heap, GSP non WPR and VGA workspace regions
              * This will also include CBC region if the corresponding flag is set
              *
-             * SYSMEM required for GSP allocations will be created and allocated
-             * into fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]
+             * SYSMEM required for GSP allocations will be allocated through
+             * pMemoryManager->hGspHeapSysMemHandle
              *
              * TODO: Query GSP for size of its allocation instead of this calculation
              */
@@ -337,8 +349,7 @@ _memmgrAllocFbsrReservedRanges
                          pWprMeta->vgaWorkspaceSize;                                              // VGA Workspace
 
             // Check if CBC region needs to be saved
-            if (GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu)->bPreserveComptagBackingStoreOnSuspend ||
-                pGpu->getProperty(pGpu, PDB_PROP_GPU_RTD3_GCOFF_SUPPORTED))
+            if (GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu)->bPreserveComptagBackingStoreOnSuspend)
             {
                 NV0080_CTRL_FB_GET_COMPBIT_STORE_INFO_PARAMS compbitStoreInfoParams;
                 RM_API *pRmApi = GPU_GET_PHYSICAL_RMAPI(pGpu);
@@ -356,23 +367,30 @@ _memmgrAllocFbsrReservedRanges
                 size += compbitStoreInfoParams.Size;
             }
 
-            // Create memdesc to save GSP allocations
-            NV_ASSERT_OK_OR_GOTO(status,
-                                 memdescCreate(&pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP],
-                                                pGpu, size, 0, NV_FALSE,
-                                                ADDR_SYSMEM, NV_MEMORY_UNCACHED, MEMDESC_FLAGS_NONE),
-                                 fail);
+            // Allocate the System memory
+            portMemSet(&memAllocParams, 0, sizeof(memAllocParams));
+            memAllocParams.owner         = HEAP_OWNER_RM_CLIENT_GENERIC;
+            memAllocParams.type          = NVOS32_TYPE_IMAGE;
+            memAllocParams.size          = size;
+            memAllocParams.attr          = DRF_DEF(OS32, _ATTR, _LOCATION,  _PCI) | 
+                                           DRF_DEF(OS32, _ATTR, _COHERENCY, _UNCACHED);
+            memAllocParams.attr2         = DRF_DEF(OS32, _ATTR2, _REGISTER_MEMDESC_TO_PHYS_RM, _TRUE);
+            memAllocParams.flags         = 0;
+            memAllocParams.internalflags = 0;
 
-            // Allocate sysmem
-            status = memdescAlloc(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]);
+            status = pRmApi->Alloc(pRmApi,
+                                   pMemoryManager->hClient,
+                                   pMemoryManager->hDevice,
+                                   &pMemoryManager->hGspHeapSysMemHandle,
+                                   NV01_MEMORY_SYSTEM,
+                                   &memAllocParams,
+                                   sizeof(memAllocParams));
+
             if (status != NV_OK)
             {
-                NV_ASSERT(status == NV_OK);
-                memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]);
-                pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP] = NULL;
+                NV_PRINTF(LEVEL_ERROR, "Failed to allocate FBSR memory for GSP heap: %d\n", status);
                 goto fail;
             }
-
         }
     }
     return status;
@@ -387,12 +405,8 @@ fail:
     if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE] != NULL)
         memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE]);
 
-    if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP] != NULL)
-        memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]);
-
     pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_BEFORE_BAR2PTE] = NULL;
     pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE]  = NULL;
-    pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]       = NULL;
 
     return status;
 }

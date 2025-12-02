@@ -151,6 +151,61 @@ typedef struct
     NvU32 linkCap;
 } KBIF_CACHE_PCIE_CONFIG_REG;
 
+// Information related to PciePowerControl
+typedef struct
+{
+    NvU32  identifiedKeyOrder;
+    NvU32  identifiedKeyLocation;
+    NvU32  pciePowerControlValue;
+    NvBool bPciePowerControlPresent;
+} PCIE_POWER_CONTROL_INFO;
+
+typedef enum
+{
+    PCIEPOWERCONTROL_KEY_ORDER_CHIPSET_GPU_ID = 1,
+    PCIEPOWERCONTROL_KEY_ORDER_WILDCARD,
+    PCIEPOWERCONTROL_KEY_ORDER_CHIPSET_ID,
+    PCIEPOWERCONTROL_KEY_ORDER_MAX
+} PCIEPOWERCONTROL_KEY_ORDER;
+
+typedef enum _PCIEPOWERCONTROL_KEY_LOCATION
+{
+    PCIEPOWERCONTROL_KEY_LOCATION_NOT_PRESENT = 0,
+    PCIEPOWERCONTROL_KEY_LOCATION_GLOBAL,
+    PCIEPOWERCONTROL_KEY_LOCATION_ADAPTER,
+    PCIEPOWERCONTROL_KEY_LOCATION_UEFI,
+    PCIEPOWERCONTROL_KEY_LOCATION_DR,
+    PCIEPOWERCONTROL_KEY_LOCATION_COOKIE,
+} PCIEPOWERCONTROL_KEY_LOCATION;
+
+typedef struct
+{
+    union 
+    {
+        struct
+        {
+            // Enables the RTD3
+            NvU32 enable             : 1;
+            // Overrides the checking for RM's support (VBIOS)
+            NvU32 overrideRM         : 1;
+            // Overrides the platform checking (_DSM support)
+            NvU32 overridePlaform    : 1;
+            // Allow core power to be turned ON always
+            NvU32 turnONCorePower    : 1;
+            // Enables ASPM
+            //  0x1 = Enables only L0s
+            //  0x2 = Enables only L1
+            //  0x3 = Enables both L0s and L1
+            NvU32 enableASPM         : 2;
+            NvU32 reserved           : 25;
+            NvU32 notInRegistry      : 1;
+        };
+        NvU32  value;
+    };
+    PCIEPOWERCONTROL_KEY_ORDER        identifiedKeyOrder;
+    PCIEPOWERCONTROL_KEY_LOCATION     identifiedKeyLocation;
+} PCIEPOWERCONTROL;
+
 typedef struct KERNEL_HOST_VGPU_DEVICE KERNEL_HOST_VGPU_DEVICE;
 
 
@@ -245,7 +300,7 @@ struct KernelBif {
     NV_STATUS (*__kbifPrepareForXveReset__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (2 hals) body
     NV_STATUS (*__kbifDoFullChipReset__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (4 hals) body
     void (*__kbifResetHostEngines__)(struct OBJGPU *, struct KernelBif * /*this*/, struct KernelMc *);  // halified (2 hals) body
-    NvU32 (*__kbifGetValidEnginesToReset__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (3 hals) body
+    NvU32 (*__kbifGetValidEnginesToReset__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (4 hals) body
     NvU32 (*__kbifGetValidDeviceEnginesToReset__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (2 hals) body
     NV_STATUS (*__kbifGetMigrationBandwidth__)(struct OBJGPU *, struct KernelBif * /*this*/, NvU32 *);  // halified (2 hals)
     NvU32 (*__kbifGetEccCounts__)(struct OBJGPU *, struct KernelBif * /*this*/);  // halified (2 hals) body
@@ -293,6 +348,7 @@ struct KernelBif {
     KBIF_CACHE_DATA cacheData;
     NvBool bPreparingFunctionLevelReset;
     NvBool bInFunctionLevelReset;
+    PCIE_POWER_CONTROL_INFO pciePowerControlInfo;
     NvU32 osPcieAtomicsOpMask;
     NvU32 pcieAtomicsCplDeviceCapMask;
     NvBool bForceDisableFLR;
@@ -538,6 +594,16 @@ static inline void kbifCacheChipsetL1SubstatesEnable(struct OBJGPU *pGpu, struct
 }
 #else // __nvoc_kernel_bif_h_disabled
 #define kbifCacheChipsetL1SubstatesEnable(pGpu, pKernelBif) kbifCacheChipsetL1SubstatesEnable_IMPL(pGpu, pKernelBif)
+#endif // __nvoc_kernel_bif_h_disabled
+
+NV_STATUS kbifGetPciePowerControlValue_IMPL(struct OBJGPU *pGpu, struct KernelBif *pKernelBif, NvU32 *pPciePowerControlValue);
+#ifdef __nvoc_kernel_bif_h_disabled
+static inline NV_STATUS kbifGetPciePowerControlValue(struct OBJGPU *pGpu, struct KernelBif *pKernelBif, NvU32 *pPciePowerControlValue) {
+    NV_ASSERT_FAILED_PRECOMP("KernelBif was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_kernel_bif_h_disabled
+#define kbifGetPciePowerControlValue(pGpu, pKernelBif, pPciePowerControlValue) kbifGetPciePowerControlValue_IMPL(pGpu, pKernelBif, pPciePowerControlValue)
 #endif // __nvoc_kernel_bif_h_disabled
 
 NV_STATUS kbifWaitForConfigAccessAfterReset_IMPL(struct OBJGPU *pGpu, struct KernelBif *pKernelBif);
@@ -1646,6 +1712,8 @@ static inline void kbifResetHostEngines_b3696a(struct OBJGPU *pGpu, struct Kerne
 NvU32 kbifGetValidEnginesToReset_TU102(struct OBJGPU *pGpu, struct KernelBif *pKernelBif);
 
 NvU32 kbifGetValidEnginesToReset_GA100(struct OBJGPU *pGpu, struct KernelBif *pKernelBif);
+
+NvU32 kbifGetValidEnginesToReset_GB100(struct OBJGPU *pGpu, struct KernelBif *pKernelBif);
 
 static inline NvU32 kbifGetValidEnginesToReset_15a734(struct OBJGPU *pGpu, struct KernelBif *pKernelBif) {
     return 0U;

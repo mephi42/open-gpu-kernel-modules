@@ -13,6 +13,7 @@ extern const PRB_MSG_DESC prb_messages_gsp[];
 #define GSP_RPCHISTORYGSPTOCPU (&prb_messages_gsp[2])
 #define GSP_RPCDEBUGINFO (&prb_messages_gsp[3])
 #define GSP_XIDREPORT (&prb_messages_gsp[4])
+#define GSP_RPCPERF (&prb_messages_gsp[5])
 
 // Message maximum lengths
 // Does not include repeated fields, strings and byte arrays.
@@ -21,6 +22,7 @@ extern const PRB_MSG_DESC prb_messages_gsp[];
 #define GSP_RPCHISTORYGSPTOCPU_LEN 84
 #define GSP_RPCDEBUGINFO_LEN 260
 #define GSP_XIDREPORT_LEN 843
+#define GSP_RPCPERF_LEN 92
 
 extern const PRB_FIELD_DESC prb_fields_gsp_rpcentry[];
 
@@ -89,6 +91,18 @@ extern const PRB_FIELD_DESC prb_fields_gsp_xidreport[];
 #define GSP_XIDREPORT_BUILDID_LEN 1
 #define GSP_XIDREPORT_CRASHCATREPORT_LEN 564
 #define GSP_XIDREPORT_RPCDEBUGINFO_LEN 263
+
+extern const PRB_FIELD_DESC prb_fields_gsp_rpcperf[];
+
+// 'RpcPerf' field descriptor pointers
+#define GSP_RPCPERF_MSG (&prb_fields_gsp_rpcperf[0])
+#define GSP_RPCPERF_GPUINSTANCE (&prb_fields_gsp_rpcperf[1])
+#define GSP_RPCPERF_ACTIVERPC (&prb_fields_gsp_rpcperf[2])
+
+// 'RpcPerf' field lengths
+#define GSP_RPCPERF_MSG_LEN 1
+#define GSP_RPCPERF_GPUINSTANCE_LEN 5
+#define GSP_RPCPERF_ACTIVERPC_LEN 83
 
 extern const PRB_SERVICE_DESC prb_services_gsp[];
 

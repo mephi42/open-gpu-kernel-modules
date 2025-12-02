@@ -2,6 +2,9 @@
 # corresponding #define will be generated in conftest/headers.h.
 NV_HEADER_PRESENCE_TESTS = \
   asm/system.h \
+  drm/drm_hdcp.h \
+  drm/display/drm_hdcp.h \
+  drm/display/drm_hdcp_helper.h \
   drm/drmP.h \
   drm/drm_aperture.h \
   drm/drm_atomic_state_helper.h \

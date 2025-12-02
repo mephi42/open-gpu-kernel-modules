@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -32,6 +32,8 @@
 #include "platform/chipset/chipset.h"
 #include "ctrl/ctrl2080/ctrl2080bus.h"
 #include "os/os.h"
+
+#include "published/blackwell/gb100/dev_boot_zb.h"
 
 /*!
  * @brief Check if MSIX is enabled in HW
@@ -1158,4 +1160,23 @@ kbifReadPcieCplCapsFromConfigSpace_GB100
     {
         *pBifAtomicsmask |= BIF_PCIE_CPL_ATOMICS_CAS_128;
     }
+}
+
+/*!
+ * @brief  Get the NV_PMC_ENABLE bit of the valid Engines to reset.
+ *
+ * @param[in]  pGpu       The GPU object
+ * @param[in]  pKernelBif KernelBif object pointer
+ * 
+ * @return All valid engines in NV_PMC_ENABLE.
+ */
+NvU32
+kbifGetValidEnginesToReset_GB100
+(
+    OBJGPU    *pGpu,
+    KernelBif *pKernelBif
+)
+{
+    return (DRF_DEF(_PMC_ZB, _ENABLE, _PDISP,   _ENABLED) |
+            DRF_DEF(_PMC_ZB, _ENABLE, _PERFMON, _ENABLED));
 }

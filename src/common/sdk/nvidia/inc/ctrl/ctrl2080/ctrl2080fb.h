@@ -1868,7 +1868,7 @@ typedef struct NV2080_CTRL_CMD_FB_GET_CBC_BASE_ADDR_PARAMS {
     NvU32 backingStoreChunkOverfetch;
 } NV2080_CTRL_CMD_FB_GET_CBC_BASE_ADDR_PARAMS;
 
-#define NV2080_CTRL_FB_REMAP_ENTRY_FLAGS_PENDING                             0:0
+#define NV2080_CTRL_FB_REMAP_ENTRY_FLAGS_PENDING                                0:0
 #define NV2080_CTRL_FB_REMAP_ENTRY_FLAGS_PENDING_FALSE 0U
 #define NV2080_CTRL_FB_REMAP_ENTRY_FLAGS_PENDING_TRUE  1U
 
@@ -1882,6 +1882,8 @@ typedef struct NV2080_CTRL_FB_REMAP_ENTRY {
     NvU8  source;
     NvU8  flags;
 } NV2080_CTRL_FB_REMAP_ENTRY;
+
+typedef NV2080_CTRL_FB_REMAP_ENTRY NV2080_CTRL_FB_ROW_REMAP_ENTRY;
 
 /* valid values for source */
 
@@ -1926,9 +1928,9 @@ typedef struct NV2080_CTRL_FB_REMAP_ENTRY {
 #define NV2080_CTRL_FB_GET_REMAPPED_ROWS_PARAMS_MESSAGE_ID (0x44U)
 
 typedef struct NV2080_CTRL_FB_GET_REMAPPED_ROWS_PARAMS {
-    NvU32                      entryCount;
-    NvU8                       flags;
-    NV2080_CTRL_FB_REMAP_ENTRY entries[NV2080_CTRL_FB_REMAPPED_ROWS_MAX_ROWS];
+    NvU32                          entryCount;
+    NvU8                           flags;
+    NV2080_CTRL_FB_ROW_REMAP_ENTRY entries[NV2080_CTRL_FB_REMAPPED_ROWS_MAX_ROWS];
 } NV2080_CTRL_FB_GET_REMAPPED_ROWS_PARAMS;
 
 // Max size of the queryParams in Bytes, so that the NV2080_CTRL_FB_FS_INFO_QUERY struct is still 32B
@@ -2895,5 +2897,85 @@ typedef struct NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_PARAMS {
     NvU32 numCarveoutRegions;
     NV_DECLARE_ALIGNED(NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO carveoutRegion[NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_MAX_ENTRIES], 8);
 } NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_PARAMS;
+
+/* valid values for source */
+
+
+#define NV2080_CTRL_FB_REMAPPED_BANK_SOURCE_FIELD          (0x00000002U)
+
+#define NV2080_CTRL_FB_REMAPPED_BANKS_MAX_BANKS            (0x00000200U)
+
+typedef struct NV2080_CTRL_FB_BANK_REMAP_HISTOGRAM {
+    NvU32 maxGroupCount;
+    NvU32 noSpareGroupCount;
+} NV2080_CTRL_FB_BANK_REMAP_HISTOGRAM;
+
+/*
+ * NV2080_CTRL_CMD_FB_GET_REMAPPED_BANKS
+ *
+ * This command returns the list of remapped banks stored in the Inforom.
+ *
+ *   entryCount
+ *     This output parameter specifies the number of remapped banks
+ *   flags
+ *     This output parameter contains info on whether or not there are pending
+ *     remappings and whether or not a remapping failed
+ *   entries
+ *     This output parameter is an array of NV2080_CTRL_FB_BANK_REMAP_ENTRY
+ *     containing inforomation on the remapping that occurred. This array can
+ *     hold a maximum of NV2080_CTRL_FB_REMAPPED_BANKS_MAX_BANKS
+ *
+ *  Possible status values returned are:
+ *    NV_OK
+ *    NV_ERR_INVALID_ARGUMENT
+ *    NV_ERR_INVALID_POINTER
+ *    NV_ERR_OBJECT_NOT_FOUND
+ *    NV_ERR_NOT_SUPPORTED
+ */
+#define NV2080_CTRL_CMD_FB_GET_REMAPPED_BANKS                 (0x20801361U) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FB_INTERFACE_ID << 8) | NV2080_CTRL_FB_GET_REMAPPED_BANKS_PARAMS_MESSAGE_ID" */
+
+#define NV2080_CTRL_FB_GET_REMAPPED_BANKS_FLAGS_PENDING                         0:0
+#define NV2080_CTRL_FB_GET_REMAPPED_BANKS_FLAGS_PENDING_FALSE 0U
+#define NV2080_CTRL_FB_GET_REMAPPED_BANKS_FLAGS_PENDING_TRUE  1U
+
+typedef NV2080_CTRL_FB_REMAP_ENTRY NV2080_CTRL_FB_BANK_REMAP_ENTRY;
+
+#define NV2080_CTRL_FB_GET_REMAPPED_BANKS_PARAMS_MESSAGE_ID (0x61U)
+
+typedef struct NV2080_CTRL_FB_GET_REMAPPED_BANKS_PARAMS {
+    NvU32                               entryCount;
+    NvU8                                flags;
+    NV2080_CTRL_FB_BANK_REMAP_HISTOGRAM histogram;
+    NV2080_CTRL_FB_BANK_REMAP_ENTRY     entries[NV2080_CTRL_FB_REMAPPED_BANKS_MAX_BANKS];
+} NV2080_CTRL_FB_GET_REMAPPED_BANKS_PARAMS;
+
+/*
+ * NV2080_CTRL_CMD_GET_UGPU_MEMORY_INFO
+ *
+ * @brief Returns free nonlocalized memory available as well as localizable memory available per uGPU.
+ *
+ * @param[out]  totalMemory Total memory available for nonlocalized allocations.
+ *                          Identical to NV2080_CTRL_FB_INFO_INDEX_HEAP_SIZE when PMA is enabled.
+ * @param[out]  freeMemory Free memory available for nonlocalized allocations.
+ *                         Identical to NV2080_CTRL_FB_INFO_INDEX_HEAP_FREE when PMA is enabled.
+ * @param[out]  ugpuTotalMemory Array of total memory sizes available for localized allocations per uGPU.
+ *                              Analogous to NV2080_CTRL_FB_INFO_INDEX_HEAP_SIZE, but relects memory available to each uGPU.
+ * @param[out]  ugpuFreeMemory  Array of free memory sizes available for localized allocations per uGPU.
+ *                              Analogous to NV2080_CTRL_FB_INFO_INDEX_HEAP_FREE, but relects memory available to each uGPU.
+ *
+ * @return NV_OK, NV_ERR_NOT_SUPPORTED if localization is not supported.
+ */
+#define NV2080_CTRL_CMD_FB_GET_UGPU_MEMORY_INFO       (0x20801362U) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FB_INTERFACE_ID << 8) | NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_PARAMS_MESSAGE_ID" */
+
+#define NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_MAX_UGPUS 2U
+
+#define NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_PARAMS_MESSAGE_ID (0x62U)
+
+typedef struct NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_PARAMS {
+    NV_DECLARE_ALIGNED(NvU64 totalMemory, 8);
+    NV_DECLARE_ALIGNED(NvU64 freeMemory, 8);
+    NV_DECLARE_ALIGNED(NvU64 ugpuTotalMemory[NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_MAX_UGPUS], 8);
+    NV_DECLARE_ALIGNED(NvU64 ugpuFreeMemory[NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_MAX_UGPUS], 8);
+} NV2080_CTRL_FB_GET_UGPU_MEMORY_INFO_PARAMS;
 
 /* _ctrl2080fb_h_ */

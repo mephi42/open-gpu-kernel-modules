@@ -83,6 +83,7 @@ namespace DisplayPort
                 bool      bUHBR_13_5GSupported;
                 bool      bUHBR_20GSupported;
                 CableType cableType;
+                bool      bHandshakeCompleted;
             } rxCableCaps;
 
             /* 
@@ -167,6 +168,7 @@ namespace DisplayPort
             setIgnoreCableIdCaps(false);
         }
         virtual void setConnectorTypeC(bool bTypeC);
+        virtual bool isCableIdHandshakeCompleted() { return caps2x.rxCableCaps.bHandshakeCompleted; }
 
         DPCDHALImpl2x(AuxBus * bus, Timer * timer) : DPCDHALImpl(bus, timer), bIgnoreCableIdCaps(false), bConnectorIsTypeC(false)
         {

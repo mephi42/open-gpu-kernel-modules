@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c)2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c)2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -94,7 +94,7 @@ vblcbConstruct_IMPL
     pVblankCallback->CallBack.bIsVblankNotifyEnable = NV_TRUE;
     pVblankCallback->CallBack.Next = NULL;
 
-    pKernelDisplay->pRgVblankCb = (void *)&pVblankCallback->CallBack;
+    pKernelHead->pRgVblankCb = (void *)&pVblankCallback->CallBack;
 
     kheadAddVblankCallback(pGpu, pKernelHead, &pVblankCallback->CallBack);
     status = kdispSetupVBlank(pGpu, pKernelDisplay, pAllocParams->pProc, pAllocParams->pParm1, pAllocParams->pParm2, pAllocParams->LogicalHead, &pVblankCallback->CallBack);
@@ -117,7 +117,7 @@ vblcbDestruct_IMPL
     KernelDisplay *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
     KernelHead    *pKernelHead    = KDISP_GET_HEAD(pKernelDisplay, pVblankCallback->LogicalHead);
 
-    pKernelDisplay->pRgVblankCb = NULL;
+    pKernelHead->pRgVblankCb = NULL;
     kdispSetupVBlank(pGpu, pKernelDisplay, NULL, NULL, NULL, pVblankCallback->LogicalHead, NULL);
     kheadDeleteVblankCallback(pGpu, pKernelHead, &pVblankCallback->CallBack);
 }

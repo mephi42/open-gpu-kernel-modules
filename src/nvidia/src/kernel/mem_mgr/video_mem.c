@@ -1338,7 +1338,7 @@ vidmemAllocResources
     {
         pFbAllocInfo->offset = pMemDesc->_pteArray[0];
 
-        if (pMemoryManager->bEnableDynamicGranularityPageArrays == NV_TRUE)
+        if (SYS_GET_INSTANCE()->bEnableDynamicGranularityPageArrays == NV_TRUE)
         {
             //
             // set pagearray granularity if dynamic memdesc pagesize is enabled

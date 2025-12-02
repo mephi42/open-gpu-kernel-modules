@@ -174,11 +174,12 @@ struct LIBOS_LOG_DECODE_LOG
 #endif
 
 #if LIBOS_LOG_DECODE_ENABLE
-    LibosElf64Header *elf;
+    void *elf;
     LibosElfImage elfImage;
     LibosDebugResolver resolver;
     LIBOS_LOG_DECODE_RECORD record;
     NvU64 loggingBaseAddress;
+    NvU64 loggingSize;
 #endif
 };
 
@@ -199,7 +200,7 @@ typedef struct
     char *curLineBufPtr;     // Current position in lineBuffer.
     // Decodes into lineBuffer, then prints as a string.
     char lineBuffer[LIBOS_LOG_LINE_BUFFER_SIZE];
-    NvBool bSynchronousBuffer;
+    NvBool bSynchronousBuffer; // True if timestamps are absent from serialized log buffer
     NvBool bPtrSymbolResolve;
     NvU8 lineLogLevel;
 
@@ -229,11 +230,11 @@ void libosLogAddLog(LIBOS_LOG_DECODE *logDecode, void *buffer, NvU64 bufferSize,
 void libosLogSetupMergedNvlog(LIBOS_LOG_DECODE *logDecode, NvU32 gpuInstance, NvU64 mergedBufferSize, const char *name, NvU32 gpuArch, NvU32 gpuImpl, void *buildId);
 
 #if LIBOS_LOG_DECODE_ENABLE
-void libosLogInit(LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvU64 elfSize);
+void libosLogInit(LIBOS_LOG_DECODE *logDecode, void *elf, NvU64 elfSize);
 void libosLogInitEx(
-    LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvBool bSynchronousBuffer,
+    LIBOS_LOG_DECODE *logDecode, void *elf, NvBool bSynchronousBuffer,
     NvBool bPtrSymbolResolve, NvBool bDecodeStrFmt, NvU64 elfSize);
-void libosLogInitGspMergedLogResolver(LIBOS_LOG_DECODE *logDecode, LibosElf64Header *elf, NvU64 elfSize, NvU32 gpuArch, NvU32 gpuImpl);
+void libosLogInitGspMergedLogResolver(LIBOS_LOG_DECODE *logDecode, void *elf, NvU64 elfSize, NvU32 gpuArch, NvU32 gpuImpl);
 #else
 void libosLogInit(LIBOS_LOG_DECODE *logDecode, void *elf, NvU64 elfSize);
 void libosLogInitEx(

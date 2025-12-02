@@ -302,14 +302,11 @@ int nv_soc_register_irqs(nv_state_t *nv)
 
     for (dpauxindex = 0; dpauxindex < nv->num_dpaux_instance; dpauxindex++)
     {
-        char dpaux_dev_name[10] = {0};
-        snprintf(dpaux_dev_name, sizeof(dpaux_dev_name), "%s%d", "dpaux", dpauxindex);
-
         rc = nv_request_soc_irq(nvl, nv->dpaux_irqs[dpauxindex],
                                 NV_SOC_IRQ_DPAUX_TYPE,
                                 nv_default_irq_flags(nv),
                                 dpauxindex,
-                                dpaux_dev_name);
+                                nv->dpaux_devname[dpauxindex]);
         if (rc != 0)
         {
             nv_printf(NV_DBG_ERRORS, "failed to request dpaux irq (%d)\n", rc);
@@ -424,8 +421,7 @@ static int nv_platform_alloc_device_dpaux(struct platform_device *plat_dev, nv_s
 
     for (dpauxindex = 0; dpauxindex < nv->num_dpaux_instance; dpauxindex++)
     {
-        char sdpaux_device[10];
-        snprintf(sdpaux_device, sizeof(sdpaux_device), "%s%d", sdpaux, dpauxindex);
+        snprintf(nv->dpaux_devname[dpauxindex], sizeof(nv->dpaux_devname[dpauxindex]), "%s%d", sdpaux, dpauxindex);
 
         NV_KMALLOC(nv->dpaux[dpauxindex], sizeof(*(nv->dpaux[dpauxindex])));
         if (nv->dpaux[dpauxindex] == NULL)
@@ -437,7 +433,7 @@ static int nv_platform_alloc_device_dpaux(struct platform_device *plat_dev, nv_s
 
         os_mem_set(nv->dpaux[dpauxindex], 0, sizeof(*(nv->dpaux[dpauxindex])));
 
-        irq = platform_get_irq_byname(plat_dev, sdpaux_device);
+        irq = platform_get_irq_byname(plat_dev, nv->dpaux_devname[dpauxindex]);
         if (irq < 0)
         {
             nv_printf(NV_DBG_ERRORS, "NVRM: failed to get IO irq resource\n");
@@ -1367,6 +1363,7 @@ struct platform_driver nv_platform_driver = {
 #if defined(CONFIG_PM)
         .pm = &nv_pm_ops,
 #endif
+        .probe_type = PROBE_FORCE_SYNCHRONOUS,
     },
     .probe     = nv_platform_device_probe,
     .remove    = nv_platform_device_remove_wrapper,

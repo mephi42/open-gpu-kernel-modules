@@ -205,7 +205,7 @@ NV_STATUS kchannelAllocMem_GM107
 
     ///  Alloc Instance block
     if ((IsSLIEnabled(pGpu) || IS_GSP_CLIENT(pGpu)) &&
-        !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+        !pGpu->pGpuArch->bGpuArchIsZeroFb)
     {
         pInstAllocList = ADDRLIST_FBMEM_ONLY;
         CpuCacheAttrib = NV_MEMORY_UNCACHED;

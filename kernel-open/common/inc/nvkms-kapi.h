@@ -174,10 +174,7 @@ struct NvKmsKapiDeviceResourcesInfo {
 
         NvBool  supportsSyncpts;
 
-        NvBool requiresVrrSemaphores;
-
-        NvBool  supportsInputColorRange;
-        NvBool  supportsInputColorSpace;
+        NvBool contiguousPhysicalMappings;
     } caps;
 
     NvU64 supportedSurfaceMemoryFormats[NVKMS_KAPI_LAYER_MAX];
@@ -451,7 +448,6 @@ struct NvKmsKapiHeadReplyConfig {
 struct NvKmsKapiModeSetReplyConfig {
     enum NvKmsFlipResult flipResult;
     NvBool vrrFlip;
-    NvS32 vrrSemaphoreIndex;
     struct NvKmsKapiHeadReplyConfig
         headReplyConfig[NVKMS_KAPI_MAX_HEADS];
 };
@@ -1548,22 +1544,6 @@ struct NvKmsKapiFunctionsTable {
     (
         struct NvKmsKapiDevice *device,
         NvU32 semaphoreIndex
-    );
-
-    /*!
-     * Signal the VRR semaphore at the specified index from the CPU.
-     * If device does not support VRR semaphores, this is a no-op.
-     * Returns true if signal is success or no-op, otherwise returns false.
-     *
-     * \param [in]  device  A device allocated using allocateDevice().
-     *
-     * \param [in]  index   The VRR semaphore index to be signalled.
-     */
-    NvBool
-    (*signalVrrSemaphore)
-    (
-        struct NvKmsKapiDevice *device,
-        NvS32 index
     );
 
     /*!

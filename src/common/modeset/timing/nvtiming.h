@@ -3103,6 +3103,7 @@ typedef struct tagNVT_ADAPTIVE_SYNC_SDP_CTRL
     NvU32   srCoastingVTotal;
     NvBool  bFixedVTotal;
     NvBool  bRefreshRateDivider;
+    NvBool  bDisableSourceSinkSync;
 }NVT_ADAPTIVE_SYNC_SDP_CTRL;
 
 //***********************************
@@ -5843,6 +5844,9 @@ NVT_STATUS NvTiming_CalcCVT_RB2(NvU32 width, NvU32 height, NvU32 rr, NvBool is10
 NVT_STATUS NvTiming_CalcCVT_RB3(NvU32 width, NvU32 height, NvU32 rr, NvU32 deltaHBlank, NvU32 vBlankMicroSec, NvBool isAltMiniVblankTiming, NvBool isEarlyVSync, NVT_TIMING *pT);
 NvBool NvTiming_IsTimingCVTRB(const NVT_TIMING *pTiming);
 
+NvU32 computeGCD(NvU32 a, NvU32 b);
+NvU32 computeLCM(NvU32 a, NvU32 b);
+
 // OVT timing calculation
 NVT_STATUS NvTiming_CalcOVT(NvU32 width, NvU32 height, NvU32 rr, NVT_TIMING *pT);
 NvBool NvTiming_IsTimingOVT(const NVT_TIMING *pTiming);
@@ -5900,9 +5904,10 @@ NvU32 a_div_b(NvU32 a, NvU32 b);
 NvU32 calculateCRC32(NvU8* pBuf, NvU32 bufsize);
 void  patchChecksum(NvU8* pBuf);
 NvBool isChecksumValid(NvU8* pBuf);
-NvU32 RRx1kToPclk (NVT_TIMING *pT);
-NvU32 RRx1kToPclk1khz (NVT_TIMING *pT);
+NvU32 RRx1kToPclk (const NVT_TIMING *pT);
+NvU32 RRx1kToPclk1khz (const NVT_TIMING *pT);
 
+NvU32      NvTiming_CalculateVBlankTimeInUs(const NVT_TIMING *pT);
 NVT_STATUS NvTiming_ComposeCustTimingString(NVT_TIMING *pT);
 
 // Infoframe/SDP composer

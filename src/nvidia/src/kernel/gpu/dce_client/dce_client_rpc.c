@@ -78,6 +78,13 @@ dceclientInitRpcInfra_IMPL
 
     pDceClient->pRpc->maxRpcSize = DCE_MAX_RPC_MSG_SIZE;
 
+    pDceClient->pRpc->message_buffer = portMemAllocNonPaged(DCE_MAX_RPC_MSG_SIZE);
+    if (pDceClient->pRpc->message_buffer == NULL)
+    {
+        NV_PRINTF(LEVEL_ERROR, "Cannot allocate memory for message_buffer\n");
+        goto done;
+    }
+
     // Register Synchronous IPC client for RPC to DCE RM
     pDceClient->clientId[DCE_CLIENT_RM_IPC_TYPE_SYNC] = 0;
     nvStatus = osTegraDceRegisterIpcClient(DCE_CLIENT_RM_IPC_TYPE_SYNC,
@@ -87,7 +94,7 @@ dceclientInitRpcInfra_IMPL
     {
         NV_PRINTF(LEVEL_ERROR, "Register dce ipc client failed for DCE_CLIENT_RM_IPC_TYPE_SYNC error 0x%x\n",
                                nvStatus);
-        goto ipc_register_fail;
+        goto done;
     }
 
     NV_PRINTF(LEVEL_INFO, "Registered dce ipc client DCE_CLIENT_RM_IPC_TYPE_SYNC handle: 0x%x\n",
@@ -102,12 +109,12 @@ dceclientInitRpcInfra_IMPL
     {
         NV_PRINTF(LEVEL_ERROR, "Register dce ipc client failed for DCE_CLIENT_RM_IPC_TYPE_EVENT error 0x%x\n",
                                nvStatus);
-        goto ipc_register_fail;
+        goto done;
     }
     NV_PRINTF(LEVEL_INFO, "Register dce ipc client DCE_CLIENT_RM_IPC_TYPE_EVENT: 0x%x\n",
                            pDceClient->clientId[DCE_CLIENT_RM_IPC_TYPE_EVENT]);
 
-ipc_register_fail:
+done:
     if (nvStatus != NV_OK)
     {
         dceclientDeinitRpcInfra(pDceClient);
@@ -161,8 +168,12 @@ dceclientDeinitRpcInfra_IMPL
         osTegraDceUnregisterIpcClient(pDceClient->clientId[i]);
     }
 
-    portMemFree(pDceClient->pRpc);
-    pDceClient->pRpc = NULL;
+    if (pDceClient->pRpc != NULL)
+    {
+        portMemFree(pDceClient->pRpc->message_buffer);
+        portMemFree(pDceClient->pRpc);
+        pDceClient->pRpc = NULL;
+    }
 }
 
 NV_STATUS
@@ -245,40 +256,6 @@ static void _dceclientrmPrintHdr
               _dceRpcGetMessageHeader(pRpc)->header_version, _dceRpcGetMessageHeader(pRpc)->signature,
               _dceRpcGetMessageHeader(pRpc)->length, _dceRpcGetMessageHeader(pRpc)->function,
               _dceRpcGetMessageHeader(pRpc)->rpc_result);
-}
-
-/**
- * Allocate memory for rpc message
- * TODO : Change static allocation of 4K to
- * a better dynamic allocation
- */
-static NV_STATUS _dceRpcAllocateMemory
-(
-    OBJRPC *pRpc
-)
-{
-    NvU32 *message_buffer;
-
-    NV_ASSERT_OR_RETURN(pRpc != NULL, NV_ERR_INVALID_ARGUMENT);
-    message_buffer = portMemAllocNonPaged(DCE_MAX_RPC_MSG_SIZE);
-    if (message_buffer == NULL)
-    {
-        NV_PRINTF(LEVEL_ERROR, "Cannot allocate memory for message_buffer\n");
-        return NV_ERR_INSUFFICIENT_RESOURCES;
-    }
-
-    pRpc->message_buffer = message_buffer;
-
-    return NV_OK;
-}
-
-static void _dceRpcFreeMemory
-(
-    OBJRPC *pRpc
-)
-{
-    portMemFree(pRpc->message_buffer);
-    pRpc->message_buffer = NULL;
 }
 
 /**
@@ -421,8 +398,8 @@ NV_STATUS rpcRmApiControl_dce
     NvU32 paramsSize
 )
 {
-    OBJGPU *pGpu = NULL;
-    OBJRPC *pRpc = NULL;
+    OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
+    OBJRPC *pRpc = GPU_GET_RPC(pGpu);
 
     rpc_generic_union *msg_data;
     rpc_gsp_rm_control_v *rpc_params = NULL;
@@ -430,11 +407,7 @@ NV_STATUS rpcRmApiControl_dce
 
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE : Prepare and send RmApiControl RPC [cmd:0x%x]\n", cmd);
 
-    NV_ASSERT_OR_RETURN(pRmApi != NULL, NV_ERR_INVALID_ARGUMENT);
-    pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     NV_ASSERT_OR_RETURN(pGpu != NULL, NV_ERR_INVALID_STATE);
-    pRpc = GPU_GET_RPC(pGpu);
-    NV_ASSERT_OK_OR_RETURN(_dceRpcAllocateMemory(pRpc));
 
     msg_data = _dceRpcGetMessageData(pRpc);
     rpc_params = &msg_data->gsp_rm_control_v;
@@ -475,8 +448,6 @@ NV_STATUS rpcRmApiControl_dce
     portMemCopy(pParamStructPtr, paramsSize, rpc_params->params, paramsSize);
 
 done:
-    if (pRpc->message_buffer)
-        _dceRpcFreeMemory(pRpc);
     return status;
 }
 
@@ -491,8 +462,8 @@ NV_STATUS rpcRmApiAlloc_dce
     NvU32 allocParamSize
 )
 {
-    OBJGPU *pGpu = NULL;
-    OBJRPC *pRpc = NULL;
+    OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
+    OBJRPC *pRpc = GPU_GET_RPC(pGpu);
 
     rpc_generic_union *msg_data;
     rpc_gsp_rm_alloc_v *rpc_params;
@@ -502,11 +473,7 @@ NV_STATUS rpcRmApiAlloc_dce
 
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE: Prepare and send RmApiAlloc RPC\n");
 
-    NV_ASSERT_OR_RETURN(pRmApi != NULL, NV_ERR_INVALID_ARGUMENT);
-    pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     NV_ASSERT_OR_RETURN(pGpu != NULL, NV_ERR_INVALID_STATE);
-    pRpc = GPU_GET_RPC(pGpu);
-    NV_ASSERT_OK_OR_RETURN(_dceRpcAllocateMemory(pRpc));
 
     msg_data = _dceRpcGetMessageData(pRpc);
     rpc_params = &msg_data->gsp_rm_alloc_v;
@@ -562,15 +529,13 @@ NV_STATUS rpcRmApiAlloc_dce
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE: RPC for GSP RM Alloc Successful\n");
 
 done:
-    if (pRpc->message_buffer)
-        _dceRpcFreeMemory(pRpc);
     return status;
 }
 
 NV_STATUS rpcRmApiFree_dce(RM_API *pRmApi, NvHandle hClient, NvHandle hObject)
 {
-    OBJGPU *pGpu = NULL;
-    OBJRPC *pRpc = NULL;
+    OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
+    OBJRPC *pRpc = GPU_GET_RPC(pGpu);
 
     rpc_generic_union *msg_data;
     NVOS00_PARAMETERS_v *rpc_params;
@@ -579,11 +544,7 @@ NV_STATUS rpcRmApiFree_dce(RM_API *pRmApi, NvHandle hClient, NvHandle hObject)
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE Free "
               "RPC Called for hClient: 0x%x\n", hClient);
 
-    NV_ASSERT_OR_RETURN(pRmApi != NULL, NV_ERR_INVALID_ARGUMENT);
-    pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     NV_ASSERT_OR_RETURN(pGpu != NULL, NV_ERR_INVALID_STATE);
-    pRpc = GPU_GET_RPC(pGpu);
-    NV_ASSERT_OK_OR_RETURN(_dceRpcAllocateMemory(pRpc));
 
     msg_data = _dceRpcGetMessageData(pRpc);
     rpc_params = &msg_data->free_v.params;
@@ -616,9 +577,6 @@ NV_STATUS rpcRmApiFree_dce(RM_API *pRmApi, NvHandle hClient, NvHandle hObject)
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE: RPC for Free Successful\n");
 
 done:
-    if (pRpc->message_buffer)
-        _dceRpcFreeMemory(pRpc);
-
     return status;
 }
 
@@ -633,8 +591,8 @@ NV_STATUS rpcRmApiDupObject_dce
     NvU32 flags
 )
 {
-    OBJGPU *pGpu = NULL;
-    OBJRPC *pRpc = NULL;
+    OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
+    OBJRPC *pRpc = GPU_GET_RPC(pGpu);
 
     rpc_generic_union *msg_data;
     NVOS55_PARAMETERS_v03_00 *rpc_params = NULL;
@@ -643,12 +601,7 @@ NV_STATUS rpcRmApiDupObject_dce
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE Dup Object "
               "RPC Called for hClient: 0x%x\n", hClient);
 
-
-    NV_ASSERT_OR_RETURN(pRmApi != NULL, NV_ERR_INVALID_ARGUMENT);
-    pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     NV_ASSERT_OR_RETURN(pGpu != NULL, NV_ERR_INVALID_STATE);
-    pRpc = GPU_GET_RPC(pGpu);
-    NV_ASSERT_OK_OR_RETURN(_dceRpcAllocateMemory(pRpc));
 
     msg_data = _dceRpcGetMessageData(pRpc);
     rpc_params = &msg_data->dup_object_v.params;
@@ -684,7 +637,6 @@ NV_STATUS rpcRmApiDupObject_dce
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE: RPC for DUP OBJECT Successful\n");
 
 done:
-    portMemFree(pRpc->message_buffer);
     return status;
 }
 
@@ -695,9 +647,9 @@ rpcDceRmInit_dce
     NvBool bInit
 )
 {
-    OBJGPU *pGpu = NULL;
-    OBJRPC *pRpc = NULL;
-    DceClient *pDceClientrm = NULL;
+    OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
+    OBJRPC *pRpc = GPU_GET_RPC(pGpu);
+    DceClient *pDceClientrm = GPU_GET_DCECLIENTRM(pGpu);
 
     rpc_generic_union *msg_data;
     NV_STATUS status = NV_ERR_NOT_SUPPORTED;
@@ -706,12 +658,7 @@ rpcDceRmInit_dce
     NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE RPC to trigger %s called\n",
               bInit ? "RmInitAdapter" : "RmShutdownAdapter");
 
-    NV_ASSERT_OR_RETURN(pRmApi != NULL, NV_ERR_INVALID_ARGUMENT);
-    pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     NV_ASSERT_OR_RETURN(pGpu != NULL, NV_ERR_INVALID_STATE);
-    pRpc = GPU_GET_RPC(pGpu);
-    pDceClientrm = GPU_GET_DCECLIENTRM(pGpu);
-    NV_ASSERT_OK_OR_RETURN(_dceRpcAllocateMemory(pRpc));
 
     msg_data = _dceRpcGetMessageData(pRpc);
     rpc_params = &msg_data->dce_rm_init_v;
@@ -761,6 +708,5 @@ rpcDceRmInit_dce
     }
 
 done:
-    portMemFree(pRpc->message_buffer);
     return status;
 }

@@ -355,9 +355,10 @@ confComputePerformKeyRotation_IMPL
             osQueueWorkItem(pGpu,
                             performKeyRotation_WORKITEM,
                             (void *)pWorkItemInfo,
-                            (OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA |
-                             OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RW |
-                             OS_QUEUE_WORKITEM_FLAGS_LOCK_GPUS)),
+                            (OsQueueWorkItemFlags){
+                                .bLockSema = NV_TRUE,
+                                .apiLock = WORKITEM_FLAGS_API_LOCK_READ_WRITE,
+                                .bLockGpus = NV_TRUE}),
             cleanup);
     }
     else

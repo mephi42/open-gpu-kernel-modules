@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2013 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -208,14 +208,6 @@ static NvBool GetHwHead(const NVDpyEvoRec *pDpyEvo, NvS64 *pHead)
     return TRUE;
 }
 
-static NvBool DitherConfigurationAllowed(const NVDpyEvoRec *pDpyEvo)
-{
-    NVDispEvoPtr pDispEvo = pDpyEvo->pDispEvo;
-    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
-
-    return pDevEvo->hal->caps.supportedDitheringModes != 0;
-}
-
 static void SetDitheringCommon(NVDpyEvoPtr pDpyEvo)
 {
     NVEvoUpdateState updateState = { };
@@ -254,10 +246,6 @@ static void SetDitheringCommon(NVDpyEvoPtr pDpyEvo)
  */
 static NvBool SetDithering(NVDpyEvoRec *pDpyEvo, NvS64 dithering)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     switch (dithering) {
     case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_AUTO:
     case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_ENABLED:
@@ -276,35 +264,25 @@ static NvBool SetDithering(NVDpyEvoRec *pDpyEvo, NvS64 dithering)
 
 static NvBool GetDithering(const NVDpyEvoRec *pDpyEvo, NvS64 *pDithering)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     *pDithering = pDpyEvo->requestedDithering.state;
 
     return TRUE;
 }
 
-static NvBool GetDitheringGenericValidValues(
-    const NVDpyEvoRec *pDpyEvo,
-    struct NvKmsAttributeValidValuesCommonReply *pValidValues)
-{
-    return DitherConfigurationAllowed(pDpyEvo);
-}
+#define NV_SUPPORTED_DITHERING_MODES                                    \
+    ((1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_MODE_AUTO)        | \
+     (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_MODE_DYNAMIC_2X2) | \
+     (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_MODE_STATIC_2X2)  | \
+     (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_MODE_TEMPORAL))
 
 /*!
  * Assigns ditheringMode on all dpys driven by pDpyEvo's head.
  */
 static NvBool SetDitheringMode(NVDpyEvoRec *pDpyEvo, NvS64 ditheringMode)
 {
-    NVDevEvoPtr pDevEvo = pDpyEvo->pDispEvo->pDevEvo;
     NvU32 mask = (1 << ditheringMode);
 
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
-    if (!(mask & pDevEvo->hal->caps.supportedDitheringModes)) {
+    if (!(mask & NV_SUPPORTED_DITHERING_MODES)) {
         return FALSE;
     }
 
@@ -328,10 +306,6 @@ static NvBool SetDitheringMode(NVDpyEvoRec *pDpyEvo, NvS64 ditheringMode)
 static NvBool GetDitheringMode(const NVDpyEvoRec *pDpyEvo,
                                NvS64 *pDitheringMode)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     *pDitheringMode = pDpyEvo->requestedDithering.mode;
 
     return TRUE;
@@ -341,17 +315,9 @@ static NvBool GetDitheringModeValidValues(
     const NVDpyEvoRec *pDpyEvo,
     struct NvKmsAttributeValidValuesCommonReply *pValidValues)
 {
-    NVDispEvoPtr pDispEvo = pDpyEvo->pDispEvo;
-    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
-
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     nvAssert(pValidValues->type == NV_KMS_ATTRIBUTE_TYPE_INTBITS);
 
-    pValidValues->u.bits.ints =
-        pDevEvo->hal->caps.supportedDitheringModes;
+    pValidValues->u.bits.ints = NV_SUPPORTED_DITHERING_MODES;
 
     return TRUE;
 }
@@ -361,14 +327,11 @@ static NvBool GetDitheringModeValidValues(
  */
 static NvBool SetDitheringDepth(NVDpyEvoRec *pDpyEvo, NvS64 ditheringDepth)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     switch (ditheringDepth) {
     case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_DEPTH_AUTO:
     case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_DEPTH_6_BITS:
     case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_DEPTH_8_BITS:
+    case NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_DEPTH_10_BITS:
         break;
     default:
         return FALSE;
@@ -384,10 +347,6 @@ static NvBool SetDitheringDepth(NVDpyEvoRec *pDpyEvo, NvS64 ditheringDepth)
 static NvBool GetDitheringDepth(const NVDpyEvoRec *pDpyEvo,
                                 NvS64 *pDitheringDepth)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     *pDitheringDepth = pDpyEvo->requestedDithering.depth;
 
     return TRUE;
@@ -396,10 +355,6 @@ static NvBool GetDitheringDepth(const NVDpyEvoRec *pDpyEvo,
 static NvBool GetCurrentDithering(const NVDpyEvoRec *pDpyEvo,
                                   NvS64 *pCurrentDithering)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     *pCurrentDithering = pDpyEvo->currentAttributes.dithering.enabled;
 
     return TRUE;
@@ -408,10 +363,6 @@ static NvBool GetCurrentDithering(const NVDpyEvoRec *pDpyEvo,
 static NvBool GetCurrentDitheringMode(const NVDpyEvoRec *pDpyEvo,
                                       NvS64 *pCurrentDitheringMode)
 {
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
-
     *pCurrentDitheringMode =
         pDpyEvo->currentAttributes.dithering.mode;
 
@@ -421,10 +372,6 @@ static NvBool GetCurrentDitheringMode(const NVDpyEvoRec *pDpyEvo,
 static NvBool GetCurrentDitheringDepth(const NVDpyEvoRec *pDpyEvo,
                                        NvS64 *pCurrentDitheringDepth)
 {
-
-    if (!DitherConfigurationAllowed(pDpyEvo)) {
-        return FALSE;
-    }
 
     *pCurrentDitheringDepth =
         pDpyEvo->currentAttributes.dithering.depth;
@@ -494,101 +441,6 @@ static NvBool GetDigitalVibranceValidValues(
 
     pValidValues->u.range.min = NV_EVO_DVC_MIN;
     pValidValues->u.range.max = NV_EVO_DVC_MAX;
-
-    return TRUE;
-}
-
-static NvBool ImageSharpeningAvailable(const NVDpyEvoRec *pDpyEvo)
-{
-    if (!pDpyEvo->pDispEvo->pDevEvo->hal->caps.supportsImageSharpening) {
-        return FALSE;
-    }
-
-    if (!nvDpyEvoIsActive(pDpyEvo)) {
-        return FALSE;
-    }
-
-    return pDpyEvo->currentAttributes.imageSharpening.available;
-}
-
-/*!
- * Assigns imageSharpening on all dpys driven by pDpyEvo's head.
- */
-static NvBool SetImageSharpening(NVDpyEvoRec *pDpyEvo, NvS64 imageSharpening)
-{
-    NVEvoUpdateState updateState = { };
-    NVDispEvoPtr pDispEvo = pDpyEvo->pDispEvo;
-    NVDispApiHeadStateEvoRec *pApiHeadState;
-    NvU32 head;
-
-    if ((pDpyEvo->apiHead == NV_INVALID_HEAD) ||
-            !ImageSharpeningAvailable(pDpyEvo)) {
-        return FALSE;
-    }
-    pApiHeadState = &pDispEvo->apiHeadState[pDpyEvo->apiHead];
-
-    nvAssert((pApiHeadState->hwHeadsMask) != 0x0 &&
-             (nvDpyIdIsInDpyIdList(pDpyEvo->id, pApiHeadState->activeDpys)));
-
-    imageSharpening = NV_MAX(imageSharpening, NV_EVO_IMAGE_SHARPENING_MIN);
-    imageSharpening = NV_MIN(imageSharpening, NV_EVO_IMAGE_SHARPENING_MAX);
-
-    FOR_EACH_EVO_HW_HEAD_IN_MASK(pApiHeadState->hwHeadsMask, head) {
-        nvSetImageSharpeningEvo(pDispEvo, head, imageSharpening, &updateState);
-    }
-
-    nvEvoUpdateAndKickOff(pDispEvo, FALSE, &updateState,
-                          TRUE /* releaseElv */);
-
-    pApiHeadState->attributes.imageSharpening.value = imageSharpening;
-
-    return TRUE;
-}
-
-static NvBool GetImageSharpening(const NVDpyEvoRec *pDpyEvo,
-                                 NvS64 *pImageSharpening)
-{
-    if (!ImageSharpeningAvailable(pDpyEvo)) {
-        return FALSE;
-    }
-
-    *pImageSharpening = pDpyEvo->currentAttributes.imageSharpening.value;
-
-    return TRUE;
-}
-
-static NvBool GetImageSharpeningValidValues(
-    const NVDpyEvoRec *pDpyEvo,
-    struct NvKmsAttributeValidValuesCommonReply *pValidValues)
-{
-    if (!ImageSharpeningAvailable(pDpyEvo)) {
-        return FALSE;
-    }
-
-    nvAssert(pValidValues->type == NV_KMS_ATTRIBUTE_TYPE_RANGE);
-
-    pValidValues->u.range.min = NV_EVO_IMAGE_SHARPENING_MIN;
-    pValidValues->u.range.max = NV_EVO_IMAGE_SHARPENING_MAX;
-
-    return TRUE;
-}
-
-static NvBool GetImageSharpeningAvailable(const NVDpyEvoRec *pDpyEvo,
-                                          NvS64 *pImageSharpeningAvailable)
-{
-    *pImageSharpeningAvailable = ImageSharpeningAvailable(pDpyEvo);
-
-    return TRUE;
-}
-
-static NvBool GetImageSharpeningDefault(const NVDpyEvoRec *pDpyEvo,
-                                        NvS64 *pImageSharpeningDefault)
-{
-    if (!nvDpyEvoIsActive(pDpyEvo)) {
-        return FALSE;
-    }
-
-    *pImageSharpeningDefault = NV_EVO_IMAGE_SHARPENING_DEFAULT;
 
     return TRUE;
 }
@@ -717,18 +569,11 @@ static void DpyPostColorSpaceOrRangeSetEvo(NVDpyEvoPtr pDpyEvo)
 
 static NvU32 DpyGetValidColorSpaces(const NVDpyEvoRec *pDpyEvo)
 {
-    const NVDevEvoRec *pDevEvo = pDpyEvo->pDispEvo->pDevEvo;
     NvU32 val = (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_RGB);
-
-    if ((nvDpyIsHdmiEvo(pDpyEvo) &&
-            (pDevEvo->caps.hdmiYCbCr422MaxBpc != 0)) ||
-        (nvConnectorUsesDPLib(pDpyEvo->pConnectorEvo) &&
-            (pDevEvo->caps.dpYCbCr422MaxBpc != 0))) {
-        val |= (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr422);
-    }
 
     if (nvDpyIsHdmiEvo(pDpyEvo) ||
             nvConnectorUsesDPLib(pDpyEvo->pConnectorEvo)) {
+        val |= (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr422);
         val |= (1 << NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr444);
     }
 
@@ -1309,7 +1154,7 @@ static const struct {
     [NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING] = {
         .set            = SetDithering,
         .get            = GetDithering,
-        .getValidValues = GetDitheringGenericValidValues,
+        .getValidValues = NULL,
         .type           = NV_KMS_ATTRIBUTE_TYPE_INTEGER,
     },
     [NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_MODE] = {
@@ -1321,25 +1166,25 @@ static const struct {
     [NV_KMS_DPY_ATTRIBUTE_REQUESTED_DITHERING_DEPTH] = {
         .set            = SetDitheringDepth,
         .get            = GetDitheringDepth,
-        .getValidValues = GetDitheringGenericValidValues,
+        .getValidValues = NULL,
         .type           = NV_KMS_ATTRIBUTE_TYPE_INTEGER,
     },
     [NV_KMS_DPY_ATTRIBUTE_CURRENT_DITHERING] = {
         .set            = NULL,
         .get            = GetCurrentDithering,
-        .getValidValues = GetDitheringGenericValidValues,
+        .getValidValues = NULL,
         .type           = NV_KMS_ATTRIBUTE_TYPE_BOOLEAN,
     },
     [NV_KMS_DPY_ATTRIBUTE_CURRENT_DITHERING_MODE] = {
         .set            = NULL,
         .get            = GetCurrentDitheringMode,
-        .getValidValues = GetDitheringGenericValidValues,
+        .getValidValues = NULL,
         .type           = NV_KMS_ATTRIBUTE_TYPE_INTEGER,
     },
     [NV_KMS_DPY_ATTRIBUTE_CURRENT_DITHERING_DEPTH] = {
         .set            = NULL,
         .get            = GetCurrentDitheringDepth,
-        .getValidValues = GetDitheringGenericValidValues,
+        .getValidValues = NULL,
         .type           = NV_KMS_ATTRIBUTE_TYPE_INTEGER,
     },
     [NV_KMS_DPY_ATTRIBUTE_DIGITAL_VIBRANCE] = {
@@ -1347,24 +1192,6 @@ static const struct {
         .get            = GetDigitalVibrance,
         .getValidValues = GetDigitalVibranceValidValues,
         .type           = NV_KMS_ATTRIBUTE_TYPE_RANGE,
-    },
-    [NV_KMS_DPY_ATTRIBUTE_IMAGE_SHARPENING] = {
-        .set            = SetImageSharpening,
-        .get            = GetImageSharpening,
-        .getValidValues = GetImageSharpeningValidValues,
-        .type           = NV_KMS_ATTRIBUTE_TYPE_RANGE,
-    },
-    [NV_KMS_DPY_ATTRIBUTE_IMAGE_SHARPENING_AVAILABLE] = {
-        .set            = NULL,
-        .get            = GetImageSharpeningAvailable,
-        .getValidValues = NULL,
-        .type           = NV_KMS_ATTRIBUTE_TYPE_BOOLEAN,
-    },
-    [NV_KMS_DPY_ATTRIBUTE_IMAGE_SHARPENING_DEFAULT] = {
-        .set            = NULL,
-        .get            = GetImageSharpeningDefault,
-        .getValidValues = NULL,
-        .type           = NV_KMS_ATTRIBUTE_TYPE_INTEGER,
     },
     [NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE] = {
         .set            = SetRequestedColorSpace,

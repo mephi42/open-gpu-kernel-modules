@@ -44,7 +44,7 @@ NV_STATUS __nvoc_down_thunk_KernelCE_engstateStateInitLocked(OBJGPU *arg1, struc
 NV_STATUS __nvoc_down_thunk_KernelCE_engstateStateUnload(OBJGPU *pGpu, struct OBJENGSTATE *pKCe, NvU32 flags);    // this
 NV_STATUS __nvoc_down_thunk_KernelCE_engstateStateLoad(OBJGPU *arg1, struct OBJENGSTATE *arg_this, NvU32 arg3);    // this
 void __nvoc_down_thunk_KernelCE_engstateStateDestroy(OBJGPU *arg1, struct OBJENGSTATE *arg_this);    // this
-void __nvoc_down_thunk_KernelCE_intrservRegisterIntrService(OBJGPU *arg1, struct IntrService *arg_this, IntrServiceRecord arg3[179]);    // this
+void __nvoc_down_thunk_KernelCE_intrservRegisterIntrService(OBJGPU *arg1, struct IntrService *arg_this, IntrServiceRecord arg3[180]);    // this
 NV_STATUS __nvoc_down_thunk_KernelCE_intrservServiceNotificationInterrupt(OBJGPU *arg1, struct IntrService *arg_this, IntrServiceServiceNotificationInterruptArguments *arg3);    // this
 
 // Up-thunk(s) to bridge KernelCE methods to ancestors (if any)
@@ -170,7 +170,7 @@ void __nvoc_down_thunk_KernelCE_engstateStateDestroy(OBJGPU *arg1, struct OBJENG
 }
 
 // kceRegisterIntrService: virtual override (intrserv) base (intrserv)
-void __nvoc_down_thunk_KernelCE_intrservRegisterIntrService(OBJGPU *arg1, struct IntrService *arg_this, IntrServiceRecord arg3[179]) {
+void __nvoc_down_thunk_KernelCE_intrservRegisterIntrService(OBJGPU *arg1, struct IntrService *arg_this, IntrServiceRecord arg3[180]) {
     kceRegisterIntrService(arg1, (struct KernelCE *)(((unsigned char *) arg_this) - NV_OFFSETOF(KernelCE, __nvoc_base_IntrService)), arg3);
 }
 
@@ -306,7 +306,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     PORT_UNREFERENCED_VARIABLE(rmVariantHal_HalVarIdx);
 
     // kceIsPresent -- virtual halified (2 hals) override (engstate) base (engstate) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceIsPresent__ = &kceIsPresent_3dd2c9;
     }
@@ -328,7 +328,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     }
 
     // kceStateLoad -- virtual halified (2 hals) override (engstate) base (engstate)
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceStateLoad__ = &kceStateLoad_46f6a7;
     }
@@ -359,6 +359,18 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     else
     {
         pThis->__kceIsSecureCe__ = &kceIsSecureCe_3dd2c9;
+    }
+
+    // kceSetDecompCeCap -- halified (2 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xe0000000UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB10B | GB110 | GB112 */ 
+    {
+        pThis->__kceSetDecompCeCap__ = &kceSetDecompCeCap_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__kceSetDecompCeCap__ = &kceSetDecompCeCap_b3696a;
     }
 
     // kceIsCeSysmemRead -- halified (3 hals) body
@@ -393,6 +405,18 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
         pThis->__kceIsCeSysmemWrite__ = &kceIsCeSysmemWrite_3dd2c9;
     }
 
+    // kceIsCCWorkSubmitLce -- halified (2 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x60000000UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB110 | GB112 */ 
+    {
+        pThis->__kceIsCCWorkSubmitLce__ = &kceIsCCWorkSubmitLce_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__kceIsCCWorkSubmitLce__ = &kceIsCCWorkSubmitLce_3dd2c9;
+    }
+
     // kceIsCeNvlinkP2P -- halified (3 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x60000000UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB110 | GB112 */ 
@@ -408,6 +432,18 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     else
     {
         pThis->__kceIsCeNvlinkP2P__ = &kceIsCeNvlinkP2P_3dd2c9;
+    }
+
+    // kceIsScrubLce -- halified (2 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x60000000UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB110 | GB112 */ 
+    {
+        pThis->__kceIsScrubLce__ = &kceIsScrubLce_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__kceIsScrubLce__ = &kceIsScrubLce_3dd2c9;
     }
 
     // kceAssignCeCaps -- halified (3 hals) body
@@ -464,7 +500,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     }
 
     // kceGetNvlinkAutoConfigCeValues -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceGetNvlinkAutoConfigCeValues__ = &kceGetNvlinkAutoConfigCeValues_56cd7a;
     }
@@ -494,7 +530,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
 
     // kceIsCurrentMaxTopology -- halified (2 hals)
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kceIsCurrentMaxTopology__ = &kceIsCurrentMaxTopology_3dd2c9;
     }
@@ -504,7 +540,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     }
 
     // kceClearAssignedNvlinkPeerMasks -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceClearAssignedNvlinkPeerMasks__ = &kceClearAssignedNvlinkPeerMasks_b3696a;
     }
@@ -534,7 +570,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     {
         pThis->__kceGetGrceConfigSize1__ = &kceGetGrceConfigSize1_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceGetGrceConfigSize1__ = &kceGetGrceConfigSize1_4a4dee;
     }
@@ -568,7 +604,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     {
         pThis->__kceGetPce2lceConfigSize1__ = &kceGetPce2lceConfigSize1_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kceGetPce2lceConfigSize1__ = &kceGetPce2lceConfigSize1_4a4dee;
     }
@@ -604,13 +640,29 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
         pThis->__kceGetMappings__ = &kceGetMappings_GB100;
     }
     else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kceGetMappings__ = &kceGetMappings_46f6a7;
     }
     else
     {
         pThis->__kceGetMappings__ = &kceGetMappings_GB202;
+    }
+
+    // kceGetMappingsForMIGGpuInstance -- halified (3 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x10000000UL) )) /* ChipHal: GH100 */ 
+    {
+        pThis->__kceGetMappingsForMIGGpuInstance__ = &kceGetMappingsForMIGGpuInstance_GH100;
+    }
+    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xe0000000UL) ) ||
+             ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB10B | GB110 | GB112 */ 
+    {
+        pThis->__kceGetMappingsForMIGGpuInstance__ = &kceGetMappingsForMIGGpuInstance_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__kceGetMappingsForMIGGpuInstance__ = &kceGetMappingsForMIGGpuInstance_46f6a7;
     }
 
     // kceMapPceLceForC2C -- halified (3 hals) body
@@ -639,6 +691,18 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     else
     {
         pThis->__kceMapPceLceForScrub__ = &kceMapPceLceForScrub_46f6a7;
+    }
+
+    // kceMapPceLceForWorkSubmitLces -- halified (2 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x60000000UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB110 | GB112 */ 
+    {
+        pThis->__kceMapPceLceForWorkSubmitLces__ = &kceMapPceLceForWorkSubmitLces_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__kceMapPceLceForWorkSubmitLces__ = &kceMapPceLceForWorkSubmitLces_56cd7a;
     }
 
     // kceMapPceLceForDecomp -- halified (2 hals) body
@@ -728,8 +792,8 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     {
         pThis->__kceMapPceLceForNvlinkPeers__ = &kceMapPceLceForNvlinkPeers_GA100;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xe0000000UL) ) ||
-             ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB10B | GB110 | GB112 */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x60000000UL) ) ||
+             ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000006UL) )) /* ChipHal: GB100 | GB102 | GB110 | GB112 */ 
     {
         pThis->__kceMapPceLceForNvlinkPeers__ = &kceMapPceLceForNvlinkPeers_GB100;
     }
@@ -787,7 +851,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
 
     // kceGetNvlinkPeerSupportedLceMask -- halified (3 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kceGetNvlinkPeerSupportedLceMask__ = &kceGetNvlinkPeerSupportedLceMask_4a4dee;
     }
@@ -811,7 +875,7 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
         pThis->__kceGetGrceSupportedLceMask__ = &kceGetGrceSupportedLceMask_GB202;
     }
     else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__kceGetGrceSupportedLceMask__ = &kceGetGrceSupportedLceMask_4a4dee;
     }
@@ -854,13 +918,13 @@ static void __nvoc_init_funcTable_KernelCE_1(KernelCE *pThis, GpuHalspecOwner *p
     {
         pThis->__kceGetGrceMaskReg__ = &kceGetGrceMaskReg_46f6a7;
     }
-} // End __nvoc_init_funcTable_KernelCE_1 with approximately 109 basic block(s).
+} // End __nvoc_init_funcTable_KernelCE_1 with approximately 120 basic block(s).
 
 
-// Initialize vtable(s) for 49 virtual method(s).
+// Initialize vtable(s) for 54 virtual method(s).
 void __nvoc_init_funcTable_KernelCE(KernelCE *pThis, GpuHalspecOwner *pGpuhalspecowner, RmHalspecOwner *pRmhalspecowner) {
 
-    // Initialize vtable(s) with 34 per-object function pointer(s).
+    // Initialize vtable(s) with 39 per-object function pointer(s).
     __nvoc_init_funcTable_KernelCE_1(pThis, pGpuhalspecowner, pRmhalspecowner);
 }
 
@@ -913,10 +977,19 @@ NV_STATUS __nvoc_objCreate_KernelCE(KernelCE **ppThis, Dynamic *pParent, NvU32 c
     GpuHalspecOwner *pGpuhalspecowner;
     RmHalspecOwner *pRmhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(KernelCE), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(KernelCE));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(KernelCE));
@@ -924,7 +997,7 @@ NV_STATUS __nvoc_objCreate_KernelCE(KernelCE **ppThis, Dynamic *pParent, NvU32 c
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelCE_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -937,13 +1010,15 @@ NV_STATUS __nvoc_objCreate_KernelCE(KernelCE **ppThis, Dynamic *pParent, NvU32 c
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
         pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelCE_cleanup);
     if ((pRmhalspecowner = dynamicCast(pParent, RmHalspecOwner)) == NULL)
         pRmhalspecowner = objFindAncestorOfType(RmHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelCE_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__KernelCE(pThis, pGpuhalspecowner, pRmhalspecowner);
     status = __nvoc_ctor_KernelCE(pThis, pGpuhalspecowner, pRmhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_KernelCE_cleanup;
@@ -951,24 +1026,28 @@ NV_STATUS __nvoc_objCreate_KernelCE(KernelCE **ppThis, Dynamic *pParent, NvU32 c
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_KernelCE_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(KernelCE));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

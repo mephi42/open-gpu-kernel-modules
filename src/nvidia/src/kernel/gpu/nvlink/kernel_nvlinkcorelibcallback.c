@@ -463,7 +463,7 @@ knvlinkCoreQueueLinkChangeCallback
     status = osQueueWorkItem(pGpu,
                              _knvlinkCorePassiveLinkChangeCallback,
                              pWorkItemData,
-                             OS_QUEUE_WORKITEM_FLAGS_NONE);
+                             (OsQueueWorkItemFlags){0});
     if (status != NV_OK)
     {
         portMemFree(pWorkItemData);

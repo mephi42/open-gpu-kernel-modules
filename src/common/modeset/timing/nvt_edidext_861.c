@@ -3149,6 +3149,13 @@ void NvTiming_ConstructAdaptiveSyncSDP(
                                     NVT_DP_ADAPTIVE_SYNC_SDP_DB0_VARIABLE_FRAME_RATE_SHIFT);
     }
 
+    if (pCtrl->bDisableSourceSinkSync)
+    {
+        nvt_nvu8_set_bits(pSdp->payload.db0, NVT_DP_ADAPTIVE_SYNC_SDP_DB0_DISABLE_PR_ACTIVE_SOURCE_SINK_SYNC_DISABLED,
+                                    NVT_DP_ADAPTIVE_SYNC_SDP_DB0_DISABLE_PR_ACTIVE_MASK,
+                                    NVT_DP_ADAPTIVE_SYNC_SDP_DB0_DISABLE_PR_ACTIVE_SHIFT);
+    }
+
     if (pCtrl->minVTotal)
     {
         nvt_nvu8_set_bits(pSdp->payload.db1, pCtrl->minVTotal & 0xff,

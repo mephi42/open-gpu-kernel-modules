@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -35,22 +35,29 @@
 #include "nverror.h"
 #include "nvrm_registry.h"
 
+#include "published/blackwell/gb100/hwproject.h"
 #include "published/blackwell/gb100/dev_vm.h"
-#include "published/blackwell/gb100/dev_boot.h"
-#include "published/blackwell/gb100/dev_boot_addendum.h"
+#include "published/blackwell/gb100/dev_boot_zb.h"
+#include "published/blackwell/gb100/dev_boot_zb_addendum.h"
 #include "published/blackwell/gb100/dev_mnoc_pri_zb.h"
 #include "published/blackwell/gb100/dev_pcfg_pf0.h"
 #include "published/blackwell/gb100/dev_nv_pcie_config_reg_addendum.h"
+#include "published/blackwell/gb100/dev_fuse_zb.h"
+#include "published/blackwell/gb100/hwproject.h"
 
-static NV_STATUS _gpuFindPcieRegAddr_GB100(OBJGPU *pGpu, NvU32 regId, NvU32 *pRegAddr);
-static NvU32     _gpuGetPciePartitionId_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
-static NvU32     _gpuGetPcieCfgCapId_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
-static NvU32     _gpuGetPcieExtCfgCapId_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
-static NvU32     _gpuGetPcieCfgMsgboxId_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
-static NV_STATUS _gpuGetPcieCfgCapBaseAddr_GB100(OBJGPU *pGpu, NvU32 hwDefAddr, NvU32 *pCapBaseAddr);
-static NV_STATUS _gpuGetPcieExtCfgCapBaseAddr_GB100(OBJGPU *pGpu, NvU32 hwDefAddr, NvU32 *pCapBaseAddr);
-static NvU32     _gpuGetPcieCfgRegOffset_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
-static NvU32     _gpuGetPcieExtCfgRegOffset_GB100(OBJGPU *pGpu, NvU32 hwDefAddr);
+#include "gpu/mem_mgr/mem_mgr.h"
+#include "kernel/gpu/mig_mgr/kernel_mig_manager.h"
+
+static NV_STATUS _gpuFindPcieRegAddr_GB100(void *hPci, NvU32 regId, NvU32 *pRegAddr);
+static NvU32     _gpuGetPciePartitionId_GB100(NvU32 hwDefAddr);
+static NvU32     _gpuGetPcieCfgCapId_GB100(NvU32 hwDefAddr);
+static NvU32     _gpuGetPcieExtCfgCapId_GB100(NvU32 hwDefAddr);
+static NvU32     _gpuGetPcieCfgMsgboxId_GB100(NvU32 hwDefAddr);
+static NV_STATUS _gpuGetPcieCfgCapBaseAddr_GB100(void *hPci, NvU32 hwDefAddr, NvU32 *pCapBaseAddr);
+static void      _gpuGetPcieExtCfgDvsecInfo_GB100(NvU32 hwDefAddr, NvU32 *pVenId, NvU32 *pDvsecLen);
+static NV_STATUS _gpuGetPcieExtCfgCapBaseAddr_GB100(void *hPci, NvU32 hwDefAddr, NvU32 *pCapBaseAddr);
+static NvU32     _gpuGetPcieCfgRegOffset_GB100(NvU32 hwDefAddr);
+static NvU32     _gpuGetPcieExtCfgRegOffset_GB100(NvU32 hwDefAddr);
 static NvBool    _gpuMnocMboxSendReceiverCond(OBJGPU *pGpu, void *pCondData);
 static NV_STATUS _gpuMnocMboxSendReceiverReady_GB100(OBJGPU *pGpu, IoAperture *pMboxAperture, NvU32 port, RMTIMEOUT *pTimeout);
 static NvBool    _gpuMnocMboxSendCreditCond(OBJGPU *pGpu, void *pCondData);
@@ -238,7 +245,7 @@ gpuReadPassThruConfigReg_GB100
 static NV_STATUS
 _gpuFindPcieRegAddr_GB100
 (
-    OBJGPU *pGpu,
+    void   *hPci,
     NvU32   hwDefAddr,
     NvU32  *pRegAddr
 )
@@ -248,7 +255,7 @@ _gpuFindPcieRegAddr_GB100
     NvU32     offset      = 0;
     NvU32     capBaseAddr = 0;
 
-    partitionId = _gpuGetPciePartitionId_GB100(pGpu, hwDefAddr);
+    partitionId = _gpuGetPciePartitionId_GB100(hwDefAddr);
 
     if (partitionId == NV_PCIE_PARTITION_ID_TYPE0_HEADER)
     {
@@ -261,18 +268,18 @@ _gpuFindPcieRegAddr_GB100
     }
     else if (partitionId == NV_PCIE_PARTITION_ID_CFG_SPACE)
     {
-        status = _gpuGetPcieCfgCapBaseAddr_GB100(pGpu, hwDefAddr, &capBaseAddr);
+        status = _gpuGetPcieCfgCapBaseAddr_GB100(hPci, hwDefAddr, &capBaseAddr);
         if (status == NV_OK)
         {
-            offset = _gpuGetPcieCfgRegOffset_GB100(pGpu, hwDefAddr);
+            offset = _gpuGetPcieCfgRegOffset_GB100(hwDefAddr);
         }
     }
     else if (partitionId == NV_PCIE_PARTITION_ID_EXT_CFG_SPACE)
     {
-        status = _gpuGetPcieExtCfgCapBaseAddr_GB100(pGpu, hwDefAddr, &capBaseAddr);
+        status = _gpuGetPcieExtCfgCapBaseAddr_GB100(hPci, hwDefAddr, &capBaseAddr);
         if (status == NV_OK)
         {
-            offset = _gpuGetPcieExtCfgRegOffset_GB100(pGpu, hwDefAddr);
+            offset = _gpuGetPcieExtCfgRegOffset_GB100(hwDefAddr);
         }
     }
     else
@@ -330,17 +337,44 @@ gpuWriteBusConfigCycle_GB100
         return status;
     }
 
+    // Write to the address
+    if (pGpu->hPci == NULL)
+    {
+        pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
+    }
+
     // Find config register address via linked list traversal
-    status = _gpuFindPcieRegAddr_GB100(pGpu, hwDefAddr, &regAddr);
+    status = _gpuFindPcieRegAddr_GB100(pGpu->hPci, hwDefAddr, &regAddr);
     if (status == NV_OK)
     {
-        // Write to the address
-        if (pGpu->hPci == NULL)
-        {
-            pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
-        }
-
         osPciWriteDword(pGpu->hPci, regAddr, value);
+    }
+
+    return status;
+}
+
+
+// same as gpuReadBusConfigCycle_GB100 with just a pci handle
+NV_STATUS
+pciReadBusConfigCycle_GB100
+(
+    void   *hPci,
+    NvU32   hwDefAddr,
+    NvU32  *pData
+)
+{
+    // work with just a PCI handle
+    NV_STATUS status   = NV_OK;
+    NvU32     regAddr  = 0;
+
+    // no GM107 fallback
+    // no config access sanity check
+
+    // Find config register address via linked list traversal
+    status = _gpuFindPcieRegAddr_GB100(hPci, hwDefAddr, &regAddr);
+    if (status == NV_OK)
+    {
+        *pData = osPciReadDword(hPci, regAddr);
     }
 
     return status;
@@ -382,16 +416,16 @@ gpuReadBusConfigCycle_GB100
         return status;
     }
 
+    if (pGpu->hPci == NULL)
+    {
+        pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
+    }
+
     // Find config register address via linked list traversal
-    status = _gpuFindPcieRegAddr_GB100(pGpu, hwDefAddr, &regAddr);
+    status = _gpuFindPcieRegAddr_GB100(pGpu->hPci, hwDefAddr, &regAddr);
     if (status == NV_OK)
     {
         // Read the address
-        if (pGpu->hPci == NULL)
-        {
-            pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
-        }
-
         *pData = osPciReadDword(pGpu->hPci, regAddr);
     }
 
@@ -438,7 +472,6 @@ gpuSanityCheckVirtRegAccess_GB100
 static NvU32
 _gpuGetPciePartitionId_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -489,7 +522,7 @@ _gpuGetPciePartitionId_GB100
 static NV_STATUS
 _gpuGetPcieCfgCapBaseAddr_GB100
 (
-    OBJGPU *pGpu,
+    void   *hPci,
     NvU32   hwDefAddr,
     NvU32  *pCapBaseAddr
 )
@@ -501,19 +534,10 @@ _gpuGetPcieCfgCapBaseAddr_GB100
     NvU32     curMsgBoxId    = 0;
     NvU32     targetCapId    = 0;
     NvU32     targetMsgBoxId = 0;
-    NvU32     domain         = gpuGetDomain(pGpu);
-    NvU8      bus            = gpuGetBus(pGpu);
-    NvU8      device         = gpuGetDevice(pGpu);
-    NvU8      function       = 0;
     NvU8      regCount       = 0;
 
-    if (pGpu->hPci == NULL)
-    {
-        pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
-    }
-
     // 1. Get the details that uniquely identify capability group of the hwDefAddr i.e, capId & msgboxId
-    targetCapId = _gpuGetPcieCfgCapId_GB100(pGpu, hwDefAddr);
+    targetCapId = _gpuGetPcieCfgCapId_GB100(hwDefAddr);
     if (targetCapId == 0)
     {
         status = NV_ERR_INVALID_ADDRESS;
@@ -522,10 +546,10 @@ _gpuGetPcieCfgCapBaseAddr_GB100
         return status;
     }
 
-    targetMsgBoxId = _gpuGetPcieCfgMsgboxId_GB100(pGpu, hwDefAddr);
+    targetMsgBoxId = _gpuGetPcieCfgMsgboxId_GB100(hwDefAddr);
 
     // 2. Read base address of this partition to get to first node of linklist
-    regVal = osPciReadDword(pGpu->hPci, capBaseAddr);
+    regVal = osPciReadDword(hPci, capBaseAddr);
     if (regVal == 0xFFFFFFFF)
     {
         NV_PRINTF(LEVEL_INFO, "Register read failed : 0x%x\n", capBaseAddr);
@@ -538,7 +562,7 @@ _gpuGetPcieCfgCapBaseAddr_GB100
     capBaseAddr = (regVal & 0xFF);
     while ((capBaseAddr != 0) && ((regCount++) <= NV_ARRAY_ELEMENTS(pcieCfgRegInfo)))
     {
-        regVal = osPciReadDword(pGpu->hPci, capBaseAddr);
+        regVal = osPciReadDword(hPci, capBaseAddr);
         if (regVal == 0xFFFFFFFF)
         {
             NV_PRINTF(LEVEL_INFO, "Register read failed : 0x%x\n", capBaseAddr);
@@ -593,7 +617,7 @@ _gpuGetPcieCfgCapBaseAddr_GB100
  * @brief Helper function to get the group address of
  *        PCIE Extended Config Space
  *
- * @param[in]  pGpu          GPU object pointer
+ * @param[in]  hPci          GPU PCI handle
  * @param[in]  hwDefAddr     HW defined register address
  * @param[out] pCapBaseAddr  Group address
  *
@@ -619,7 +643,7 @@ _gpuGetPcieCfgCapBaseAddr_GB100
 static NV_STATUS
 _gpuGetPcieExtCfgCapBaseAddr_GB100
 (
-    OBJGPU *pGpu,
+    void   *hPci,
     NvU32   hwDefAddr,
     NvU32  *pCapBaseAddr
 )
@@ -635,21 +659,12 @@ _gpuGetPcieExtCfgCapBaseAddr_GB100
     NvU32     targetVendorId = 0;
     NvU32     targetDvsecLen = 0;
     NvU32     targetCapId    = 0;
-    NvU32     domain         = gpuGetDomain(pGpu);
-    NvU8      bus            = gpuGetBus(pGpu);
-    NvU8      device         = gpuGetDevice(pGpu);
-    NvU8      function       = 0;
     NvU8      regCount       = 0;
 
     *pCapBaseAddr = 0;
 
-    if (pGpu->hPci == NULL)
-    {
-        pGpu->hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
-    }
-
     // 1. Get the details that uniquely identify group of the hwDefAddr i.e, capId, targetVendorId, targetDvsecLen
-    targetCapId = _gpuGetPcieExtCfgCapId_GB100(pGpu, hwDefAddr);
+    targetCapId = _gpuGetPcieExtCfgCapId_GB100(hwDefAddr);
     if (targetCapId == 0)
     {
         status = NV_ERR_INVALID_ADDRESS;
@@ -660,13 +675,13 @@ _gpuGetPcieExtCfgCapBaseAddr_GB100
 
     if (targetCapId == NV_PCIE_REG_CAP_ID_EXT_CFG_DVSEC_CAP)
     {
-        gpuGetPcieExtCfgDvsecInfo_HAL(pGpu, hwDefAddr, &targetVendorId, &targetDvsecLen);
+        _gpuGetPcieExtCfgDvsecInfo_GB100(hwDefAddr, &targetVendorId, &targetDvsecLen);
     }
 
     // 2. Traverse the linked list to get the base address of the capability group
     while ((capBaseAddr != 0) && ((regCount++) <= NV_ARRAY_ELEMENTS(pcieExtCfgRegInfo)))
     {
-        regVal = osPciReadDword(pGpu->hPci, capBaseAddr);
+        regVal = osPciReadDword(hPci, capBaseAddr);
         if (regVal == 0xFFFFFFFF)
         {
             NV_PRINTF(LEVEL_INFO, "Register read failed : 0x%x\n", capBaseAddr);
@@ -683,7 +698,7 @@ _gpuGetPcieExtCfgCapBaseAddr_GB100
             if (curCapId == NV_PCIE_REG_CAP_ID_EXT_CFG_DVSEC_CAP)
             {
                 venIdAddr = (capBaseAddr + 0x4);
-                regVal2   = osPciReadDword(pGpu->hPci, venIdAddr);
+                regVal2   = osPciReadDword(hPci, venIdAddr);
                 if (regVal == 0xFFFFFFFF)
                 {
                     NV_PRINTF(LEVEL_INFO, "Register read failed : 0x%x\n", venIdAddr);
@@ -748,7 +763,6 @@ _gpuGetPcieExtCfgCapBaseAddr_GB100
 static NvU32
 _gpuGetPcieCfgCapId_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -778,7 +792,6 @@ _gpuGetPcieCfgCapId_GB100
 static NvU32
 _gpuGetPcieExtCfgCapId_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -808,7 +821,6 @@ _gpuGetPcieExtCfgCapId_GB100
 static NvU32
 _gpuGetPcieCfgMsgboxId_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -837,10 +849,9 @@ _gpuGetPcieCfgMsgboxId_GB100
  * @param[out] pVenId    Vendor ID of the DVSEC register
  * @param[out] pDvsecLen DVSEC Length of the DVSEC register
  */
-void
-gpuGetPcieExtCfgDvsecInfo_GB100
+static void
+_gpuGetPcieExtCfgDvsecInfo_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr,
     NvU32  *pVenId,
     NvU32  *pDvsecLen
@@ -859,7 +870,7 @@ gpuGetPcieExtCfgDvsecInfo_GB100
         }
     }
 
-    NV_ASSERT_FAILED("VendorId and DvsecLength fields not found\n");
+    NV_ASSERT_FAILED("VendorId and Dvseclength fields not found\n");
 }
 
 /*!
@@ -874,7 +885,6 @@ gpuGetPcieExtCfgDvsecInfo_GB100
 static NvU32
 _gpuGetPcieCfgRegOffset_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -906,7 +916,6 @@ _gpuGetPcieCfgRegOffset_GB100
 static NvU32
 _gpuGetPcieExtCfgRegOffset_GB100
 (
-    OBJGPU *pGpu,
     NvU32   hwDefAddr
 )
 {
@@ -985,6 +994,48 @@ gpuGetIdInfo_GB100(OBJGPU *pGpu)
             NV_PRINTF(LEVEL_INFO, "pci_dev_id = 0x%x\n", pGpu->idInfo.PCIDeviceID);
         }
     }
+}
+
+//
+// Workaround for Bug 5041782.
+//
+// This function is not created through HAL infrastructure. It needs to be
+// called when OBJGPU is not created. HAL infrastructure can't be used for
+// this case, so it has been added manually. It will be invoked directly by
+// gpumgrWaitForBarFirewall() after checking the GPU devId.
+//
+// See kfspWaitForSecureBoot_GH100
+#define GPU_FSP_BOOT_COMPLETION_TIMEOUT_US 4000000
+NvBool gpuWaitForBarFirewall_GB100(NvU32 domain, NvU8 bus, NvU8 device, NvU8 function)
+{
+    NvU32 data;
+    NvU32 timeUs = 0;
+    void *hPci = osPciInitHandle(domain, bus, device, function, NULL, NULL);
+
+    while (timeUs < GPU_FSP_BOOT_COMPLETION_TIMEOUT_US)
+    {
+        if (pciReadBusConfigCycle_GB100(hPci, NV_PF0_DESIGNATED_VENDOR_SPECIFIC_0_HEADER_2_AND_GENERAL,
+                                        &data) != NV_OK)
+        {
+            NV_PRINTF(LEVEL_WARNING, "Cannot find BAR firewall capability, falling back to wait for 4 seconds!\n");
+            osDelayUs(GPU_FSP_BOOT_COMPLETION_TIMEOUT_US);
+            return NV_TRUE;
+        }
+
+        // Firewall is lowered if 0
+        if (DRF_VAL(_PF0_DESIGNATED,
+                    _VENDOR_SPECIFIC_0_HEADER_2_AND_GENERAL,
+                    _BAR_FIREWALL_STATUS,
+                    data) == 0)
+        {
+            return NV_TRUE;
+        }
+
+        osDelayUs(1000);
+        timeUs += 1000;
+    }
+
+    return NV_FALSE;
 }
 
 /*!
@@ -1085,8 +1136,8 @@ gpuIsCCEnabledInHw_GB100
     OBJGPU *pGpu
 )
 {
-    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC_SCRATCH_RESET_2_CC);
-    return FLD_TEST_DRF(_PMC, _SCRATCH_RESET_2_CC, _MODE_ENABLED, _TRUE, val);
+    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC0_PRI_BASE + NV_PMC_ZB_SCRATCH_RESET_2_CC);
+    return FLD_TEST_DRF(_PMC_ZB, _SCRATCH_RESET_2_CC, _MODE_ENABLED, _TRUE, val);
 }
 
 /*!
@@ -1100,8 +1151,8 @@ gpuIsDevModeEnabledInHw_GB100
     OBJGPU *pGpu
 )
 {
-    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC_SCRATCH_RESET_2_CC);
-    return FLD_TEST_DRF(_PMC, _SCRATCH_RESET_2_CC, _DEV_ENABLED, _TRUE, val);
+    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC0_PRI_BASE + NV_PMC_ZB_SCRATCH_RESET_2_CC);
+    return FLD_TEST_DRF(_PMC_ZB, _SCRATCH_RESET_2_CC, _DEV_ENABLED, _TRUE, val);
 }
 
 /*!
@@ -1122,7 +1173,9 @@ gpuIsMultiGpuNvleEnabledInHw_GB100
     // TODO : Nvlink multiGPU regkey to be removed once we have stable vbios, BUG 5178914
     //
     if (((osReadRegistryDword(pGpu, NV_REG_STR_RM_CC_MULTI_GPU_NVLE_MODE_ENABLED, &data) == NV_OK) &&
-        (data == NV_REG_STR_RM_CC_MULTI_GPU_NVLE_MODE_ENABLED_YES)) || gpuIsNvleModeEnabledInHw_HAL(pGpu))
+            (data == NV_REG_STR_RM_CC_MULTI_GPU_NVLE_MODE_ENABLED_YES)) ||
+            gpuIsNvleModeEnabledInHw_HAL(pGpu) ||
+            (!RMCFG_FEATURE_MODS_FEATURES && gpuIsCCEnabledInHw_HAL(pGpu)))
     {
         return NV_TRUE;
     }
@@ -1140,8 +1193,8 @@ gpuIsNvleModeEnabledInHw_GB100
     OBJGPU *pGpu
 )
 {
-    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC_SCRATCH_RESET_2_CC);
-    return FLD_TEST_DRF(_PMC, _SCRATCH_RESET_2_CC, _NVLE_MODE_ENABLED, _TRUE, val);
+    NvU32 val = GPU_REG_RD32(pGpu, NV_PMC0_PRI_BASE + NV_PMC_ZB_SCRATCH_RESET_2_CC);
+    return FLD_TEST_DRF(_PMC_ZB, _SCRATCH_RESET_2_CC, _NVLE_MODE_ENABLED, _TRUE, val);
 }
 
 /*!
@@ -1635,3 +1688,64 @@ _gpuMnocMboxPollForMsg_GB100
     return gpuTimeoutCondWait(pGpu, _gpuMnocMboxPollCond, &waitArg, pTimeout);
 }
 
+/*!
+ * @brief Read fuse for display supported status.
+ *        Some chips not marked displayless do not support display
+ */
+NvBool
+gpuFuseSupportsDisplay_GB100
+(
+    OBJGPU *pGpu
+)
+{
+    NvU32 fuseOptDisplay = GPU_REG_RD32(pGpu, NV_FUSE0_PRI_BASE + NV_FUSE_ZB_STATUS_OPT_DISPLAY);
+    return FLD_TEST_DRF(_FUSE_ZB, _STATUS_OPT_DISPLAY, _DATA, _ENABLE, fuseOptDisplay);
+}
+/*!
+ * Generate uGPU ID data for a GPU.
+ *
+ * @param  [in]  pGpu      OBJGPU pointer
+ * @param  [out] pGidData  data array into which GID should be written
+ * @param  [in]  ugidSize   size of data array
+ * @param  [in]  ugidFlags selects either the SHA-1 or SHA-256 GID
+ * @param  [in]  ugpuId    which uGPU to generate an ID for.
+ *
+ * @return       NV_OK if the GID is generated correctly
+ */
+NV_STATUS
+gpuGenUgidData_GB100
+(
+    OBJGPU *pGpu,
+    NvU8 *pUgidData,
+    NvU32 ugidSize,
+    NvU32 ugidFlags,
+    NvU32 ugpuId
+)
+{
+    if (FLD_TEST_DRF(2080_GPU_CMD, _GPU_GET_GID_FLAGS, _TYPE, _SHA1, ugidFlags) &&
+        GPU_GET_MEMORY_MANAGER(pGpu)->bLocalizedMemorySupported
+        && !IS_MIG_ENABLED(pGpu)
+        )
+    {
+        if ((ugidSize < RM_SHA1_GID_SIZE) || (pUgidData == NULL))
+        {
+            return NV_ERR_INVALID_ARGUMENT;
+        }
+
+        if (ugpuId >= NVOS32_ATTR2_ENABLE_LOCALIZED_MEMORY_UGPU_COUNT)
+        {
+            return NV_ERR_INVALID_INDEX;
+        }
+
+        NvU16 chipId = gpuGetChipId(pGpu);
+        NvU64 pdi64;
+
+        NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, gpuGetPdi_HAL(pGpu, &pdi64));
+
+        NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, nvGenerateUgpuUuid(chipId, ugpuId, pdi64, (NvUuid*)(pUgidData)));
+
+        return NV_OK;
+    }
+
+    return NV_ERR_NOT_SUPPORTED;
+}

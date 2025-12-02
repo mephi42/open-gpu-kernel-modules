@@ -249,156 +249,6 @@ update_params:
 }
 
 NV_STATUS
-_p2papiUpdateTopologyInfo
-(
-    P2PApi *pP2PApi,
-    OBJGPU *pLocalGpu,
-    OBJGPU *pRemoteGpu,
-    KernelNvlink *pLocalKernelNvlink,
-    KernelNvlink *pRemoteKernelNvlink
-)
-{
-    // Check if identifiers need to be programmed
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, knvlinkEncryptionGetGpuIdentifiers_HAL(pLocalGpu, pLocalKernelNvlink));
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, knvlinkEncryptionGetGpuIdentifiers_HAL(pRemoteGpu, pRemoteKernelNvlink));
-
-    // Send topology to key manager
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        knvlinkEncryptionUpdateTopology_HAL(pLocalGpu, pLocalKernelNvlink, knvlinkGetALID(pRemoteGpu, pRemoteKernelNvlink), knvlinkGetCLID(pRemoteGpu, pRemoteKernelNvlink)));
-
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        knvlinkEncryptionUpdateTopology_HAL(pRemoteGpu, pRemoteKernelNvlink, knvlinkGetALID(pLocalGpu, pLocalKernelNvlink), knvlinkGetCLID(pLocalGpu, pLocalKernelNvlink)));
-
-    return NV_OK;
-}
-
-NV_STATUS
-_p2papiSendEncryptionKeys
-(
-    OBJGPU *pGpu,
-    NvU8   *pKey,
-    NvU32   remoteScfDcfGpuId,
-    NvBool  bForKeyRotation
-)
-{
-    NvU8                             nvleKeyReqBuf[sizeof(RM_SPDM_NV_CMD_REQ_KEYMGR_NVLE) +
-                                                   sizeof(RM_GSP_NVLE_UPDATE_SESSION_KEYS)] = {0};
-    NvU8                            *pNvleKeyReq                                            = nvleKeyReqBuf;
-    RM_SPDM_NV_CMD_REQ_KEYMGR_NVLE  *pSpdmReqHdr                                            = NULL;
-    RM_GSP_NVLE_UPDATE_SESSION_KEYS *pGspReqHdr                                             = NULL;
-    NvU32                            nvleKeyReqSize                                         = 0;
-    RM_SPDM_NV_CMD_RSP               nvleKeyRsp                                             = {0};
-    NvU32                            nvleKeyRspSize                                         = sizeof(nvleKeyRsp);
-    NvU8                             wrappingKeyIv[CC_AES_256_GCM_IV_SIZE_BYTES + 1]        = {0};
-    ConfidentialCompute             *pConfCompute                                           = NULL;
-    Spdm                            *pSpdm                                                  = NULL;
-
-    if (pGpu == NULL || pKey == NULL)
-    {
-        return NV_ERR_INVALID_ARGUMENT;
-    }
-
-    pConfCompute = GPU_GET_CONF_COMPUTE(pGpu);
-    pSpdm        = GPU_GET_SPDM(pGpu);
-
-    if (pConfCompute == NULL || pSpdm == NULL || !pSpdm->bSessionEstablished)
-    {
-        return NV_ERR_INVALID_STATE;
-    }
-
-    // SPDM App Message header wraps the entire message for GSP
-    pSpdmReqHdr                                  = (RM_SPDM_NV_CMD_REQ_KEYMGR_NVLE *)pNvleKeyReq;
-    pSpdmReqHdr->hdr.cmdType                     = RM_SPDM_NV_CMD_TYPE_REQ_KEYMGR_NVLE;
-
-    nvleKeyReqSize = sizeof(RM_SPDM_NV_CMD_REQ_KEYMGR_NVLE) + sizeof(RM_GSP_NVLE_UPDATE_SESSION_KEYS);
-    pGspReqHdr                                   = (RM_GSP_NVLE_UPDATE_SESSION_KEYS *)
-                                                   ((NvU8 *)pNvleKeyReq + sizeof(RM_SPDM_NV_CMD_REQ_KEYMGR_NVLE));
-
-    pGspReqHdr->cmdId                                  = RM_GSP_NVLE_CMD_ID_UPDATE_SESSION_KEYS;
-    pGspReqHdr->bForKeyRotation                        = bForKeyRotation;
-    pGspReqHdr->wrappedKeyEntries[0].remoteScfDcfGpuId = remoteScfDcfGpuId;
-    pGspReqHdr->wrappedKeyEntries[0].bValid            = NV_TRUE;
-    portMemCopy(pGspReqHdr->wrappedKeyEntries[0].key, sizeof(pGspReqHdr->wrappedKeyEntries[0].key),
-                pKey, RM_GSP_NVLE_AES_256_GCM_KEY_SIZE_BYTES);
-
-    //
-    // TODO: Kernel-RM and GSP do not agree on endianness of initial IV value.
-    // Additionally, we do not support keeping context of IV incrementing between
-    // multiple calls. So for now, require Kernel-RM to always reset the IV to 0 for each call.
-    //
-    // When providing IV to ccslEncrypt, need to set "freshness" bit after IV itself.
-    //
-    wrappingKeyIv[CC_AES_256_GCM_IV_SIZE_BYTES] = 0x1;
-
-    // Encrypt the key before sending.
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-        ccslEncryptWithIv(pConfCompute->pNvleP2pWrappingCcslCtx,
-                          sizeof(pGspReqHdr->wrappedKeyEntries),
-                          (NvU8 *)pGspReqHdr->wrappedKeyEntries,
-                          wrappingKeyIv, NULL, 0,
-                          (NvU8 *)pGspReqHdr->wrappedKeyEntries,
-                          (NvU8 *)pGspReqHdr->keyEntriesTag));
-
-    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, spdmSendApplicationMessage(pGpu, pSpdm, pNvleKeyReq, nvleKeyReqSize,
-                                                                  (NvU8 *)&nvleKeyRsp, &nvleKeyRspSize));
-    if ((nvleKeyRspSize < sizeof(RM_SPDM_NV_CMD_HDR)) || (nvleKeyRspSize > sizeof(RM_SPDM_NV_CMD_RSP)))
-    {
-        // Somehow, we got an entirely invalid response
-        NV_PRINTF(LEVEL_ERROR, "NVLE response from GSP of invalid size! rspSize: 0x%x!\n", nvleKeyRspSize);
-        return NV_ERR_INVALID_DATA;
-    }
-
-    // Check for known error response or any non-success response
-    if ((nvleKeyRsp.hdr.cmdType == RM_SPDM_NV_CMD_TYPE_RSP_ERROR) &&
-        (nvleKeyRspSize         == sizeof(RM_SPDM_NV_CMD_RSP_ERROR)))
-    {
-        NV_PRINTF(LEVEL_ERROR, "GSP returned NVLE response with error code 0x%x!\n", nvleKeyRsp.error.status);
-        return (nvleKeyRsp.error.status != NV_OK) ? nvleKeyRsp.error.status : NV_ERR_INVALID_DATA;
-    }
-    else if (nvleKeyRsp.hdr.cmdType != RM_SPDM_NV_CMD_TYPE_RSP_SUCCESS ||
-             nvleKeyRspSize         != sizeof(RM_SPDM_NV_CMD_RSP_SUCCESS))
-    {
-        NV_PRINTF(LEVEL_ERROR, "Unexpected NVLE response from GSP! cmdType: 0x%x rspSize: 0x%x!\n",
-                  nvleKeyRsp.hdr.cmdType, nvleKeyRspSize);
-        return NV_ERR_INVALID_DATA;
-    }
-
-    return NV_OK;
-}
-
-NV_STATUS
-_p2papiDeriveEncryptionKeys
-(
-    P2PApi *pP2PApi,
-    OBJGPU *pLocalGpu,
-    OBJGPU *pRemoteGpu,
-    KernelNvlink *pLocalKernelNvlink,
-    KernelNvlink *pRemoteKernelNvlink
-)
-{
-
-    NvU8 p2pKey[RM_GSP_NVLE_AES_256_GCM_KEY_SIZE_BYTES] = {0};
-    NV_STATUS status = NV_OK;
-
-    if (!libspdm_random_bytes((NvU8 *)&p2pKey, sizeof(p2pKey)))
-    {
-        return NV_ERR_INVALID_DATA;
-    }
-
-    NV_ASSERT_OK_OR_GOTO(status,
-        _p2papiSendEncryptionKeys(pLocalGpu,  p2pKey, knvlinkGetCLID(pRemoteGpu, pRemoteKernelNvlink), NV_FALSE), ErrorExit);
-    NV_ASSERT_OK_OR_GOTO(status,
-        _p2papiSendEncryptionKeys(pRemoteGpu, p2pKey, knvlinkGetCLID(pLocalGpu, pLocalKernelNvlink),  NV_FALSE), ErrorExit);
-
-ErrorExit:
-    // Always be sure to scrub P2P key regardless of success
-    portMemSet((NvU8 *)&p2pKey, 0, sizeof(p2pKey));
-
-    return status;
-}
-
-
-NV_STATUS
 p2papiConstruct_IMPL
 (
     P2PApi                       *pP2PApi,
@@ -598,6 +448,19 @@ p2papiConstruct_IMPL
                                                pNv503bAllocParams->mailboxBar1Addr,
                                                pNv503bAllocParams->mailboxTotalSize);
         NV_ASSERT_OK_OR_RETURN(status);
+    }
+
+    // Set fabric base address for switch connected NvLink
+    if ((p2pConnectionType == P2P_CONNECTIVITY_NVLINK) &&
+        (pLocalKernelNvlink != NULL) && (pRemoteKernelNvlink != NULL))
+    {
+        pNv503bAllocParams->l2pFabricP2PInfo.gpa = knvlinkGetUniqueFabricBaseAddress(pLocalGpu, pLocalKernelNvlink);
+        pNv503bAllocParams->p2lFabricP2PInfo.gpa = knvlinkGetUniqueFabricBaseAddress(pRemoteGpu, pRemoteKernelNvlink);
+    }
+    else
+    {
+        pNv503bAllocParams->l2pFabricP2PInfo.gpa = NVLINK_INVALID_FABRIC_ADDR;
+        pNv503bAllocParams->p2lFabricP2PInfo.gpa = NVLINK_INVALID_FABRIC_ADDR;
     }
 
     // Process any specific peer id requests for peer 1
@@ -845,19 +708,6 @@ remote_fla_bind:
         NV_CHECK_OR_RETURN(LEVEL_ERROR, pRemoteKernelBus->totalP2pObjectsAliveRefCount < NV_U32_MAX, NV_ERR_INSUFFICIENT_RESOURCES);
         pLocalKernelBus->totalP2pObjectsAliveRefCount++;
         pRemoteKernelBus->totalP2pObjectsAliveRefCount++;
-    }
-
-    // Check if CC is enabled
-    if (pLocalKernelNvlink && pRemoteKernelNvlink)
-    {
-        if (pLocalKernelNvlink->getProperty(pLocalGpu, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED) &&
-            pRemoteKernelNvlink->getProperty(pRemoteGpu, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED))
-        {
-            NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-                _p2papiUpdateTopologyInfo(pP2PApi, pLocalGpu, pRemoteGpu, pLocalKernelNvlink, pRemoteKernelNvlink));
-            NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
-                 _p2papiDeriveEncryptionKeys(pP2PApi, pLocalGpu, pRemoteGpu, pLocalKernelNvlink, pRemoteKernelNvlink));
-        }
     }
 
     return status;

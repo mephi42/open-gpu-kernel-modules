@@ -1314,6 +1314,8 @@ typedef struct
 #define NVOS32_ATTR2_ENABLE_LOCALIZED_MEMORY_UGPU0      0x00000001
 #define NVOS32_ATTR2_ENABLE_LOCALIZED_MEMORY_UGPU1      0x00000002
 
+#define NVOS32_ATTR2_ENABLE_LOCALIZED_MEMORY_UGPU_COUNT 2
+
 //
 // When allocating memory, register the memory descriptor to GSP-RM
 // so that GSP-RM is aware of and can access it
@@ -1418,12 +1420,6 @@ typedef struct
  *          denotes that an unmapped virtual address range should "not" fault but simply
  *          return 0's.
  *
- *      NVOS32_ALLOC_FLAGS_ALLOCATE_KERNEL_PRIVILEGED
- *          This a special flag that can be used only by kernel(root) clients
- *          to allocate memory out of a protected region of the address space
- *          If this flag is set by non kernel clients then the allocation will
- *          fail.
- *
  *      NVOS32_ALLOC_FLAGS_SKIP_RESOURCE_ALLOC
  *
  *      NVOS32_ALLOC_FLAGS_PREFER_PTES_IN_SYSMEMORY
@@ -1472,7 +1468,6 @@ typedef struct
 #define NVOS32_ALLOC_FLAGS_SPARSE                       0x04000000
 #define NVOS32_ALLOC_FLAGS_USER_READ_ONLY               0x04000000 // TODO BUG 2488682: remove this after KMD transition
 #define NVOS32_ALLOC_FLAGS_DEVICE_READ_ONLY             0x08000000 // TODO BUG 2488682: remove this after KMD transition
-#define NVOS32_ALLOC_FLAGS_ALLOCATE_KERNEL_PRIVILEGED   0x08000000
 #define NVOS32_ALLOC_FLAGS_SKIP_RESOURCE_ALLOC          0x10000000
 #define NVOS32_ALLOC_FLAGS_PREFER_PTES_IN_SYSMEMORY     0x20000000
 #define NVOS32_ALLOC_FLAGS_SKIP_ALIGN_PAD               0x40000000
@@ -2740,13 +2735,6 @@ typedef struct {
 //
 //          MAP_PTE                    Deprecated.
 //
-//          VASPACE_IS_MIRRORED        This flag will tell RM to create a mirrored
-//                                     kernel PDB for the address space associated
-//                                     with this device. When this flag is set
-//                                     the address space covered by the top PDE
-//                                     is restricted and cannot be allocated out of.
-//
-//
 //          VASPACE_BIG_PAGE_SIZE_64k  ***Warning this flag will be deprecated do not use*****
 //          VASPACE_BIG_PAGE_SIZE_128k This flag will choose the big page size of the VASPace
 //                                     to 64K/128k if the system supports a configurable size.
@@ -2814,11 +2802,6 @@ typedef struct {
 #define NV_DEVICE_ALLOCATION_FLAGS_VASPACE_BIG_PAGE_SIZE_64k       (0x00000200)
 #define NV_DEVICE_ALLOCATION_FLAGS_VASPACE_BIG_PAGE_SIZE_128k      (0x00000400)
 #define NV_DEVICE_ALLOCATION_FLAGS_RESTRICT_RESERVED_VALIMITS      (0x00000800)
-
-/*
- *TODO: Delete this flag once CUDA moves to the ctrl call
- */
-#define NV_DEVICE_ALLOCATION_FLAGS_VASPACE_IS_MIRRORED             (0x00000040)
 
 // XXX NV_DEVICE_ALLOCATION_FLAGS_VASPACE_PTABLE_PMA_MANAGED should not
 //     should not be exposed to clients. It should be the default RM
@@ -3096,12 +3079,6 @@ typedef struct
  *          Note that operations (2) and (4) are symmetric - the RM perspective of management is identical
  *          before and after a sequence of SET => ... => UNSET.
  *
- *       IS_MIRRORED      <to be deprecated once CUDA uses EXTERNALLY_MANAGED>
- *                        This flag will tell RM to create a mirrored
- *                        kernel PDB for the address space associated
- *                        with this device. When this flag is set
- *                        the address space covered by the top PDE
- *                        is restricted and cannot be allocated out of.
  *       ENABLE_PAGE_FAULTING
  *                        Enable page faulting if the architecture supports it.
  *                        As of now page faulting is only supported for compute on pascal+.
@@ -3114,7 +3091,7 @@ typedef struct
  *                        Note, the GMMU page tables still exist and take priority over NVLINK ATS.
  *                        VA space object creation will fail if:
  *                        - hardware support is not available (NV_ERR_NOT_SUPPORTED)
- *                        - incompatible options IS_MIRRORED or IS_EXTERNALLY_OWNED are set (NV_ERR_INVALID_ARGUMENT)
+ *                        - incompatible option IS_EXTERNALLY_OWNED is set (NV_ERR_INVALID_ARGUMENT)
  *       IS_FLA
  *                        Sets FLA flag for this VASPACE
  *
@@ -3169,7 +3146,6 @@ typedef struct
 #define NV_VASPACE_ALLOCATION_FLAGS_SHARED_MANAGEMENT                     BIT(2)
 #define NV_VASPACE_ALLOCATION_FLAGS_IS_EXTERNALLY_OWNED                   BIT(3)
 #define NV_VASPACE_ALLOCATION_FLAGS_ENABLE_NVLINK_ATS                     BIT(4)
-#define NV_VASPACE_ALLOCATION_FLAGS_IS_MIRRORED                           BIT(5)
 #define NV_VASPACE_ALLOCATION_FLAGS_ENABLE_PAGE_FAULTING                  BIT(6)
 #define NV_VASPACE_ALLOCATION_FLAGS_VA_INTERNAL_LIMIT                     BIT(7)
 #define NV_VASPACE_ALLOCATION_FLAGS_ALLOW_ZERO_ADDRESS                    BIT(8)

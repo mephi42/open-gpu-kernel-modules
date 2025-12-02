@@ -209,6 +209,7 @@ int         NV_API_CALL  os_nv_cap_validate_and_dup_fd    (const nv_cap_t *, int
 void        NV_API_CALL  os_nv_cap_close_fd               (int);
 NvS32       NV_API_CALL  os_imex_channel_get              (NvU64);
 NvS32       NV_API_CALL  os_imex_channel_count            (void);
+NV_STATUS   NV_API_CALL  os_tegra_igpu_perf_boost         (void *, NvBool, NvU32);
 
 NV_STATUS   NV_API_CALL  os_get_tegra_platform       (NvU32 *);
 enum os_pci_req_atomics_type {

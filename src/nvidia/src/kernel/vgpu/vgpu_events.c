@@ -290,8 +290,9 @@ void vgpuServiceEventPstate(OBJGPU *pGpu, OBJVGPU *pVGpu)
     status = osQueueWorkItem(pGpu,
                              _rmPstateEventCallback,
                              (void *)pCurrPstate,
-                             OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE |
-                                 OS_QUEUE_WORKITEM_FLAGS_DONT_FREE_PARAMS);
+                             (OsQueueWorkItemFlags){
+                                 .bLockGpuGroupDevice = NV_TRUE,
+                                 .bDontFreeParams = NV_TRUE});
     if (status != NV_OK)
     {
         NV_PRINTF(LEVEL_ERROR, "Failed to schedule Pstate callback! 0x%x\n",

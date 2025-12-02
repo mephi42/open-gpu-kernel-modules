@@ -1758,7 +1758,6 @@ static void gpu_chunk_free(uvm_va_block_t *va_block,
         return;
 
     UVM_ASSERT(gpu_chunk->va_block == va_block);
-    UVM_ASSERT(gpu_chunk->va_block_page_index == page_index);
 
     uvm_mmu_chunk_unmap(gpu_chunk, &va_block->tracker);
     gpu_state->chunks[page_index] = NULL;
@@ -1867,7 +1866,6 @@ static NV_STATUS gpu_chunk_add(uvm_va_block_t *va_block,
 
     if (gpu_state->chunks[page_index] == gpu_chunk) {
         UVM_ASSERT(gpu_chunk->va_block == va_block);
-        UVM_ASSERT(gpu_chunk->va_block_page_index == page_index);
         return NV_OK;
     }
 
@@ -1887,11 +1885,7 @@ static NV_STATUS gpu_chunk_add(uvm_va_block_t *va_block,
     uvm_processor_mask_set(&va_block->resident, gpu->id);
     uvm_page_mask_set(&gpu_state->resident, page_index);
 
-    // It is safe to modify the page index field without holding any PMM locks
-    // because the chunk is allocated, which means that none of the other
-    // fields in the bitmap can change.
     gpu_chunk->va_block = va_block;
-    gpu_chunk->va_block_page_index = page_index;
 
     gpu_state->chunks[page_index] = gpu_chunk;
 

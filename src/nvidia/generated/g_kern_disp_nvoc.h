@@ -274,8 +274,6 @@ struct KernelDisplay {
     POSVBLANKCALLBACK pOsVblankCallback;
     NvU32 numDispChannels;
     KernelDisplayClientChannelMap *pClientChannelTable;
-    NvBool bIsPanelReplayEnabled;
-    void *pRgVblankCb;
     NvBool bWindowChannelAlwaysMapped;
 };
 
@@ -795,7 +793,7 @@ static inline NV_STATUS kdispStateUnload_DISPATCH(OBJGPU *pGpu, struct KernelDis
     return pKernelDisplay->__nvoc_metadata_ptr->vtable.__kdispStateUnload__(pGpu, pKernelDisplay, flags);
 }
 
-static inline void kdispRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, IntrServiceRecord pRecords[179]) {
+static inline void kdispRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, IntrServiceRecord pRecords[180]) {
     pKernelDisplay->__nvoc_metadata_ptr->vtable.__kdispRegisterIntrService__(pGpu, pKernelDisplay, pRecords);
 }
 
@@ -1038,7 +1036,7 @@ NV_STATUS kdispStateLoad_IMPL(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay
 
 NV_STATUS kdispStateUnload_IMPL(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, NvU32 flags);
 
-void kdispRegisterIntrService_IMPL(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, IntrServiceRecord pRecords[179]);
+void kdispRegisterIntrService_IMPL(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, IntrServiceRecord pRecords[180]);
 
 NvU32 kdispServiceInterrupt_KERNEL(OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, IntrServiceServiceInterruptArguments *pParams);
 

@@ -84,6 +84,7 @@ typedef struct
 #define NVLINK_INBAND_GPU_PROBE_CAPS_ATS_SUPPORT   NVBIT(3)
 #define NVLINK_INBAND_GPU_PROBE_CAPS_LINK_RETRAIN_SUPPORT NVBIT(4)
 #define NVLINK_INBAND_GPU_PROBE_CAPS_HEALTH_SUMMARY NVBIT(6)
+#define NVLINK_INBAND_GPU_PROBE_CAPS_GPU_PROBE_REQUEST_ACTION NVBIT(7)
 #define NVLINK_INBAND_GPU_PROBE_CAPS_MC_RETRY      NVBIT(8)
 
 /* Add more caps as need in the future */
@@ -199,8 +200,9 @@ typedef struct
     NvU32  cliqueId;              /* Fabric Clique Id*/
     NvU32  fabricHealthMask;      /* Mask containing bits indicating various fabric health parameters */
     NvU32  epoch;                 /* Epoch to be matched by RM when allowing P2P between GPUs */
-    NvU8   action;                /*! < action request from FM */
-    NvU8   reserved[27];          /* For future use. Must be initialized to zero */
+    NvU8   action;                /* Action request from FM */
+    NvU64  linkMask;              /* Enabled link mask */
+    NvU8   reserved[19];          /* For future use. Must be initialized to zero */
 } nvlink_inband_gpu_probe_update_req_t;
 
 typedef struct

@@ -334,15 +334,21 @@ int nv_encode_caching(
                     NV_PGPROT_UNCACHED(*prot) :
                     NV_PGPROT_UNCACHED_DEVICE(*prot);
             break;
-#if defined(NV_PGPROT_WRITE_COMBINED) && \
-    defined(NV_PGPROT_WRITE_COMBINED_DEVICE)
+#if defined(NV_PGPROT_WRITE_COMBINED)
         case NV_MEMORY_DEFAULT:
         case NV_MEMORY_WRITECOMBINED:
             if (NV_ALLOW_WRITE_COMBINING(memory_type))
             {
+#if defined(NVCPU_RISCV64)
+                /* 
+                 * Don't attempt to mark sysmem pages as write combined on riscv.
+                 * Bug 5404055 to clean up this check.
+                 */
                 *prot = (memory_type == NV_MEMORY_TYPE_FRAMEBUFFER) ?
-                        NV_PGPROT_WRITE_COMBINED_DEVICE(*prot) :
-                        NV_PGPROT_WRITE_COMBINED(*prot);
+                    NV_PGPROT_WRITE_COMBINED(*prot) : *prot;
+#else
+                *prot = NV_PGPROT_WRITE_COMBINED(*prot);
+#endif
                 break;
             }
 
@@ -590,7 +596,8 @@ int nvidia_mmap_helper(
             // TODO: Refactor is needed as part of bug#2001704.
             //
             if ((nv_get_numa_status(nvl) == NV_NUMA_STATUS_ONLINE) &&
-                !IS_REG_OFFSET(nv, access_start, access_len) &&
+                pfn_to_page(__phys_to_pfn(access_start)) != NULL &&
+                pfn_to_page(__phys_to_pfn(access_start + access_len - 1)) != NULL &&
                 (mmap_context->num_pages != 0))
             {
                 ret = nvidia_mmap_numa(vma, mmap_context);
@@ -894,7 +901,7 @@ static NvBool nv_vma_enter_locked(struct vm_area_struct *vma, NvBool detaching)
     {
         // Clean up on error: release refcount and dep_map
         refcount_sub_and_test(VMA_LOCK_OFFSET, &vma->vm_refcnt);
-        rwsem_release(&vma->vmlock_dep_map, _RET_IP_);
+        rwsem_release(&vma->vmlock_dep_map, _RET_IP_);	
         return NV_FALSE;
     }
 

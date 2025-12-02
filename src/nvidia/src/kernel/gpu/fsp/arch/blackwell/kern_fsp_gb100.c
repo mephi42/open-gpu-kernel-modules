@@ -45,6 +45,8 @@
 #include "nvRmReg.h"
 #include "nverror.h"
 
+#define KERNEL_FSP_MBOX_PORT 2
+
 #define CMS2_LOG_START   0x50U
 #define CMS2_LOG_END     0x7FU
 #define CMS2_LOG_DWORDS  (CMS2_LOG_END - CMS2_LOG_START + 1)
@@ -53,6 +55,17 @@
 static void _kfspPrintCms2Log_GB100(OBJGPU *pGpu, KernelFsp *pKernelFsp, NvU8 *cms2Log);
 static NvBool _kfspWaitBootCond_GB100(OBJGPU *pGpu, void *pArg);
 static void _kfspGatherCms2Log_GB100(OBJGPU *pGpu, NvU32  *cms2Log);
+
+NV_STATUS
+kfspConstructHal_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp
+)
+{
+    return ioaprtInit(&pKernelFsp->mboxAperture, pGpu->pIOApertures[DEVICE_INDEX_GPU],
+                      NV_PFSP_MNOC_RX_FIFO_DATA(0), 0x200);
+}
 
 NV_STATUS
 kfspWaitForSecureBoot_GB100
@@ -254,3 +267,112 @@ _kfspGatherCms2Log_GB100
     }
 }
 
+NV_STATUS
+kfspSendPacket_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp,
+    NvU8      *pPacket,
+    NvU32      packetSize
+)
+{
+   if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+   {
+        RMTIMEOUT timeout;
+
+        gpuSetTimeout(pGpu, GPU_TIMEOUT_DEFAULT, &timeout, 0);
+
+        return gpuMnocMboxSend_HAL(pGpu, &pKernelFsp->mboxAperture, KERNEL_FSP_MBOX_PORT,
+                                   &timeout, pPacket, packetSize);
+    }
+
+    return kfspSendPacket_GH100(pGpu, pKernelFsp, pPacket, packetSize);
+}
+
+NV_STATUS
+kfspReadPacket_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp,
+    NvU8      *pPacket,
+    NvU32      maxPacketSize,
+    NvU32     *pBytesRead
+)
+{
+    NV_ASSERT_OR_RETURN(pBytesRead != NULL, NV_ERR_INVALID_POINTER);
+
+    if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+    {
+        NvU32 recvSize = maxPacketSize;
+        NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
+                              gpuMnocMboxRecv_HAL(pGpu, &pKernelFsp->mboxAperture,
+                                                  KERNEL_FSP_MBOX_PORT,
+                                                  pPacket, &recvSize));
+        *pBytesRead = recvSize;
+
+        return NV_OK;
+    }
+
+    return kfspReadPacket_GH100(pGpu, pKernelFsp, pPacket, maxPacketSize, pBytesRead);
+}
+
+NvBool
+kfspCanSendPacket_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp
+)
+{
+    if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+    {
+        // SendPacket is a blocking call
+        return NV_TRUE;
+    }
+
+    return kfspCanSendPacket_GH100(pGpu, pKernelFsp);
+}
+
+NvBool
+kfspIsResponseAvailable_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp
+)
+{
+    if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+    {
+        return gpuMnocMboxIsMsgAvailable_HAL(pGpu, &pKernelFsp->mboxAperture, KERNEL_FSP_MBOX_PORT);
+    }
+
+    return kfspIsResponseAvailable_GH100(pGpu, pKernelFsp);
+}
+
+NvU32
+kfspGetMaxSendPacketSize_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp
+)
+{
+    if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+    {
+        return gpuMnocMboxMaxMessageSize_HAL(pGpu);
+    }
+
+    return kfspGetMaxSendPacketSize_GH100(pGpu, pKernelFsp);
+}
+
+NvU32
+kfspGetMaxRecvPacketSize_GB100
+(
+    OBJGPU    *pGpu,
+    KernelFsp *pKernelFsp
+)
+{
+    if (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU))
+    {
+        return gpuMnocMboxMaxMessageSize_HAL(pGpu);
+    }
+
+    return kfspGetMaxRecvPacketSize_GH100(pGpu, pKernelFsp);
+}

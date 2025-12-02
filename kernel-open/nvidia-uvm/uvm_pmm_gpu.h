@@ -174,6 +174,34 @@ static void uvm_pmm_list_zero_checks(void)
     BUILD_BUG_ON(UVM_PMM_LIST_ZERO_COUNT > 2);
 }
 
+// Lists for allocated root chunks. When picking a root chunk to evict, lists
+// with lower numerical order are checked first.
+typedef enum
+{
+    // Root chunks unused by VA blocks, i.e. allocated, but not holding any
+    // resident pages. These take priority when evicting as no data needs to be
+    // migrated for them to be evicted.
+    //
+    // For simplicity, the list is approximate, tracking unused chunks only from
+    // root chunk sized (2M) VA blocks.
+    //
+    // Updated by the VA block code with uvm_pmm_gpu_mark_root_chunk_(un)used().
+    UVM_PMM_ALLOC_LIST_UNUSED,
+
+    // Discarded root GPU chunks, which are still resident on the GPU. Chunks on
+    // this list are evicted with a lower priority than unused chunks because we
+    // expect some of them to get reverted to used pages.
+    //
+    // Updated by the VA block code with
+    // uvm_pmm_gpu_mark_root_chunk_discarded().
+    UVM_PMM_ALLOC_LIST_DISCARDED,
+
+    // Root chunks used by VA blocks, likely with resident pages.
+    UVM_PMM_ALLOC_LIST_USED,
+
+    UVM_PMM_ALLOC_LIST_COUNT
+} uvm_pmm_alloc_list_t;
+
 // Maximum chunk sizes per type of allocation in single GPU.
 // The worst case today is Maxwell with 4 allocations sizes for page tables and
 // 2 page sizes used by uvm_mem_t. Notably one of the allocations for page
@@ -277,7 +305,7 @@ struct uvm_gpu_chunk_struct
 
         size_t log2_size : order_base_2(UVM_CHUNK_SIZE_MASK_SIZE);
 
-        // Start page index within va_block
+        // Start page index within va_block.
         uvm_page_index_t va_block_page_index : order_base_2(PAGES_PER_UVM_VA_BLOCK + 1);
 
         // This allows determining what PMM owns the chunk. Users of this field
@@ -348,30 +376,12 @@ typedef struct uvm_pmm_gpu_struct
         // Bit locks for the root chunks with 1 bit per each root chunk
         uvm_bit_locks_t bitlocks;
 
-        // List of root chunks unused by VA blocks, i.e. allocated, but not
-        // holding any resident pages. These take priority when evicting as no
-        // data needs to be migrated for them to be evicted.
-        //
-        // For simplicity, the list is approximate, tracking unused chunks only
-        // from root chunk sized (2M) VA blocks.
-        //
-        // Updated by the VA block code with
-        // uvm_pmm_gpu_mark_root_chunk_(un)used().
-        struct list_head va_block_unused;
-
-        // List of discarded root GPU chunks, which are still mapped on the GPU.
-        // Chunks on this list are evicted with a lower priority than unused chunks.
-        //
-        // Updated by the VA block code with
-        // uvm_pmm_gpu_mark_root_chunk_discarded().
-        struct list_head va_block_discarded;
-
-        // List of root chunks used by VA blocks
-        struct list_head va_block_used;
+        // LRU lists for picking which root chunks to evict
+        struct list_head alloc_list[UVM_PMM_ALLOC_LIST_COUNT];
 
         // List of chunks needing to be lazily freed and a queue for processing
-        // the list. TODO: Bug 3881835: revisit whether to use nv_kthread_q_t
-        // or workqueue.
+        // the list. TODO: Bug 3881835: revisit whether to use nv_kthread_q_t or
+        // workqueue.
         struct list_head va_block_lazy_free;
         nv_kthread_q_item_t va_block_lazy_free_q_item;
     } root_chunks;
@@ -612,21 +622,6 @@ static uvm_chunk_size_t uvm_chunk_find_prev_size(uvm_chunk_sizes_mask_t chunk_si
     return (uvm_chunk_size_t)1 << __fls(chunk_sizes);
 }
 
-// Obtain the {va_block, virt_addr} information for the chunks in the given
-// [phys_addr:phys_addr + region_size) range. One entry per chunk is returned.
-// phys_addr and region_size must be page-aligned.
-//
-// Valid translations are written to out_mappings sequentially (there are no
-// gaps). The caller is required to provide enough entries in out_pages for the
-// whole region. The function returns the number of entries written to
-// out_mappings.
-//
-// The returned reverse map is a snapshot: it is stale as soon as it is
-// returned, and the caller is responsible for locking the VA block(s) and
-// checking that the chunks are still there. Also, the VA block(s) are
-// retained, and it's up to the caller to release them.
-NvU32 uvm_pmm_gpu_phys_to_virt(uvm_pmm_gpu_t *pmm, NvU64 phys_addr, NvU64 region_size, uvm_reverse_map_t *out_mappings);
-
 // Iterates over every size in the input mask from smallest to largest
 #define for_each_chunk_size(__size, __chunk_sizes)                                  \
     for ((__size) = (__chunk_sizes) ? uvm_chunk_find_first_size(__chunk_sizes) :    \
@@ -652,5 +647,7 @@ NvU32 uvm_pmm_gpu_phys_to_virt(uvm_pmm_gpu_t *pmm, NvU64 phys_addr, NvU64 region
 #define for_each_chunk_size_rev_from(__size, __chunk_sizes)             \
     for (; (__size) != UVM_CHUNK_SIZE_INVALID;                          \
          (__size) = uvm_chunk_find_prev_size((__chunk_sizes), (__size)))
+
+NV_STATUS uvm_test_pmm_get_alloc_list(UVM_TEST_PMM_GET_ALLOC_LIST_PARAMS *params, struct file *filp);
 
 #endif

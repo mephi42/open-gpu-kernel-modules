@@ -27,9 +27,11 @@
 #include "gpu/mem_mgr/mem_desc.h"
 
 #include "published/blackwell/gb100/pri_nv_xal_ep.h"
-
-#include "published/blackwell/gb100/dev_top.h"
+#include "published/blackwell/gb100/dev_ltc_zb.h"
+#include "published/blackwell/gb100/dev_hshub.h"
 #include "published/blackwell/gb100/dev_hshub_base.h"
+#include "published/blackwell/gb100/dev_fuse_zb.h"
+#include "published/blackwell/gb100/hwproject.h"
 
 /*!
  * @brief Function used to return the HSHUB0 IoAperture
@@ -52,8 +54,6 @@ kmemsysInitHshub0Aperture_GB100
     IoAperture *pHshub0IoAperture = NULL;
     NV_STATUS status;
 
-// TODO Remove this hardcoded value by fixing bug 4313915
-#define NV_PFB_HSHUB0      0x00870fff:0x00870000
     hshub0PriBaseAddress = DRF_BASE(NV_PFB_HSHUB0);
     status = objCreate(&pHshub0IoAperture, pGpu, IoAperture,
                          pGpu->pIOApertures[DEVICE_INDEX_GPU], NULL, 0, 0,
@@ -232,4 +232,28 @@ kmemsysAssertFbAckTimeoutPending_GB100
 #else
     return NV_FALSE;
 #endif
+}
+
+NvBool
+kmemsysCheckReadoutEccEnablement_GB100
+(
+    OBJGPU *pGpu,
+    KernelMemorySystem *pKernelMemorySystem
+)
+{
+    NvU32 fuse = GPU_REG_RD32(pGpu, NV_FUSE0_PRI_BASE + NV_FUSE_ZB_FEATURE_READOUT);
+    return FLD_TEST_DRF(_FUSE_ZB, _FEATURE_READOUT, _ECC_DRAM, _ENABLED, fuse);
+}
+
+NvU32
+kmemsysGetL2EccDedCountRegAddr_GB100
+(
+    OBJGPU             *pGpu,
+    KernelMemorySystem *pKernelMemorySystem,
+    NvU32               fbpa,
+    NvU32               subp
+)
+{
+    return (NV_LTC_PRI_BASE + NV_PLTC_LTS0_L2_CACHE_ECC_UNCORRECTED_ERR_COUNT +
+            (fbpa * NV_LTC_PRI_STRIDE) + (subp * NV_LTS_PRI_STRIDE));
 }

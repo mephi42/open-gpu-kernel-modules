@@ -98,8 +98,10 @@ confComputeConstructEngine_IMPL(OBJGPU                  *pGpu,
 
     if (gpuIsCCEnabledInHw_HAL(pGpu))
     {
-        NV_PRINTF(LEVEL_INFO, "CC mode is enabled by HW\n");
-        pConfCompute->setProperty(pConfCompute, PDB_PROP_CONFCOMPUTE_ENABLED, NV_TRUE);
+        {
+            NV_PRINTF(LEVEL_INFO, "CC mode is enabled by HW\n");
+            pConfCompute->setProperty(pConfCompute, PDB_PROP_CONFCOMPUTE_ENABLED, NV_TRUE);
+        }
     }
     else if (gpuIsProtectedPcieEnabledInHw_HAL(pGpu))
     {

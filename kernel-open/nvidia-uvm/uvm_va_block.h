@@ -275,7 +275,6 @@ struct uvm_va_block_struct
 {
     // Reference count for this block. References are held by:
     // - The parent managed range for managed blocks or VA space for HMM blocks
-    // - The reverse map
     // - The eviction path temporarily when attempting to evict a GPU page under
     //   this block
     //
@@ -1411,19 +1410,6 @@ static inline NvU64 uvm_va_block_cpu_page_address(uvm_va_block_t *block, uvm_pag
     return block->start + PAGE_SIZE * page_index;
 }
 
-// Get the physical address on the given GPU for given residency
-uvm_gpu_phys_address_t uvm_va_block_res_phys_page_address(uvm_va_block_t *va_block,
-                                                          uvm_page_index_t page_index,
-                                                          uvm_processor_id_t residency,
-                                                          uvm_gpu_t *gpu);
-
-// Get the page physical address on the given GPU
-//
-// This will assert that GPU state is indeed present.
-uvm_gpu_phys_address_t uvm_va_block_gpu_phys_page_address(uvm_va_block_t *va_block,
-                                                          uvm_page_index_t page_index,
-                                                          uvm_gpu_t *gpu);
-
 static bool uvm_va_block_contains_address(uvm_va_block_t *block, NvU64 address)
 {
     return address >= block->start && address <= block->end;
@@ -1607,8 +1593,6 @@ NV_STATUS uvm_test_change_pte_mapping(UVM_TEST_CHANGE_PTE_MAPPING_PARAMS *params
 NV_STATUS uvm_test_va_block_info(UVM_TEST_VA_BLOCK_INFO_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_va_residency_info(UVM_TEST_VA_RESIDENCY_INFO_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_va_block_discard_status(UVM_TEST_VA_BLOCK_DISCARD_STATUS_PARAMS *params, struct file *filp);
-NV_STATUS uvm_test_va_block_discard_check_pmm_state(UVM_TEST_VA_BLOCK_DISCARD_CHECK_PMM_STATE_PARAMS *params,
-                                                    struct file *filp);
 
 // Compute the offset in system pages of addr from the start of va_block.
 static uvm_page_index_t uvm_va_block_cpu_page_index(uvm_va_block_t *va_block, NvU64 addr)
@@ -2034,17 +2018,6 @@ static uvm_page_index_t uvm_va_block_next_unset_page_in_mask(uvm_va_block_region
         UVM_ASSERT(previous_page < region.outer);
         return previous_page + 1;
     }
-}
-
-static NvU64 uvm_reverse_map_start(const uvm_reverse_map_t *reverse_map)
-{
-    return uvm_va_block_cpu_page_address(reverse_map->va_block, reverse_map->region.first);
-}
-
-static NvU64 uvm_reverse_map_end(const uvm_reverse_map_t *reverse_map)
-{
-    return uvm_va_block_cpu_page_address(reverse_map->va_block, reverse_map->region.first) +
-           uvm_va_block_region_size(reverse_map->region) - 1;
 }
 
 // Iterate over contiguous pages of the region given by the page mask.

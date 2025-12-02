@@ -522,6 +522,42 @@ NV_STATUS deserialize_NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS_v29_00(NV20
     return NVOS_STATUS_SUCCESS;
 }
 
+NV_STATUS deserialize_NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS_v2C_03(NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS *grInfoParams, NvU8 *buffer, NvU32 bufferSize, NvU32 *offset)
+{
+    if (!offset)
+    {
+        return NVOS_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    if (grInfoParams && buffer)
+    {
+        NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS_v2C_03 *gr_info_v2C_03 = NULL;
+        NvU32 i = 0, j = 0;
+
+        if ((bufferSize < *offset) ||
+            (bufferSize < (*offset + sizeof(NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS_v2C_03))))
+        {
+            return NV_ERR_BUFFER_TOO_SMALL;
+        }
+
+        gr_info_v2C_03 = (void*)(buffer + *offset);
+
+        for (i = 0; i < NV2080_CTRL_INTERNAL_GR_MAX_ENGINES_1B_04; i++)
+        {
+            for (j = 0; j < NV0080_CTRL_GR_INFO_MAX_SIZE_2C_03; j++)
+            {
+                grInfoParams->engineInfo[i].infoList[j].index = gr_info_v2C_03->engineInfo[i].infoList[j].index;
+                grInfoParams->engineInfo[i].infoList[j].data = gr_info_v2C_03->engineInfo[i].infoList[j].data;
+            }
+        }
+
+    }
+
+    *offset += sizeof(NV2080_CTRL_INTERNAL_STATIC_GR_GET_INFO_PARAMS_v2C_03);
+
+    return NVOS_STATUS_SUCCESS;
+}
+
 NV_STATUS deserialize_NV2080_CTRL_INTERNAL_STATIC_GR_GET_GLOBAL_SM_ORDER_PARAMS_v1F_01(NV2080_CTRL_INTERNAL_STATIC_GR_GET_GLOBAL_SM_ORDER_PARAMS *smOrderParams, NvU8 *buffer,
                                                                                        NvU32 bufferSize, NvU32 *offset)
 {
@@ -998,21 +1034,21 @@ NV_STATUS deserialize_NV2080_CTRL_INTERNAL_STATIC_GR_GET_FLOORSWEEPING_MASKS_PAR
         {
             for (j = 0; j < NV2080_CTRL_INTERNAL_GR_MAX_GPC_v2B_01; j++)
             {
-                floorsweepMaskParams->floorsweepingMasks[i].tpcMask[j] = 
+                floorsweepMaskParams->floorsweepingMasks[i].tpcMask[j] =
                     floorsweep_mask_params_v2B_01->floorsweepingMasks[i].tpcMask[j];
-                floorsweepMaskParams->floorsweepingMasks[i].tpcCount[j] = 
+                floorsweepMaskParams->floorsweepingMasks[i].tpcCount[j] =
                     floorsweep_mask_params_v2B_01->floorsweepingMasks[i].tpcCount[j];
-                floorsweepMaskParams->floorsweepingMasks[i].numPesPerGpc[j] = 
+                floorsweepMaskParams->floorsweepingMasks[i].numPesPerGpc[j] =
                     floorsweep_mask_params_v2B_01->floorsweepingMasks[i].numPesPerGpc[j];
-                floorsweepMaskParams->floorsweepingMasks[i].mmuPerGpc[j] = 
+                floorsweepMaskParams->floorsweepingMasks[i].mmuPerGpc[j] =
                     floorsweep_mask_params_v2B_01->floorsweepingMasks[i].mmuPerGpc[j];
-                floorsweepMaskParams->floorsweepingMasks[i].zcullMask[j] = 
+                floorsweepMaskParams->floorsweepingMasks[i].zcullMask[j] =
                     floorsweep_mask_params_v2B_01->floorsweepingMasks[i].zcullMask[j];
             }
 
-            floorsweepMaskParams->floorsweepingMasks[i].gpcMask = 
+            floorsweepMaskParams->floorsweepingMasks[i].gpcMask =
                 floorsweep_mask_params_v2B_01->floorsweepingMasks[i].gpcMask;
-            floorsweepMaskParams->floorsweepingMasks[i].physGpcMask = 
+            floorsweepMaskParams->floorsweepingMasks[i].physGpcMask =
                 floorsweep_mask_params_v2B_01->floorsweepingMasks[i].physGpcMask;
 
             for (j = 0; j < NV2080_CTRL_INTERNAL_MAX_TPC_PER_GPC_COUNT_v1C_03; j++)
@@ -2205,6 +2241,44 @@ NV_STATUS deserialize_NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS_v28_08(NV2080_CTRL
     return NVOS_STATUS_SUCCESS;
 }
 
+NV_STATUS deserialize_NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS_v2C_02(NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS *eccStatusParams, NvU8 *buffer, NvU32 bufferSize, NvU32 *offset)
+{
+    if (offset == NULL)
+    {
+        return NVOS_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // If eccStatusParams and buffer are valid, then copy data and return the offset
+    if (eccStatusParams && buffer)
+    {
+        NvU32 i;
+        NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS_v2C_02 *eccStatusParams_v2C_02 = NULL;
+
+        if ((bufferSize < *offset) ||
+            (bufferSize < (*offset + sizeof(NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS_v2C_02))))
+        {
+            return NV_ERR_BUFFER_TOO_SMALL;
+        }
+
+        eccStatusParams_v2C_02 = (void*)(buffer + *offset);
+
+        eccStatusParams->bFatalPoisonError = eccStatusParams_v2C_02->bFatalPoisonError;
+
+        for (i = 0; i < NV2080_CTRL_GPU_ECC_UNIT_COUNT_v2C_02; i++) {
+            eccStatusParams->units[i].enabled                = eccStatusParams_v2C_02->units[i].enabled;
+            eccStatusParams->units[i].scrubComplete          = eccStatusParams_v2C_02->units[i].scrubComplete;
+            eccStatusParams->units[i].supported              = eccStatusParams_v2C_02->units[i].supported;
+            eccStatusParams->units[i].dbe.count              = eccStatusParams_v2C_02->units[i].dbe.count;
+            eccStatusParams->units[i].dbeNonResettable.count = eccStatusParams_v2C_02->units[i].dbeNonResettable.count;
+            eccStatusParams->units[i].sbe.count              = eccStatusParams_v2C_02->units[i].sbe.count;
+            eccStatusParams->units[i].sbeNonResettable.count = eccStatusParams_v2C_02->units[i].sbeNonResettable.count;
+        }
+    }
+    *offset += sizeof(NV2080_CTRL_GPU_QUERY_ECC_STATUS_PARAMS_v2C_02);
+
+    return NVOS_STATUS_SUCCESS;
+}
+
 NV_STATUS deserialize_GPU_EXEC_SYSPIPE_INFO_v26_01(GPU_EXEC_SYSPIPE_INFO *execSyspipeInfo, NvU8 *buffer, NvU32 bufferSize, NvU32 *offset)
 {
     if (!offset)
@@ -2833,6 +2907,39 @@ NV_STATUS deserialize_NV0080_CTRL_MSENC_GET_CAPS_V2_PARAMS_v25_00(
     }
 
     *offset += sizeof(*pParams_v25_00);
+    return NVOS_STATUS_SUCCESS;
+}
+
+NV_STATUS deserialize_NV0080_CTRL_MSENC_GET_CAPS_V2_PARAMS_v2C_07(
+    NV0080_CTRL_MSENC_GET_CAPS_V2_PARAMS *pParams, NvU8 *buffer, NvU32 bufferSize,
+    NvU32 *offset)
+{
+    NV0080_CTRL_MSENC_GET_CAPS_V2_PARAMS_v2C_07 *pParams_v2C_07 = NULL;
+
+    if (offset == NULL)
+    {
+        return NVOS_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    if (pParams != NULL && buffer != NULL)
+    {
+        if ((bufferSize < *offset) ||
+            (bufferSize < (*offset + sizeof(*pParams_v2C_07))))
+        {
+            return NV_ERR_BUFFER_TOO_SMALL;
+        }
+
+        pParams_v2C_07 = (void*)(buffer + *offset);
+        NV_ASSERT_OR_RETURN(NV0080_CTRL_MSENC_CAPS_TBL_SIZE <=
+                            NV0080_CTRL_MSENC_CAPS_TBL_SIZE_V2C_07,
+                            NV_ERR_INSUFFICIENT_RESOURCES);
+
+        pParams->instanceId = pParams_v2C_07->instanceId;
+        portMemCopy(pParams->capsTbl, sizeof(pParams->capsTbl),
+            pParams_v2C_07->capsTbl, sizeof(pParams_v2C_07->capsTbl));
+    }
+
+    *offset += sizeof(*pParams_v2C_07);
     return NVOS_STATUS_SUCCESS;
 }
 

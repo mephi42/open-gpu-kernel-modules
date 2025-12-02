@@ -29,6 +29,9 @@
 #include "gpu/gpu.h"
 #include "ctrl/ctrl2080.h"
 
+#include "gpu/mem_mgr/mem_mgr.h"
+#include "kernel/gpu/mig_mgr/kernel_mig_manager.h"
+
 #include "gpu/gsp/gsp_static_config.h"  // CORERM-3199
 
 /*!
@@ -139,6 +142,30 @@ NV_STATUS gpuInitBranding_FWCLIENT(OBJGPU *pGpu)
 }
 
 NV_STATUS
+gpuGetPdi_FWCLIENT
+(
+    OBJGPU *pGpu,
+    NvU64  *pdi
+)
+{
+    GspStaticConfigInfo *pGSCI = GPU_GET_GSP_STATIC_INFO(pGpu);
+
+    if (pGSCI->bPdiValid)
+    {
+        *pdi = pGSCI->pdi;
+        return NV_OK;
+    }
+    else if (!IS_SILICON(pGpu))
+    {
+        // SHA1 generated from string "Nvidia" => "0xA7C66AD26DBB0AB8C1A237BA6DBA36B8"
+        *pdi = 0x6DBB0AB8A7C66AD2;
+        return NV_OK;
+    }
+
+    return NV_ERR_INVALID_STATE;
+}
+
+NV_STATUS
 gpuGenGidData_FWCLIENT
 (
     OBJGPU *pGpu,
@@ -245,7 +272,7 @@ gpuConstructDeviceInfoTable_FWCLIENT
     for (NvU32 i = 0; i < pParams->numEntries; i++)
     {
         NV2080_CTRL_INTERNAL_DEVICE_INFO *pSrc = &pParams->deviceInfoTable[i];
-        pGpu->pDeviceInfoTable[i] = (DEVICE_INFO2_ENTRY){
+        pGpu->pDeviceInfoTable[i] = (DEVICE_INFO_ENTRY){
             .faultId                = pSrc->faultId,
             .instanceId             = pSrc->instanceId,
             .typeEnum               = pSrc->typeEnum,

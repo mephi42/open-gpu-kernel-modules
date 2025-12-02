@@ -82,6 +82,9 @@ kbusConstructEngine_IMPL(OBJGPU *pGpu, KernelBus *pKernelBus, ENGDESCRIPTOR engD
     NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
             kbusSetBarsApertureSize_HAL(pGpu, pKernelBus, GPU_GFID_PF));
 
+    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
+            kbusConstructXalApertures_HAL(pGpu, pKernelBus));
+
     return NV_OK;
 }
 
@@ -350,6 +353,7 @@ NvU32 kbusGetFlushAperture_IMPL(KernelBus *pKernelBus, NV_ADDRESS_SPACE addrSpac
 void
 kbusDestruct_IMPL(KernelBus *pKernelBus)
 {
+    NvU32 i;
     OBJGPU *pGpu = ENG_GET_GPU(pKernelBus);
 
     memdescFree(pKernelBus->bar1[GPU_GFID_PF].pInstBlkMemDesc);
@@ -358,6 +362,13 @@ kbusDestruct_IMPL(KernelBus *pKernelBus)
     memdescFree(pKernelBus->bar2[GPU_GFID_PF].pInstBlkMemDesc);
     memdescDestroy(pKernelBus->bar2[GPU_GFID_PF].pInstBlkMemDesc);
     pKernelBus->bar2[GPU_GFID_PF].pInstBlkMemDesc = NULL;
+    for (i = 0; i < pKernelBus->xalApertureCount; i++)
+    {
+        objDelete(&pKernelBus->xalApertures[i]);
+    }
+    portMemFree(pKernelBus->xalApertures);
+    pKernelBus->xalApertures = NULL;
+    pKernelBus->xalApertureCount = 0;
 
     //
     // We need to clean-up the memory resources for BAR2 as late as possible,

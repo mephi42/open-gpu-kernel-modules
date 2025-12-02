@@ -141,8 +141,9 @@ struct nv_drm_device {
 
     NvBool hasVideoMemory;
 
+    NvBool contiguousPhysicalMappings;
+
     NvBool supportsSyncpts;
-    NvBool requiresVrrSemaphores;
     NvBool subOwnershipGranted;
     NvBool hasFramebufferConsole;
 

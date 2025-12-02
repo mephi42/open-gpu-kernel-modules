@@ -64,33 +64,6 @@ UvmGlobalState *UvmGetGlobalStatePointer(void);
 //-----------------------------------------------------------------------------
 NV_STATUS UvmSetGlobalStatePointer(UvmGlobalState *pGlobalState);
 
-//
-// TODO: Bug 1766104: Remove this with uvmfull
-//
-// ioctl command numbers for the debug-build-only tests that
-// live in uvm_gpu_op_testc.c
-//
-// This type should be really put into user-kernel shared types specific file,
-// e.g. uvm_test_ioctl.h. Leaving it here temporarily to keep it compatibile
-// with older drivers.
-//
-typedef enum
-{
-    UVM_GPU_OPS_SAMPLE_TEST = 0,
-    UVM_CHANNEL_MGMT_API_BASIC_MIGRATION_TEST,
-    UVM_CHANNEL_MGMT_API_PUSHBUFFER_SIMPLE_SANITY_TEST,
-    UVM_REGION_TRACKER_SANITY_TEST,
-    UVM_CHANNEL_DIRECTED_TEST,
-    UVM_CHANNEL_MGMT_API_INLINE_REGION_SANITY_TEST,
-    UVM_CHANNEL_PHYSICAL_MEMCOPY_TEST,
-    UVM_CHANNEL_PAGESIZE_4K_TO_128K_DIRECTED_TEST,
-    UVM_CHANNEL_PAGESIZE_4K_TO_2M_DIRECTED_TEST,
-    UVM_CHANNEL_PAGESIZE_4K_TO_128K_CONTIGUOUS_DIRECTED_TEST,
-    UVM_CHANNEL_PAGESIZE_4K_TO_2M_CONTIGUOUS_DIRECTED_TEST,
-    UVM_CHANNEL_P2P_MEMCOPY_TEST,
-    UVM_TEST_END
-} UvmTests;
-
 #ifdef __cplusplus
 }
 #endif

@@ -110,7 +110,7 @@ typedef struct _NVHsDeviceEvoRec {
 
     NVDevEvoRec *pDevEvo;
 
-    NvU32 gpuVASpace;
+    NvU32 gpuVASpaceCtxDma;
 
     struct {
         Nv3dDeviceRec device;

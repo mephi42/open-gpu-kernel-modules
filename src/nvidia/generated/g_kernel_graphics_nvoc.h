@@ -159,6 +159,14 @@ struct KGRAPHICS_GLOBAL_CTX_BUFFERS_INFO
 #define KGRAPHICS_SCRUBBER_HANDLE_3DOBJ      (KGRAPHICS_SCRUBBER_HANDLE_VAS + 4)      
 #define KGRAPHICS_SCRUBBER_HANDLE_USERD      (KGRAPHICS_SCRUBBER_HANDLE_VAS + 5)      
 
+#define KGRAPHICS_CHANNEL_HANDLE_VAS                0xbaba0042
+#define KGRAPHICS_CHANNEL_HANDLE_PBVIRT             (KGRAPHICS_CHANNEL_HANDLE_VAS + 1)
+#define KGRAPHICS_CHANNEL_HANDLE_PBPHYS             (KGRAPHICS_CHANNEL_HANDLE_VAS + 2)
+#define KGRAPHICS_CHANNEL_HANDLE_CHANNELID          (KGRAPHICS_CHANNEL_HANDLE_VAS + 3)
+#define KGRAPHICS_CHANNEL_HANDLE_3DOBJ              (KGRAPHICS_CHANNEL_HANDLE_VAS + 4)
+#define KGRAPHICS_CHANNEL_HANDLE_PARTITIONREF       (KGRAPHICS_CHANNEL_HANDLE_VAS + 6)
+#define KGRAPHICS_CHANNEL_HANDLE_USERD              (KGRAPHICS_CHANNEL_HANDLE_VAS + 7)
+#define KGRAPHICS_CHANNEL_HANDLE_EXECPARTITIONREF   (KGRAPHICS_CHANNEL_HANDLE_VAS + 8)
         
 struct KGRAPHICS_BUG4208224_CONTEXT_INFO
 {
@@ -244,6 +252,7 @@ struct KernelGraphics {
     NvBool PRIVATE_FIELD(bBottomHalfCtxswLoggingEnabled);
     NvBool PRIVATE_FIELD(bOverrideContextBuffersToGpuCached);
     NvBool PRIVATE_FIELD(bPeFiroBufferEnabled);
+    NvU32 PRIVATE_FIELD(bOverrideContextBuffersPteKind);
     NvBool PRIVATE_FIELD(bDeferContextInit);
     NvBool PRIVATE_FIELD(bPerSubcontextContextHeaderSupported);
     NvBool PRIVATE_FIELD(bSetContextBuffersGPUPrivileged);
@@ -308,6 +317,7 @@ struct KernelGraphics_PRIVATE {
     NvBool bBottomHalfCtxswLoggingEnabled;
     NvBool bOverrideContextBuffersToGpuCached;
     NvBool bPeFiroBufferEnabled;
+    NvU32 bOverrideContextBuffersPteKind;
     NvBool bDeferContextInit;
     NvBool bPerSubcontextContextHeaderSupported;
     NvBool bSetContextBuffersGPUPrivileged;
@@ -641,6 +651,35 @@ static inline void kgraphicsInitFecsRegistryOverrides(OBJGPU *arg1, struct Kerne
 #define kgraphicsInitFecsRegistryOverrides(arg1, arg_this) kgraphicsInitFecsRegistryOverrides_GP100(arg1, arg_this)
 #endif // __nvoc_kernel_graphics_h_disabled
 
+NvU32 kgraphicsMapCtxBufferToRegkey_IMPL(OBJGPU *arg1, struct KernelGraphics *arg_this, NvU32 ctxBuff);
+#ifdef __nvoc_kernel_graphics_h_disabled
+static inline NvU32 kgraphicsMapCtxBufferToRegkey(OBJGPU *arg1, struct KernelGraphics *arg_this, NvU32 ctxBuff) {
+    NV_ASSERT_FAILED_PRECOMP("KernelGraphics was disabled!");
+    return 0;
+}
+#else // __nvoc_kernel_graphics_h_disabled
+#define kgraphicsMapCtxBufferToRegkey(arg1, arg_this, ctxBuff) kgraphicsMapCtxBufferToRegkey_IMPL(arg1, arg_this, ctxBuff)
+#endif // __nvoc_kernel_graphics_h_disabled
+
+NvU32 kgraphicsMapGlobalCtxBufferToRegkey_IMPL(OBJGPU *arg1, struct KernelGraphics *arg_this, NvU32 ctxBuff);
+#ifdef __nvoc_kernel_graphics_h_disabled
+static inline NvU32 kgraphicsMapGlobalCtxBufferToRegkey(OBJGPU *arg1, struct KernelGraphics *arg_this, NvU32 ctxBuff) {
+    NV_ASSERT_FAILED_PRECOMP("KernelGraphics was disabled!");
+    return 0;
+}
+#else // __nvoc_kernel_graphics_h_disabled
+#define kgraphicsMapGlobalCtxBufferToRegkey(arg1, arg_this, ctxBuff) kgraphicsMapGlobalCtxBufferToRegkey_IMPL(arg1, arg_this, ctxBuff)
+#endif // __nvoc_kernel_graphics_h_disabled
+
+void kgraphicsSetContextBufferPteKind_IMPL(OBJGPU *arg1, struct KernelGraphics *arg_this, MEMORY_DESCRIPTOR **arg3, NvU32 bufferType, NvBool globalBuffer, NvU32 pteKind);
+#ifdef __nvoc_kernel_graphics_h_disabled
+static inline void kgraphicsSetContextBufferPteKind(OBJGPU *arg1, struct KernelGraphics *arg_this, MEMORY_DESCRIPTOR **arg3, NvU32 bufferType, NvBool globalBuffer, NvU32 pteKind) {
+    NV_ASSERT_FAILED_PRECOMP("KernelGraphics was disabled!");
+}
+#else // __nvoc_kernel_graphics_h_disabled
+#define kgraphicsSetContextBufferPteKind(arg1, arg_this, arg3, bufferType, globalBuffer, pteKind) kgraphicsSetContextBufferPteKind_IMPL(arg1, arg_this, arg3, bufferType, globalBuffer, pteKind)
+#endif // __nvoc_kernel_graphics_h_disabled
+
 #ifdef __nvoc_kernel_graphics_h_disabled
 static inline void kgraphicsSetCtxswLoggingEnabled(OBJGPU *pGpu, struct KernelGraphics *pKernelGraphics, NvBool bEnabled) {
     NV_ASSERT_FAILED_PRECOMP("KernelGraphics was disabled!");
@@ -767,7 +806,7 @@ static inline NV_STATUS kgraphicsStatePostLoad_DISPATCH(OBJGPU *arg1, struct Ker
     return arg_this->__nvoc_metadata_ptr->vtable.__kgraphicsStatePostLoad__(arg1, arg_this, flags);
 }
 
-static inline void kgraphicsRegisterIntrService_DISPATCH(OBJGPU *arg1, struct KernelGraphics *arg_this, IntrServiceRecord arg3[179]) {
+static inline void kgraphicsRegisterIntrService_DISPATCH(OBJGPU *arg1, struct KernelGraphics *arg_this, IntrServiceRecord arg3[180]) {
     arg_this->__nvoc_metadata_ptr->vtable.__kgraphicsRegisterIntrService__(arg1, arg_this, arg3);
 }
 
@@ -897,7 +936,7 @@ NvBool kgraphicsIsPresent_IMPL(OBJGPU *arg1, struct KernelGraphics *arg2);
 
 NV_STATUS kgraphicsStatePostLoad_IMPL(OBJGPU *arg1, struct KernelGraphics *arg2, NvU32 flags);
 
-void kgraphicsRegisterIntrService_IMPL(OBJGPU *arg1, struct KernelGraphics *arg2, IntrServiceRecord arg3[179]);
+void kgraphicsRegisterIntrService_IMPL(OBJGPU *arg1, struct KernelGraphics *arg2, IntrServiceRecord arg3[180]);
 
 NV_STATUS kgraphicsServiceNotificationInterrupt_IMPL(OBJGPU *arg1, struct KernelGraphics *arg2, IntrServiceServiceNotificationInterruptArguments *arg3);
 
@@ -1064,6 +1103,16 @@ static inline NvBool kgraphicsGetPeFiroBufferEnabled(OBJGPU *pGpu, struct Kernel
 static inline void kgraphicsSetPeFiroBufferEnabled(OBJGPU *pGpu, struct KernelGraphics *pKernelGraphics, NvBool bProp) {
     struct KernelGraphics_PRIVATE *pKernelGraphics_PRIVATE = (struct KernelGraphics_PRIVATE *)pKernelGraphics;
     pKernelGraphics_PRIVATE->bPeFiroBufferEnabled = bProp;
+}
+
+static inline NvBool kgraphicsIsOverrideContextBufferPteKind(OBJGPU *pGpu, struct KernelGraphics *pKernelGraphics) {
+    struct KernelGraphics_PRIVATE *pKernelGraphics_PRIVATE = (struct KernelGraphics_PRIVATE *)pKernelGraphics;
+    return pKernelGraphics_PRIVATE->bOverrideContextBuffersPteKind;
+}
+
+static inline void kgraphicsSetOverrideContextBufferPteKind(OBJGPU *pGpu, struct KernelGraphics *pKernelGraphics, NvBool bProp) {
+    struct KernelGraphics_PRIVATE *pKernelGraphics_PRIVATE = (struct KernelGraphics_PRIVATE *)pKernelGraphics;
+    pKernelGraphics_PRIVATE->bOverrideContextBuffersPteKind = bProp;
 }
 
 static inline NvBool kgraphicsShouldDeferContextInit(OBJGPU *pGpu, struct KernelGraphics *pKernelGraphics) {

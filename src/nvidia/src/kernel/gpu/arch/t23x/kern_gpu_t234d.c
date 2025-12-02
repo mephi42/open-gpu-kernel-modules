@@ -33,8 +33,6 @@
 #include "gpu/gpu_child_class_defs.h"
 #include <published/nv_arch.h>
 
-#include "swref/published/t23x/t234/dev_fuse.h"
-
 #include "class/cl0080.h"
 #include "class/cl2080.h"
 
@@ -128,7 +126,6 @@ gpuDeviceRmctrlAllowlist_T234D[] =
 static const NvU32
 gpuSubdeviceRmctrlAllowlist_T234D[] =
 {
-    NV2080_CTRL_CMD_GPU_GET_INFO_V2,
     NV2080_CTRL_CMD_GPU_GET_NAME_STRING,
     NV2080_CTRL_CMD_GPU_GET_SHORT_NAME_STRING,
     NV2080_CTRL_CMD_GPU_GET_SIMULATION_INFO,
@@ -143,7 +140,7 @@ gpuSubdeviceRmctrlAllowlist_T234D[] =
     NV2080_CTRL_CMD_INTERNAL_DISPLAY_WRITE_INST_MEM,
     NV2080_CTRL_CMD_INTERNAL_DISPLAY_SET_IMP_INIT_INFO,
     NV2080_CTRL_CMD_INTERNAL_DISPLAY_CHANNEL_PUSHBUFFER,
-    NV2080_CTRL_CMD_FB_GET_INFO_V2,
+    NV2080_CTRL_INTERNAL_GPU_CLIENT_LOW_POWER_MODE_ENTER,
     NV2080_CTRL_CMD_BUS_GET_INFO_V2,
     NV2080_CTRL_CMD_OS_UNIX_GC6_BLOCKER_REFCNT,
     NV2080_CTRL_CMD_OS_UNIX_ALLOW_DISALLOW_GCOFF,
@@ -173,9 +170,6 @@ gpuValidateRmctrlCmd_T234D(OBJGPU *pGpu, NvU32 cmd)
 {
     NV_STATUS status = NV_OK;
 
-    NV_ASSERT_OR_RETURN(pGpu->getProperty(pGpu, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY),
-                        NV_ERR_INVALID_STATE);
-
     // only validate device/subdevice rmctrls currently
     switch (DRF_VAL(XXXX, _CTRL_CMD, _CLASS, cmd))
     {
@@ -191,6 +185,25 @@ gpuValidateRmctrlCmd_T234D(OBJGPU *pGpu, NvU32 cmd)
             break;
         default:
             status = NV_OK;
+            break;
+    }
+
+    return status;
+}
+
+NV_STATUS
+gpuValidateBusInfoIndex_T234D(OBJGPU *pGpu, NvU32 index)
+{
+    NV_STATUS status = NV_ERR_NOT_SUPPORTED;
+
+    switch (index)
+    {
+        case NV2080_CTRL_BUS_INFO_INDEX_TYPE:
+        case NV2080_CTRL_BUS_INFO_INDEX_COHERENT_DMA_FLAGS:
+        case NV2080_CTRL_BUS_INFO_INDEX_NONCOHERENT_DMA_FLAGS:
+            status = NV_OK;
+            break;
+        default:
             break;
     }
 

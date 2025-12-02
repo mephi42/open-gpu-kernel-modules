@@ -79,6 +79,13 @@ typedef struct
     volatile NvBool bScaled;
     volatile NvU32  defaultus;          //!< Default timeout in us
     volatile NvU32  defaultResetus;     //!< Default timeout reset value in us
+    //
+    // Default timeout reset value in Us for the reset FSM state transitions
+    // between ASSERT -> ASSERTED and DEASSERT -> DEASSERTED.
+    // This is for presilicon test only.
+    //
+    volatile NvBool bDefaultResetFSMStateTransitionOverridden;
+    volatile NvU32  defaultResetFSMStateTransitionUs;
     NvU32           defaultFlags;       //!< Default timeout mode
     NvU32           scale;              //!< Emulation/Simulation multiplier
     OBJGPU         *pGpu;

@@ -26,7 +26,8 @@
 #include "os-interface.h"
 #include "nv-linux.h"
 
-#if defined(NV_LINUX_NVHOST_H_PRESENT)
+#if defined(NV_LINUX_NVHOST_H_PRESENT) && defined(NV_LINUX_HOST1X_NEXT_H_PRESENT)
+#include <linux/host1x-next.h>
 #include <linux/nvhost.h>
 #if defined(NV_LINUX_NVHOST_T194_H_PRESENT)
 #include <linux/nvhost_t194.h>
@@ -40,9 +41,12 @@ NV_STATUS nv_get_syncpoint_aperture
     NvU32 *offset
 )
 {
-    struct platform_device *host1x_pdev = NULL;
+    struct platform_device *host1x_pdev;
     phys_addr_t base;
-    size_t size;
+    struct host1x *host1x;
+    NvU32 stride;
+    NvU32 num_syncpts;
+    NvS32 ret;
 
     host1x_pdev = nvhost_get_default_device();
     if (host1x_pdev == NULL) 
@@ -50,12 +54,16 @@ NV_STATUS nv_get_syncpoint_aperture
         return NV_ERR_INVALID_DEVICE;
     }
 
-    nvhost_syncpt_unit_interface_get_aperture(
-        host1x_pdev, &base, &size);
+    host1x = platform_get_drvdata(host1x_pdev);
+    ret = host1x_syncpt_get_shim_info(host1x, &base, &stride, &num_syncpts);
+    if ((ret != 0) || (syncpointId >= num_syncpts)) 
+    {
+        return NV_ERR_INVALID_DATA;
+    }
 
     *physAddr = base;
-    *limit = nvhost_syncpt_unit_interface_get_byte_offset(1);
-    *offset = nvhost_syncpt_unit_interface_get_byte_offset(syncpointId);
+    *limit = stride;
+    *offset = stride * syncpointId;
 
      return NV_OK;
 }

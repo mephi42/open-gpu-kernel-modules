@@ -83,6 +83,9 @@ RPINFO rootPortInfo[] =
     {PCI_VENDOR_ID_INTEL, DEVICE_ID_INTEL_2F08_ROOT_PORT, RP_INTEL_2F08, Intel_RP2F0X_setupFunc},
     {PCI_VENDOR_ID_INTEL, DEVICE_ID_INTEL_0C01_ROOT_PORT, RP_INTEL_0C01, Intel_RP0C0X_setupFunc},
 
+    {PCI_VENDOR_ID_QUALCOMM, DEVICE_ID_QUALCOMM_SNAPDRAGON_010E_ROOT_PORT, RP_QUALCOMM_010E, Qualcomm_Snapdragon8cx_RP_setupFunc},
+    {PCI_VENDOR_ID_QUALCOMM, DEVICE_ID_QUALCOMM_SNAPDRAGON_0111_ROOT_PORT, RP_QUALCOMM_0111, Qualcomm_Snapdragon8cx_RP_setupFunc},
+
 // last element must have zero vendor id and device id
     {0,                   0,                              RP_UNKNOWN,    NULL}
 };
@@ -908,7 +911,20 @@ Intel_7A82_setupFunc
 static NV_STATUS
 Intel_7A04_setupFunc
 (
-    OBJCL *pCl
+    OBJCL* pCl
+)
+{
+    pCl->setProperty(pCl, PDB_PROP_CL_HAS_RESIZABLE_BAR_ISSUE, NV_TRUE);
+
+    return NV_OK;
+}
+
+
+// Intel Z790 platform (Raptor Lake)
+static NV_STATUS
+Intel_7D06_setupFunc
+(
+    OBJCL* pCl
 )
 {
     pCl->setProperty(pCl, PDB_PROP_CL_HAS_RESIZABLE_BAR_ISSUE, NV_TRUE);
@@ -1314,6 +1330,16 @@ Arm_NeoverseN1_setupFunc
 {
     // TODO Need to check if any more PDB properties should be set
     pCl->setProperty(pCl, PDB_PROP_CL_IS_CHIPSET_IO_COHERENT, NV_TRUE);
+    return NV_OK;
+}
+
+static NV_STATUS
+Qualcomm_Snapdragon_setupFunc
+(
+    OBJCL *pCl
+)
+{
+
     return NV_OK;
 }
 

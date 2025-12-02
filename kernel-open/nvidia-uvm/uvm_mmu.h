@@ -217,7 +217,7 @@ struct uvm_mmu_mode_hal_struct
     // Bit pattern used for debug purposes to clobber PTEs which ought to be
     // unused. In practice this will generate a PRIV violation or a physical
     // memory out-of-range error so we can immediately identify bad PTE usage.
-    NvU64 (*poisoned_pte)(void);
+    NvU64 (*poisoned_pte)(uvm_page_tree_t *tree);
 
     // Write a PDE bit-pattern to entry based on the data in allocs (which may
     // point to two items for dual PDEs).
@@ -228,7 +228,7 @@ struct uvm_mmu_mode_hal_struct
     // invalid/clean PDE entries.
     void (*make_pde)(void *entry, uvm_mmu_page_table_alloc_t **allocs, uvm_page_directory_t *dir, NvU32 child_index);
 
-    // size of an entry in a directory/table.  Generally either 8 or 16 bytes.
+    // size of an entry in a directory/table. Generally either 8 or 16 bytes.
     // (in the case of Pascal dual PDEs)
     NvLength (*entry_size)(NvU32 depth);
 

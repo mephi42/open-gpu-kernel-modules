@@ -468,7 +468,7 @@ deviceCtrlCmdDmaSetPageDirectory_IMPL
     // there are no use cases for vGPU or SLI with these systems, so those are
     // not handled here.
     //
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) && IS_GSP_CLIENT(pGpu))
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb && IS_GSP_CLIENT(pGpu))
     {
         NV_ASSERT_OK_OR_RETURN(gvaspaceExternalRootDirCommit(pGVAS,
                                                              hClient,
@@ -1091,40 +1091,6 @@ deviceCtrlCmdDmaGetCaps_IMPL
         RMCTRL_SET_CAP(pDmaCapsParams->capsTbl, NV0080_CTRL_DMA_CAPS, _MULTIPLE_VA_SPACES_SUPPORTED);
 
     return status;
-}
-
-//
-// deviceCtrlCmdDmaEnablePrivilegedRange_IMPL
-//
-// Lock Requirements:
-//      Assert that both locks are held on entry
-// Enables the privileged range assuming that the vaspace
-// has not yet been created. If the vaspace has already been
-// created that means we have already made allocations in this
-// vaspace(lazy allocation). In this case this ctrl call should fail.
-//
-NV_STATUS
-deviceCtrlCmdDmaEnablePrivilegedRange_IMPL
-(
-    Device *pDevice,
-    NV0080_CTRL_DMA_ENABLE_PRIVILEGED_RANGE_PARAMS *pParams
-)
-{
-    NV_ASSERT_OR_RETURN(rmapiLockIsOwner() && rmGpuLockIsOwner(), NV_ERR_INVALID_LOCK_STATE);
-
-    if (pParams->hVASpace != NV01_NULL_OBJECT)
-    {
-        return NV_ERR_NOT_SUPPORTED;
-    }
-
-    if (pDevice->pVASpace == NULL)
-    {
-        pDevice->deviceInternalAllocFlags |=
-                                  NV_DEVICE_INTERNAL_ALLOCATION_FLAGS_ENABLE_PRIVILEGED_VASPACE;
-        return NV_OK;
-    }
-
-    return NV_ERR_NOT_SUPPORTED;
 }
 
 NV_STATUS

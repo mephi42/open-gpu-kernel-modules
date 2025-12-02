@@ -95,6 +95,7 @@ struct GpuUserSharedData {
 
     // Data members
     NvU64 polledDataMask;
+    NvU32 pollingIntervalMs;
 };
 
 
@@ -179,6 +180,16 @@ static inline NV_STATUS gpushareddataCtrlCmdRequestDataPoll(struct GpuUserShared
 }
 #else // __nvoc_gpu_user_shared_data_h_disabled
 #define gpushareddataCtrlCmdRequestDataPoll(pData, pParams) gpushareddataCtrlCmdRequestDataPoll_IMPL(pData, pParams)
+#endif // __nvoc_gpu_user_shared_data_h_disabled
+
+NV_STATUS gpushareddataCtrlCmdRequestPollInterval_IMPL(struct GpuUserSharedData *pData, NV00DE_CTRL_REQUEST_POLL_INTERVAL_PARAM *pParams);
+#ifdef __nvoc_gpu_user_shared_data_h_disabled
+static inline NV_STATUS gpushareddataCtrlCmdRequestPollInterval(struct GpuUserSharedData *pData, NV00DE_CTRL_REQUEST_POLL_INTERVAL_PARAM *pParams) {
+    NV_ASSERT_FAILED_PRECOMP("GpuUserSharedData was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_gpu_user_shared_data_h_disabled
+#define gpushareddataCtrlCmdRequestPollInterval(pData, pParams) gpushareddataCtrlCmdRequestPollInterval_IMPL(pData, pParams)
 #endif // __nvoc_gpu_user_shared_data_h_disabled
 
 
@@ -344,6 +355,8 @@ static inline void gpushareddataAddAdditionalDependants_DISPATCH(struct RsClient
 NvBool gpushareddataCanCopy_IMPL(struct GpuUserSharedData *pData);
 
 NV_STATUS gpushareddataCtrlCmdRequestDataPoll_IMPL(struct GpuUserSharedData *pData, NV00DE_CTRL_REQUEST_DATA_POLL_PARAMS *pParams);
+
+NV_STATUS gpushareddataCtrlCmdRequestPollInterval_IMPL(struct GpuUserSharedData *pData, NV00DE_CTRL_REQUEST_POLL_INTERVAL_PARAM *pParams);
 
 #undef PRIVATE_FIELD
 

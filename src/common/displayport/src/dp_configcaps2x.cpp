@@ -67,8 +67,8 @@ void DPCDHALImpl2x::parseAndSetCableId(NvU8 cableId)
 
 void DPCDHALImpl2x::performCableIdHandshakeForTypeC()
 {
-    NvU8 txCableCaps = 0;
-    NvU8 rxCableCaps = 0;
+    NvU8    txCableCaps         = 0;
+    NvU8    rxCableCaps         = 0;
 
     if (AuxRetry::ack !=
         bus.read(NV_DPCD20_CABLE_ATTRIBUTES_UPDATED_BY_DPRX, &rxCableCaps, sizeof rxCableCaps))
@@ -79,6 +79,7 @@ void DPCDHALImpl2x::performCableIdHandshakeForTypeC()
     {
         parseAndSetCableId(rxCableCaps);
     }
+    caps2x.rxCableCaps.bHandshakeCompleted = (rxCableCaps != 0);
 
     if (caps2x.txCableCaps.bIsSupported)
     {
@@ -210,6 +211,7 @@ void DPCDHALImpl2x::performCableIdHandshakeForTypeC()
         {
             parseAndSetCableId(rxCableCaps);
         }
+        caps2x.rxCableCaps.bHandshakeCompleted = (rxCableCaps != 0);
 
         // If no matches, reflect that to the DPRX
         if (txCableCaps != rxCableCaps)
@@ -238,6 +240,7 @@ void DPCDHALImpl2x::performCableIdHandshake()
     {
         parseAndSetCableId(rxCableCaps);
     }
+    caps2x.rxCableCaps.bHandshakeCompleted = NV_TRUE;
 }
 
 void DPCDHALImpl2x::setUSBCCableIDInfo(NV0073_CTRL_DP_USBC_CABLEID_INFO *cableIDInfo)

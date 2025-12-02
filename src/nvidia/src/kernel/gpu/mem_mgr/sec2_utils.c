@@ -234,6 +234,10 @@ sec2utilsConstruct_IMPL
     // Set up various channel resources
     NV_ASSERT_OK_OR_GOTO(status, channelSetupIDs(pChannel, pGpu, NV_FALSE, IS_MIG_IN_USE(pGpu)), free_client);
 
+    // Set the VASpaceId for the scrub and sema buffers
+    pSec2Utils->scrubMthdAuthTagBuf.hVASpace = pChannel->hVASpaceId;
+    pSec2Utils->semaMthdAuthTagBuf.hVASpace = pChannel->hVASpaceId;
+
     channelSetupChannelBufferSizes(pChannel);
 
     // save original values

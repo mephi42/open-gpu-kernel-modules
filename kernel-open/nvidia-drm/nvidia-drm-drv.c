@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@
 
 #if defined(NV_DRM_AVAILABLE)
 
-#include "nvidia-drm-ioctl.h"
+#include "nv_drm_common_ioctl.h"
 
 #if defined(NV_DRM_DRMP_H_PRESENT)
 #include <drm/drmP.h>
@@ -326,8 +326,8 @@ done:
 
 static int nv_drm_disp_cmp (const void *l, const void *r)
 {
-    struct nv_drm_mst_display_info *l_info = (struct nv_drm_mst_display_info *)l;
-    struct nv_drm_mst_display_info *r_info = (struct nv_drm_mst_display_info *)r;
+    const struct nv_drm_mst_display_info *l_info = (const struct nv_drm_mst_display_info *)l;
+    const struct nv_drm_mst_display_info *r_info = (const struct nv_drm_mst_display_info *)r;
 
     return strcmp(l_info->dpAddress, r_info->dpAddress);
 }
@@ -743,6 +743,8 @@ static int nv_drm_dev_load(struct drm_device *dev)
 
     nv_dev->hasVideoMemory = resInfo.caps.hasVideoMemory;
 
+    nv_dev->contiguousPhysicalMappings = resInfo.caps.contiguousPhysicalMappings;
+
     nv_dev->genericPageKind = resInfo.caps.genericPageKind;
 
     // Fermi-Volta use generation 0, Turing+ uses generation 2.
@@ -761,8 +763,6 @@ static int nv_drm_dev_load(struct drm_device *dev)
     nv_dev->display_semaphores.count =
         resInfo.caps.numDisplaySemaphores;
     nv_dev->display_semaphores.next_index = 0;
-
-    nv_dev->requiresVrrSemaphores = resInfo.caps.requiresVrrSemaphores;
 
     nv_dev->vtFbBaseAddress = resInfo.vtFbBaseAddress;
     nv_dev->vtFbSize = resInfo.vtFbSize;
@@ -1717,6 +1717,11 @@ static long nv_drm_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     return retcode;
 }
 
+static int nv_drm_load_noop(struct drm_device *dev, unsigned long flags)
+{
+    return 0;
+}
+
 static const struct file_operations nv_drm_fops = {
     .owner          = THIS_MODULE,
 
@@ -1898,6 +1903,8 @@ static struct drm_driver nv_drm_driver = {
 #if defined(NV_DRM_DRIVER_HAS_GEM_PRIME_RES_OBJ)
     .gem_prime_res_obj      = nv_drm_gem_prime_res_obj,
 #endif
+
+    .load                   = nv_drm_load_noop,
 
     .postclose              = nv_drm_postclose,
     .open                   = nv_drm_open,

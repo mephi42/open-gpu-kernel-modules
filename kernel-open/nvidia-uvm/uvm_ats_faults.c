@@ -601,7 +601,12 @@ NV_STATUS uvm_ats_service_faults(uvm_gpu_va_space_t *gpu_va_space,
     uvm_page_mask_zero(faults_serviced_mask);
     uvm_page_mask_zero(reads_serviced_mask);
 
-    if (!(vma->vm_flags & VM_READ))
+    // If the VMA doesn't have read or write permissions then all faults are
+    // fatal so we exit early.
+    // TODO: Bug 5451843: This fix brings to light potential issues in the ATS
+    // fault handling path as described in the bug. Those need to be handled
+    // to avoid any potential permission issues.
+    if (!(vma->vm_flags & (VM_READ | VM_WRITE)))
         return NV_OK;
 
     if (!(vma->vm_flags & VM_WRITE)) {

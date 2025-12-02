@@ -52,6 +52,7 @@
 #include <ctrl/ctrl0000/ctrl0000client.h> /* NV0000_CTRL_CMD_CLIENT_GET_ADDR_SPACE_TYPE_VIDMEM */
 #include <ctrl/ctrl0080/ctrl0080gpu.h> /* NV0080_CTRL_CMD_GPU_GET_NUM_SUBDEVICES */
 #include <ctrl/ctrl0080/ctrl0080fb.h> /* NV0080_CTRL_CMD_FB_GET_CAPS_V2 */
+#include <ctrl/ctrl2080/ctrl2080gpu.h> /* NV2080_CTRL_CMD_GPU_GET_INFO_V2 */
 #include <ctrl/ctrl2080/ctrl2080fb.h> /* NV2080_CTRL_CMD_FB_GET_SEMAPHORE_SURFACE_LAYOUT */
 #include <ctrl/ctrl2080/ctrl2080unix.h> /* NV2080_CTRL_CMD_OS_UNIX_GC6_BLOCKER_REFCNT */
 
@@ -108,15 +109,19 @@ static NvU32 EnumerateGpus(void (*gpuCallback)(const struct NvKmsKapiGpuInfo *in
              * Pass back an NvKmsKapiGpuInfo for each active device found
              * for the current gpu_id. For regular GPUs this will only be
              * one but in MIG mode the same gpu_id can host multiple MIG
-             * devices.
+             * devices. In MIG mode, only offer graphics capable MIG device
+             * (SMG).
              */
             if (activeDevices[j].gpuId == gpu_info[i].gpu_id) {
-                kapiGpuInfo.gpuInfo = gpu_info[i];
-                kapiGpuInfo.migDevice = activeDevices[j].migDeviceId;
-                gpuCallback(&kapiGpuInfo);
-
-                kapiGpuCount++;
                 foundMig = NV_TRUE;
+
+                if (activeDevices[j].smgAccessOk) {
+                    kapiGpuInfo.gpuInfo = gpu_info[i];
+                    kapiGpuInfo.migDevice = activeDevices[j].migDeviceId;
+                    gpuCallback(&kapiGpuInfo);
+
+                    kapiGpuCount++;
+                }
             }
         }
 
@@ -207,6 +212,7 @@ static NvBool RmAllocateDevice(struct NvKmsKapiDevice *device)
 {
     NV0080_CTRL_GPU_GET_NUM_SUBDEVICES_PARAMS getNumSubDevicesParams = { 0 };
     NV0000_CTRL_GPU_GET_ID_INFO_V2_PARAMS idInfoParams = { };
+    NV2080_CTRL_GPU_GET_INFO_V2_PARAMS infoParams = { };
     NV2080_ALLOC_PARAMETERS subdevAllocParams = { 0 };
     NV0080_ALLOC_PARAMETERS allocParams = { };
     NV0080_CTRL_FB_GET_CAPS_V2_PARAMS fbCapsParams = { 0 };
@@ -333,6 +339,25 @@ static NvBool RmAllocateDevice(struct NvKmsKapiDevice *device)
 
     device->hRmSubDevice = hRmSubDevice;
 
+    /* Determine if GPU has coherent link */
+
+    infoParams.gpuInfoListSize = 1;
+    infoParams.gpuInfoList[0].index =
+        NV2080_CTRL_GPU_INFO_INDEX_COHERENT_GPU_MEMORY_MODE;
+    ret = nvRmApiControl(device->hRmClient,
+                         device->hRmSubDevice,
+                         NV2080_CTRL_CMD_GPU_GET_INFO_V2,
+                         &infoParams, sizeof(infoParams));
+    if (ret != NVOS_STATUS_SUCCESS) {
+        nvKmsKapiLogDeviceDebug(device,
+                                "Failed to determine coherent GPU memory mode");
+        device->coherentGpuMemory = NV_FALSE;
+    } else {
+        device->coherentGpuMemory =
+            (infoParams.gpuInfoList[0].data !=
+             NV2080_CTRL_GPU_INFO_INDEX_COHERENT_GPU_MEMORY_MODE_NONE);
+    }
+
     if (device->migDevice != NO_MIG_DEVICE) {
         device->smgGpuInstSubscriptionHdl     = nvKmsKapiGenerateRmHandle(device);
         device->smgComputeInstSubscriptionHdl = nvKmsKapiGenerateRmHandle(device);
@@ -423,7 +448,6 @@ static NvBool KmsAllocateDevice(struct NvKmsKapiDevice *device)
 {
     struct NvKmsAllocDeviceParams *paramsAlloc;
     NvBool status;
-    NvBool inVideoMemory = FALSE;
     NvU32 head;
     NvBool ret = FALSE;
     NvU32 layer;
@@ -497,15 +521,6 @@ static NvBool KmsAllocateDevice(struct NvKmsKapiDevice *device)
     device->caps.maxWidthInPixels      = paramsAlloc->reply.maxWidthInPixels;
     device->caps.maxHeightInPixels     = paramsAlloc->reply.maxHeightInPixels;
     device->caps.maxCursorSizeInPixels = paramsAlloc->reply.maxCursorSize;
-    device->caps.requiresVrrSemaphores = paramsAlloc->reply.requiresVrrSemaphores;
-
-    device->caps.supportsInputColorSpace =
-        paramsAlloc->reply.supportsInputColorSpace;
-    device->caps.supportsInputColorRange =
-        paramsAlloc->reply.supportsInputColorRange;
-
-    device->caps.supportsWindowMode =
-        paramsAlloc->reply.layerCaps[NVKMS_MAIN_LAYER].supportsWindowMode;
 
     /* XXX Add LUT support */
 
@@ -571,12 +586,8 @@ static NvBool KmsAllocateDevice(struct NvKmsKapiDevice *device)
 
     device->supportsSyncpts = paramsAlloc->reply.supportsSyncpts;
 
-    if (paramsAlloc->reply.nIsoSurfacesInVidmemOnly) {
-        inVideoMemory = TRUE;
-    }
-
     /* Allocate notifier memory */
-    if (!nvKmsKapiAllocateNotifiers(device, inVideoMemory)) {
+    if (!nvKmsKapiAllocateNotifiers(device)) {
         nvKmsKapiLogDebug(
             "Failed to allocate Notifier objects for GPU ID 0x%08x",
             device->gpuId);
@@ -691,7 +702,6 @@ NvBool nvKmsKapiAllocateSystemMemory(struct NvKmsKapiDevice *device,
 
             memAllocParams.attr2 = FLD_SET_DRF(OS32, _ATTR2, _ISO,
                                                _YES, memAllocParams.attr2);
-
             break;
         case NVKMS_KAPI_ALLOCATION_TYPE_NOTIFIER:
             if (layout == NvKmsSurfaceMemoryLayoutBlockLinear) {
@@ -1166,7 +1176,7 @@ static NvBool GetDeviceResourcesInfo
 
     info->caps.hasVideoMemory = !device->isSOC;
     info->caps.genericPageKind = device->caps.genericPageKind;
-    info->caps.requiresVrrSemaphores = device->caps.requiresVrrSemaphores;
+    info->caps.contiguousPhysicalMappings = !device->coherentGpuMemory;
 
     info->vtFbBaseAddress = device->vtFbBaseAddress;
     info->vtFbSize = device->vtFbSize;
@@ -1241,8 +1251,6 @@ static NvBool GetDeviceResourcesInfo
     info->caps.pitchAlignment = NV_EVO_PITCH_ALIGNMENT;
 
     info->caps.supportsSyncpts = device->supportsSyncpts;
-    info->caps.supportsInputColorRange = device->caps.supportsInputColorRange;
-    info->caps.supportsInputColorSpace = device->caps.supportsInputColorSpace;
 
     info->caps.supportedCursorSurfaceMemoryFormats =
         NVBIT(NvKmsSurfaceMemoryFormatA8R8G8B8);
@@ -2402,8 +2410,6 @@ static struct NvKmsKapiSurface* CreateSurface
     }
 
     surface->hKmsHandle = paramsReg.reply.surfaceHandle;
-    surface->size.width = params->width;
-    surface->size.height = params->height;
 
 done:
     return surface;
@@ -2988,7 +2994,6 @@ static NvBool NvKmsKapiPrimaryLayerConfigToKms(
     struct NvKmsKapiDevice *device,
     const struct NvKmsKapiLayerRequestedConfig *layerRequestedConfig,
     const NvU32 head,
-    const struct NvKmsMode *mode,
     struct NvKmsFlipCommonParams *params,
     NvBool commit,
     NvBool bFromKmsSetMode)
@@ -3015,42 +3020,12 @@ static NvBool NvKmsKapiPrimaryLayerConfigToKms(
                 layerConfig->surface->hKmsHandle;
 
             if (params->layer[NVKMS_MAIN_LAYER].surface.handle[0] != 0) {
-                const NvU32 surfaceWidth = layerConfig->surface->size.width;
-                const NvU32 surfaceHeight = layerConfig->surface->size.height;
-
-                // If there's no scaling and the sizeOut is going to be clamped
-                // to size of the mode, then set the sizes to the size of the
-                // surface rather than the size requested in the layerConfig.
-                //
-                // GPUs prior to nvdisplay require the sizeIn to match the size
-                // of the surface.
-                if (!device->caps.supportsWindowMode &&
-                    layerConfig->srcWidth == layerConfig->dstWidth &&
-                    layerConfig->dstWidth >= mode->timings.hVisible &&
-                    layerConfig->dstX == 0 &&
-                    surfaceWidth > layerConfig->dstWidth) {
-
-                    params->layer[NVKMS_MAIN_LAYER].sizeIn.val.width = surfaceWidth;
-                    params->layer[NVKMS_MAIN_LAYER].sizeOut.val.width = surfaceWidth;
-                } else {
-                    params->layer[NVKMS_MAIN_LAYER].sizeIn.val.width = layerConfig->srcWidth;
-                    params->layer[NVKMS_MAIN_LAYER].sizeOut.val.width = layerConfig->dstWidth;
-                }
-
-                if (!device->caps.supportsWindowMode &&
-                    layerConfig->srcHeight == layerConfig->dstHeight &&
-                    layerConfig->dstHeight >= mode->timings.vVisible &&
-                    layerConfig->dstY == 0 &&
-                    surfaceHeight > layerConfig->dstHeight) {
-
-                    params->layer[NVKMS_MAIN_LAYER].sizeIn.val.height = surfaceHeight;
-                    params->layer[NVKMS_MAIN_LAYER].sizeOut.val.height = surfaceHeight;
-                } else {
-                    params->layer[NVKMS_MAIN_LAYER].sizeIn.val.height = layerConfig->srcHeight;
-                    params->layer[NVKMS_MAIN_LAYER].sizeOut.val.height = layerConfig->dstHeight;
-                }
-
+                params->layer[NVKMS_MAIN_LAYER].sizeIn.val.width = layerConfig->srcWidth;
+                params->layer[NVKMS_MAIN_LAYER].sizeIn.val.height = layerConfig->srcHeight;
                 params->layer[NVKMS_MAIN_LAYER].sizeIn.specified = TRUE;
+
+                params->layer[NVKMS_MAIN_LAYER].sizeOut.val.width = layerConfig->dstWidth;
+                params->layer[NVKMS_MAIN_LAYER].sizeOut.val.height = layerConfig->dstHeight;
                 params->layer[NVKMS_MAIN_LAYER].sizeOut.specified = TRUE;
             }
         }
@@ -3208,7 +3183,6 @@ static NvBool NvKmsKapiLayerConfigToKms(
     const struct NvKmsKapiLayerRequestedConfig *layerRequestedConfig,
     const NvU32 layer,
     const NvU32 head,
-    const struct NvKmsMode *mode,
     struct NvKmsFlipCommonParams *params,
     NvBool commit,
     NvBool bFromKmsSetMode)
@@ -3217,7 +3191,6 @@ static NvBool NvKmsKapiLayerConfigToKms(
         return NvKmsKapiPrimaryLayerConfigToKms(device,
                                                 layerRequestedConfig,
                                                 head,
-                                                mode,
                                                 params,
                                                 commit,
                                                 bFromKmsSetMode);
@@ -3410,7 +3383,6 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
                                            layerRequestedConfig,
                                            layer,
                                            head,
-                                           &paramsHead->mode,
                                            &paramsHead->flip,
                                            commit,
                                            NV_TRUE /* bFromKmsSetMode */)) {
@@ -3514,19 +3486,6 @@ static NvBool KmsSetMode(
         }
 
         status = NV_FALSE;
-    } else {
-        const NvU32 dispIdx = device->dispIdx;
-        int head;
-
-        // Cache the mode timings to be used later by
-        // NvKmsKapiPrimaryLayerConfigToKms.
-        for (head = 0; head < ARRAY_LEN(device->headState); head++) {
-            const struct NvKmsSetModeOneDispRequest *dispRequest =
-                &params->request.disp[dispIdx];
-            if (dispRequest->requestedHeadsBitMask & (1 << head)) {
-                device->headState[head].mode = dispRequest->head[head].mode;
-            }
-        }
     }
 
 done:
@@ -3622,7 +3581,6 @@ static NvBool KmsFlip(
                                                layerRequestedConfig,
                                                layer,
                                                head,
-                                               &device->headState[head].mode,
                                                flipParams,
                                                commit,
                                                NV_FALSE /* bFromKmsSetMode */);
@@ -3718,7 +3676,6 @@ static NvBool KmsFlip(
 
     /*! fill back flip reply */
     replyConfig->vrrFlip = params->reply.vrrFlipType;
-    replyConfig->vrrSemaphoreIndex = params->reply.vrrSemaphoreIndex;
 
     for (i = 0; i < params->request.numFlipHeads; i++) {
          const struct NvKmsKapiHeadRequestedConfig *headRequestedConfig =
@@ -3988,25 +3945,6 @@ void nvKmsKapiProbe
     }
 }
 
-static NvBool SignalVrrSemaphore
-(
-    struct NvKmsKapiDevice *device,
-    NvS32 index
-)
-{
-    NvBool status = NV_TRUE;
-    struct NvKmsVrrSignalSemaphoreParams params = { };
-    params.request.deviceHandle = device->hKmsDevice;
-    params.request.vrrSemaphoreIndex = index;
-    status = nvkms_ioctl_from_kapi(device->pKmsOpen,
-                                   NVKMS_IOCTL_VRR_SIGNAL_SEMAPHORE,
-                                   &params, sizeof(params));
-    if (!status) {
-        nvKmsKapiLogDeviceDebug(device, "NVKMS VrrSignalSemaphore failed");
-    }
-    return status;
-}
-
 static NvBool CheckLutNotifier
 (
     struct NvKmsKapiDevice *device,
@@ -4136,7 +4074,6 @@ NvBool nvKmsKapiGetFunctionsTableInternal
     funcsTable->tryInitDisplaySemaphore = nvKmsKapiTryInitDisplaySemaphore;
     funcsTable->signalDisplaySemaphore = nvKmsKapiSignalDisplaySemaphore;
     funcsTable->cancelDisplaySemaphore = nvKmsKapiCancelDisplaySemaphore;
-    funcsTable->signalVrrSemaphore = SignalVrrSemaphore;
     funcsTable->checkLutNotifier = CheckLutNotifier;
 
     return NV_TRUE;

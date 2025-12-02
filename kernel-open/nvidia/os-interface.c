@@ -523,7 +523,7 @@ NV_STATUS NV_API_CALL os_memcpy_from_user(
     NvU32       n
 )
 {
-    return (NV_COPY_FROM_USER(to, from, n) ? NV_ERR_INVALID_ADDRESS : NV_OK);
+    return (copy_from_user(to, from, n) ? NV_ERR_INVALID_ADDRESS : NV_OK);
 }
 
 NV_STATUS NV_API_CALL os_memcpy_to_user(
@@ -532,7 +532,7 @@ NV_STATUS NV_API_CALL os_memcpy_to_user(
     NvU32       n
 )
 {
-    return (NV_COPY_TO_USER(to, from, n) ? NV_ERR_INVALID_ADDRESS : NV_OK);
+    return (copy_to_user(to, from, n) ? NV_ERR_INVALID_ADDRESS : NV_OK);
 }
 
 void* NV_API_CALL os_mem_set(
@@ -753,7 +753,7 @@ NvU64 NV_API_CALL os_get_cpu_frequency(void)
 
 NvU32 NV_API_CALL os_get_current_process(void)
 {
-    return NV_GET_CURRENT_PROCESS();
+    return current->tgid;
 }
 
 void NV_API_CALL os_get_current_process_name(char *buf, NvU32 len)
@@ -1262,7 +1262,7 @@ NvU32 NV_API_CALL os_get_cpu_number(void)
 
 NvU32 NV_API_CALL os_get_cpu_count(void)
 {
-    return NV_NUM_CPUS();
+    return num_possible_cpus();
 }
 
 NvBool NV_API_CALL os_pat_supported(void)
@@ -1691,7 +1691,15 @@ NV_STATUS NV_API_CALL os_alloc_pages_node
      *                              the requested order is too large (just fail
      *                              instead).
      *
-     * 5. (Optional) __GFP_RECLAIM: Used to allow/forbid reclaim.
+     * 5. __GFP_RETRY_MAYFAIL:      Used to avoid the Linux kernel OOM killer.
+     *                              To help PMA on paths where UVM might be in
+     *                              memory over subscription. This gives UVM a
+     *                              chance to free memory before invoking any
+     *                              action from the OOM killer.  Freeing
+     *                              non-essential memory will also benefit the
+     *                              system as a whole.
+     *
+     * 6. (Optional) __GFP_RECLAIM: Used to allow/forbid reclaim.
      *                              This is part of GFP_USER and consequently
      *                              GFP_HIGHUSER_MOVABLE.
      *
@@ -1705,37 +1713,12 @@ NV_STATUS NV_API_CALL os_alloc_pages_node
      */
 
     gfp_mask = __GFP_THISNODE | GFP_HIGHUSER_MOVABLE | __GFP_COMP |
-               __GFP_NOWARN;
-    
-#if defined(__GFP_RETRY_MAYFAIL)
+               __GFP_NOWARN | __GFP_RETRY_MAYFAIL;
 
-    /*
-     * __GFP_RETRY_MAYFAIL :  Used to avoid the Linux kernel OOM killer.
-     *                        To help PMA on paths where UVM might be
-     *                        in memory over subscription. This gives UVM 
-     *                        a chance to free memory before invoking any 
-     *                        action from the OOM killer.
-     *                        Freeing non-essential memory will also benefit 
-     *                        the system as a whole.
-     */
-
-    gfp_mask |= __GFP_RETRY_MAYFAIL;
-#elif defined(__GFP_NORETRY)
-
-    /*
-     *  __GFP_NORETRY :       Use __GFP_NORETRY on older kernels where
-     *                        __GFP_RETRY_MAYFAIL is not present.
-     */
-
-    gfp_mask |= __GFP_NORETRY;
-#endif
-
-#if defined(__GFP_RECLAIM)
     if (flag & NV_ALLOC_PAGES_NODE_SKIP_RECLAIM)
     {
         gfp_mask &= ~(__GFP_RECLAIM);
     }
-#endif // defined(__GFP_RECLAIM)
 
     alloc_addr = alloc_pages_node(nid, gfp_mask, order);
     if (alloc_addr == NULL)
@@ -2243,6 +2226,51 @@ NvS32 NV_API_CALL os_imex_channel_get
 )
 {
     return nv_caps_imex_channel_get((int)descriptor);
+}
+
+NV_STATUS NV_API_CALL os_tegra_igpu_perf_boost
+(
+    void *handle,
+    NvBool enable,
+    NvU32 duration
+)
+{
+#if defined(CONFIG_PM_DEVFREQ) && defined(NV_UPDATE_DEVFREQ_PRESENT)
+    nv_state_t *nv = handle;
+    nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
+    int err;
+
+    if (enable)
+    {
+        if (nvl->devfreq_enable_boost == NULL)
+        {
+            return NV_ERR_NOT_SUPPORTED;
+        }
+
+        err = nvl->devfreq_enable_boost(nvl->dev, duration);
+        if (err != 0)
+        {
+            return NV_ERR_OPERATING_SYSTEM;
+        }
+    }
+    else
+    {
+        if (nvl->devfreq_disable_boost == NULL)
+        {
+            return NV_ERR_NOT_SUPPORTED;
+        }
+
+        err = nvl->devfreq_disable_boost(nvl->dev);
+        if (err != 0)
+        {
+            return NV_ERR_OPERATING_SYSTEM;
+        }
+    }
+
+    return NV_OK;
+#else // !defined(CONFIG_PM_DEVFREQ) || !defined(NV_UPDATE_DEVFREQ_PRESENT)
+    return NV_ERR_NOT_SUPPORTED;
+#endif
 }
 
 /*

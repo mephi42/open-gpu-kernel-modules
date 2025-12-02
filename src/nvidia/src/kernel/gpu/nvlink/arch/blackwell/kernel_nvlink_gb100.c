@@ -26,6 +26,9 @@
 #include "kernel/gpu/nvlink/kernel_nvlink.h"
 #include "kernel/diagnostics/nv_debug_dump.h"
 #include "kernel/gpu_mgr/gpu_mgr.h"
+#include "kernel/gpu/gpu.h"
+#include "kernel/gpu/bus/p2p_api.h"
+#include "rmapi/rs_utils.h"
 
 NV_STATUS
 knvlinkGetSupportedCounters_GB100
@@ -143,7 +146,7 @@ knvlinkLogAliDebugMessages_GB100
 {
     NV_STATUS status;
     NV2080_CTRL_NVLINK_GET_ERR_INFO_PARAMS *pParams;
-    NvU32 linkMask;
+    NVLINK_BIT_VECTOR linkVec;
     NvU32 failures[7];
     NvU32 failure;
     NvU32 link;
@@ -163,11 +166,11 @@ knvlinkLogAliDebugMessages_GB100
         portMemFree(pParams);
         return status; );
 
-    linkMask = 0x0;
+    bitVectorClrAll(&linkVec);
     failure = 0;
     portMemSet(failures, 0x0, sizeof(failures));
 
-    FOR_EACH_INDEX_IN_MASK(32, link, KNVLINK_GET_MASK(pKernelNvlink, postRxDetLinkMask, 32))
+    FOR_EACH_IN_BITVECTOR(&pKernelNvlink->postRxDetLinkMask, link)
     {
         if ((pParams->linkErrInfo[link].DLStatMN00 & 0xffff) != 0x0)
         {
@@ -179,16 +182,16 @@ knvlinkLogAliDebugMessages_GB100
             if (failure < NV_ARRAY_ELEMENTS(failures))
                 failures[failure++] = pParams->linkErrInfo[link].DLStatMN00;
 
-            linkMask |= NVBIT32(link);
+            bitVectorSet(&linkVec, link);
         }
     }
-    FOR_EACH_INDEX_IN_MASK_END;
+    FOR_EACH_IN_BITVECTOR_END();
 
     if (bFinal)
     {
         nvErrorLog_va((void *)pGpu, ALI_TRAINING_FAIL,
-                      "NVLink: Link training failed for links 0x%x (0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x)\n",
-                      linkMask,
+                      "NVLink: Link training failed for links " NV_BITVECTOR_INLINE_FMTX "(0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x)\n",
+                      NV_BITVECTOR_INLINE_PRINTF_ARG(&linkVec),
                       failures[0],
                       failures[1],
                       failures[2],
@@ -337,6 +340,36 @@ knvlinkGetHshubSupportedRbmModes_GB100
     return status;
 }
 
+/**
+ * @brief Calculate the effective peer link mask for HS_HUB configuration
+ *
+ * @param[in]   pGpu               OBJGPU pointer of local GPU
+ * @param[in]   pKernelNvlink      reference of KernelNvlink
+ * @param[in]   pRemoteGpu         OBJGPU pointer of remote GPU
+ * @param[in/out] pPeerLinkMask    reference of peerLinkMask
+ */
+void
+knvlinkGetEffectivePeerLinkMask_GB100
+(
+    OBJGPU *pGpu,
+    KernelNvlink *pKernelNvlink,
+    OBJGPU *pRemoteGpu,
+    NvU64  *pPeerLinkMask
+)
+{
+    NvU32 linkMaskToBeReduced;
+
+    if (knvlinkIsGpuConnectedToNvswitch(pGpu, pKernelNvlink))
+    {
+        if (gpuFabricProbeGetlinkMaskToBeReduced(pGpu->pGpuFabricProbeInfoKernel,
+                                                 &linkMaskToBeReduced) == NV_OK)
+        {
+            *pPeerLinkMask &= (~linkMaskToBeReduced);
+            NV_PRINTF(LEVEL_INFO, "Reducing nvlinkMask from 0x%x  to updated 0x%llx\n", linkMaskToBeReduced, *pPeerLinkMask);
+        }
+    }
+}
+
 /*!
  * Retrieve list of supported BW modes
  */
@@ -443,11 +476,10 @@ knvlinkValidateFabricEgmBaseAddress_GB100
  *
  * @return  NV_TRUE is ENCRYPT_EN is set, else NV_FALSE
  */
-
-NvBool
-knvlinkIsEncryptEnSet_GB100
+NV_STATUS
+knvlinkGetEncryptionBits_GB100
 (
-    OBJGPU *pGpu,
+    OBJGPU       *pGpu,
     KernelNvlink *pKernelNvlink
 )
 {
@@ -461,10 +493,13 @@ knvlinkIsEncryptEnSet_GB100
     if (status != NV_OK)
     {
         NV_PRINTF(LEVEL_ERROR, "Failed to execute RPC to get Nvlink Encrypt Enable Info\n");
-        return NV_FALSE;
+        return status;
     }
 
-    return params.bEncryptEnSet;
+    pKernelNvlink->bMmuNvlinkEncryptEn = params.bMmuNvlinkEncryptEn;
+    pKernelNvlink->bNvlinkTlwEncryptEn = params.bNvlinkTlwEncryptEn;
+
+    return NV_OK;
 }
 
 /*!
@@ -483,20 +518,38 @@ knvlinkIsNvleEnabled_GB100
 {
     NV2080_CTRL_NVLINK_SET_NVLE_ENABLED_STATE_PARAMS params;
     NV_STATUS status;
-    if (!(pKernelNvlink->getProperty(pKernelNvlink, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED)))
+
+    if (pKernelNvlink->getProperty(pKernelNvlink, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED))
     {
         //
-        // Nvlink Encryption PDB PROP is set when 
-        // 1. Nvlink Encryption regkey has been enabled AND
-        // 2. Encrypt Enable Bit is set by FSP AND
-        // 3. Secure Scratch Register Bit is set by FSP after reading the NVLE PRC Knob
+        // On MODS, just check PDB_PROP_KNVLINK_ENCRYPTION_ENABLED, on non-MODS platforms, check
+        // the following settings as well
         //
-
-        if (knvlinkIsEncryptEnSet_HAL(pGpu, pKernelNvlink) &&
-            gpuIsNvleModeEnabledInHw_HAL(pGpu)
-            )
+        if (!RMCFG_FEATURE_MODS_FEATURES)
         {
-            pKernelNvlink->setProperty(pKernelNvlink, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED, NV_TRUE);
+            //
+            // Nvlink Encryption PDB PROP is set when 
+            // 1. Nvlink Encryption regkey has been enabled AND
+            // 2. Encrypt Enable Bit is set by FSP AND
+            // 3. Secure Scratch Register Bit is set by FSP after reading the NVLE PRC Knob
+            //
+            if (!(pKernelNvlink->bNvlinkTlwEncryptEn
+                  && (gpuIsNvleModeEnabledInHw_HAL(pGpu) || gpuIsCCEnabledInHw_HAL(pGpu))
+                ))
+            {
+                //
+                // This is an error case, encrypt enable bit and secure scratch register should be set
+                // when CC is enabled.
+                //
+                NV_PRINTF(LEVEL_ERROR,
+                          "CC and Nvlink encryption features are enabled, "
+                          "but encrypt enable bit or PRC knob is not set! Disabling Nvlink encryption\n");
+                pKernelNvlink->setProperty(pKernelNvlink, PDB_PROP_KNVLINK_ENCRYPTION_ENABLED, NV_FALSE);
+            }
+            else
+            {
+                NV_PRINTF(LEVEL_ERROR, "CC and Nvlink encryption features are enabled on the GPU\n");
+            }
         }
     }
 
@@ -588,3 +641,38 @@ knvlinkGetSupportedCoreLinkStateMask_GB100
 #endif // defined(INCLUDE_NVLINK_LIB)
 }
 
+void
+knvlinkP2PIdle_WORKITEM
+(
+    OBJGPU *pGpu,
+    void *pArgs
+)
+{
+    // TODO: Call p2p idle check (CTK-8435)
+
+    // Invalidate/Suspend probe
+    gpuFabricProbeSuspend(pGpu->pGpuFabricProbeInfoKernel);
+    gpuFabricProbeInvalidate(pGpu->pGpuFabricProbeInfoKernel);
+
+    // Send requested probe
+    NV_ASSERT_OK(gpuFabricProbeResume(pGpu->pGpuFabricProbeInfoKernel));
+
+    osRemove1HzCallback(pGpu, knvlinkP2PIdle_WORKITEM, pArgs);
+}
+
+/*!
+ * @brief
+ */
+NV_STATUS
+knvlinkTriggerProbeRequest_GB100
+(
+    OBJGPU *pGpu,
+    KernelNvlink *pKernelNvlink
+)
+{
+    // TODO: Trigger drainP2P (CTK-8435)
+
+    (void)osSchedule1HzCallback(pGpu, knvlinkP2PIdle_WORKITEM, NULL, NV_OS_1HZ_REPEAT);
+
+    return NV_OK;
+}

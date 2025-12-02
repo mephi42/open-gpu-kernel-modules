@@ -168,13 +168,13 @@ struct OBJUVM {
     void (*__uvmProgramAccessCntrBufferEnabled__)(OBJGPU *, struct OBJUVM * /*this*/, NvU32, NvBool);  // halified (2 hals) body
     NvBool (*__uvmIsAccessCntrBufferEnabled__)(OBJGPU *, struct OBJUVM * /*this*/, NvU32);  // halified (2 hals) body
     NvBool (*__uvmIsAccessCntrBufferPushed__)(OBJGPU *, struct OBJUVM * /*this*/, NvU32);  // halified (2 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferPut__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferGet__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferHi__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferLo__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferConfig__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferInfo__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
-    NvU32 (*__uvmGetRegOffsetAccessCntrBufferSize__)(struct OBJUVM * /*this*/, NvU32);  // halified (3 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferPut__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferGet__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferHi__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferLo__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferConfig__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferInfo__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__uvmGetRegOffsetAccessCntrBufferSize__)(struct OBJUVM * /*this*/, NvU32);  // halified (4 hals) body
 
     // 1 PDB property
 //  NvBool PDB_PROP_UVM_IS_MISSING inherited from OBJENGSTATE
@@ -496,7 +496,7 @@ static inline NV_STATUS uvmGetAccessCntrRegisterMappings_DISPATCH(OBJGPU *pGpu, 
     return pUvm->__uvmGetAccessCntrRegisterMappings__(pGpu, pUvm, accessCounterIndex, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
 }
 
-static inline void uvmRegisterIntrService_DISPATCH(OBJGPU *arg1, struct OBJUVM *pUvm, IntrServiceRecord arg3[179]) {
+static inline void uvmRegisterIntrService_DISPATCH(OBJGPU *arg1, struct OBJUVM *pUvm, IntrServiceRecord arg3[180]) {
     pUvm->__nvoc_metadata_ptr->vtable.__uvmRegisterIntrService__(arg1, pUvm, arg3);
 }
 
@@ -744,7 +744,7 @@ static inline NV_STATUS uvmGetAccessCntrRegisterMappings_395e98(OBJGPU *pGpu, st
     return NV_ERR_NOT_SUPPORTED;
 }
 
-void uvmRegisterIntrService_IMPL(OBJGPU *arg1, struct OBJUVM *pUvm, IntrServiceRecord arg3[179]);
+void uvmRegisterIntrService_IMPL(OBJGPU *arg1, struct OBJUVM *pUvm, IntrServiceRecord arg3[180]);
 
 NvU32 uvmServiceInterrupt_IMPL(OBJGPU *arg1, struct OBJUVM *pUvm, IntrServiceServiceInterruptArguments *arg3);
 

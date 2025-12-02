@@ -658,6 +658,7 @@ static void _gpuLocksAcquireDisableInterrupts(NvU32 gpuInst, NvU32 flags)
         Intr *pIntr = GPU_GET_INTR(pGpu);
         NvBool isIsr = !!(flags & GPU_LOCK_FLAGS_COND_ACQUIRE);
         NvBool bBcEnabled = gpumgrGetBcEnabledStatus(pGpu);
+        KernelDisplay  *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
 
         // Always disable intrs for cond code
         gpumgrSetBcEnabledStatus(pGpu, NV_FALSE);
@@ -673,7 +674,7 @@ static void _gpuLocksAcquireDisableInterrupts(NvU32 gpuInst, NvU32 flags)
         osDisableInterrupts(pGpu, isIsr);
 
         if ((pIntr != NULL) && pIntr->getProperty(pIntr, PDB_PROP_INTR_USE_INTR_MASK_FOR_LOCKING) &&
-             (isIsr == NV_FALSE) )
+            ((isIsr == NV_FALSE) || (pKernelDisplay != NULL && pKernelDisplay->getProperty(pKernelDisplay, PDB_PROP_KDISP_HAS_SEPARATE_LOW_LATENCY_LINE))) )
         {
             NvU64 oldIrql;
             NvU32 intrMaskFlags;
@@ -691,6 +692,8 @@ static void _gpuLocksAcquireDisableInterrupts(NvU32 gpuInst, NvU32 flags)
             // interrupt handling after this, so we don't need more top half
             // interrupts preventing it from running. Removing the isIsr check
             // results in slight perf degredation.
+            // Attempt to do so if we have a separate interrupt line which
+            // keeps the interrupts separate
             //
             // This originally also done to allow the interrupt to be read in the
             // NV_PMC_INTR_0 status register, but that is no longer required. 
@@ -1698,7 +1701,7 @@ _rmGpuLocksRelease(NvU32 gpuMask, NvU32 flags, OBJGPU *pDpcGpu, void *ra)
                   gpuMask, rmGpuLockInfo.gpusLockedMask);
         gpuMask &= rmGpuLockInfo.gpusLockedMask;
 
-        if (gpuMask == 0)
+        if ((gpuMask == 0) && !bReleaseAllocLock)
         {
             NV_PRINTF(LEVEL_WARNING, "No more GPUs to release after skipping");
             portSyncSpinlockRelease(rmGpuLockInfo.pLock);
@@ -1996,13 +1999,13 @@ rmGpuLocksRelease(NvU32 flags, OBJGPU *pDpcGpu)
     // mask have been hidden with rmGpuLockHide().  In such cases we won't
     // even bother trying to do the release.
     //
-    if (rmGpuLockInfo.gpusLockedMask == 0)
+    if ((rmGpuLockInfo.gpusLockedMask == 0) && !_rmGpuAllocLockIsOwner())
         return NV_SEMA_RELEASE_SUCCEED;
 
     // Only attempt to release the ones that are both locked and lockable
     gpuMask = rmGpuLockInfo.gpusLockedMask & rmGpuLockInfo.gpusLockableMask;
 
-    if (gpuMask == 0)
+    if ((gpuMask == 0) && !_rmGpuAllocLockIsOwner())
     {
         NV_PRINTF(LEVEL_WARNING,
                   "Attempting to release nonlockable GPUs. gpuMask = 0x%08x, gpusLockableMask = 0x%08x\n",
@@ -2051,7 +2054,7 @@ rmGpuGroupLockRelease(GPU_MASK gpuMask, NvU32 flags)
     OBJSYS *pSys = SYS_GET_INSTANCE();
     OBJGPU *pDpcGpu = NULL;
 
-    if (gpuMask == 0)
+    if ((gpuMask == 0) && !_rmGpuAllocLockIsOwner())
         return;
 
     //
@@ -2097,7 +2100,7 @@ rmDeviceGpuLocksRelease(OBJGPU *pGpu, NvU32 flags, OBJGPU *pDpcGpu)
         gpuMask = gpumgrGetGpuMask(pGpu);
     }
 
-    if (gpuMask == 0)
+    if ((gpuMask == 0) && !_rmGpuAllocLockIsOwner())
     {
         return NV_SEMA_RELEASE_SUCCEED;
     }

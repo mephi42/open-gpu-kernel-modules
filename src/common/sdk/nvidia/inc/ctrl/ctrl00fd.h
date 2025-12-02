@@ -122,9 +122,7 @@ typedef struct NV00FD_CTRL_GET_INFO_PARAMS {
  *  a. Memory belonging to only NVSwitch P2P supported GPUs
  *     which can do multicast can be attached
  *  b. Physical memory with 2MB or 512MB pagesize is allowed
- *  c. Memory of an already attached GPU should not be attached
- *  d. Only vidmem physical memory handle can be attached
- *
+ *  c. Both vidmem and sysmem (EGM) physical memory handles are supported
  */
 #define NV00FD_CTRL_CMD_ATTACH_MEM (0xfd0102) /* finn: Evaluated from "(FINN_NV_MEMORY_MULTICAST_FABRIC_FABRIC_INTERFACE_ID << 8) | NV00FD_CTRL_ATTACH_MEM_PARAMS_MESSAGE_ID" */
 
@@ -226,6 +224,9 @@ typedef struct NV00FD_CTRL_DETACH_MEM_PARAMS {
  *  bwModeEpoch [IN]
  *    Currently active bwModeEpoch of the remote GPU being attached.
  *
+ *  pageSize [IN]
+ *    The page size requested by the remote client. Must match prime configuration.
+ *
  *  cliqueId [IN]
  *    Clique ID of the remote GPU being attached.
  *
@@ -243,6 +244,7 @@ typedef struct NV00FD_CTRL_ATTACH_REMOTE_GPU_PARAMS {
     NV_DECLARE_ALIGNED(NvU64 gpuFabricProbeHandle, 8);
     NV_DECLARE_ALIGNED(NvU64 key, 8);
     NV_DECLARE_ALIGNED(NvU64 bwModeEpoch, 8);
+    NV_DECLARE_ALIGNED(NvU64 pageSize, 8);
     NvU32 cliqueId;
     NvU16 nodeId;
     NvU8  bwMode;

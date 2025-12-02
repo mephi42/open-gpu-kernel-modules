@@ -191,13 +191,6 @@ struct nv_drm_plane {
      */
     uint32_t layer_idx;
 
-    /**
-     * @supportsColorProperties
-     *
-     * If true, supports the COLOR_ENCODING and COLOR_RANGE properties.
-     */
-    bool supportsColorProperties;
-
     struct NvKmsLUTCaps ilut_caps;
     struct NvKmsLUTCaps tmo_caps;
 };

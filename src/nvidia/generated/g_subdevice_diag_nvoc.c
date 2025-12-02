@@ -248,6 +248,21 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
 #endif
     },
     {               /*  [7] */
+#if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x44u)
+        /*pFunc=*/      (void (*)(void)) NULL,
+#else
+        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdFbClearRemappedBanks_IMPL,
+#endif // NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x44u)
+        /*flags=*/      0x44u,
+        /*accessRight=*/0x0u,
+        /*methodId=*/   0x208f051bu,
+        /*paramSize=*/  sizeof(NV208F_CTRL_FB_CLEAR_REMAPPED_BANKS_PARAMS),
+        /*pClassInfo=*/ &(__nvoc_class_def_DiagApi.classInfo),
+#if NV_PRINTF_STRINGS_ALLOWED
+        /*func=*/       "diagapiCtrlCmdFbClearRemappedBanks"
+#endif
+    },
+    {               /*  [8] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -262,7 +277,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdBifPBIWriteCommand"
 #endif
     },
-    {               /*  [8] */
+    {               /*  [9] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -277,7 +292,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdBifConfigRegRead"
 #endif
     },
-    {               /*  [9] */
+    {               /*  [10] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -292,7 +307,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdBifConfigRegWrite"
 #endif
     },
-    {               /*  [10] */
+    {               /*  [11] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -307,7 +322,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdBifInfo"
 #endif
     },
-    {               /*  [11] */
+    {               /*  [12] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -322,7 +337,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdGpuGetRamSvopValues"
 #endif
     },
-    {               /*  [12] */
+    {               /*  [13] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -337,7 +352,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdGpuSetRamSvopValues"
 #endif
     },
-    {               /*  [13] */
+    {               /*  [14] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x48u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -352,7 +367,7 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdGpuVerifyInforom"
 #endif
     },
-    {               /*  [14] */
+    {               /*  [15] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x100048u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
@@ -367,49 +382,49 @@ static const struct NVOC_EXPORTED_METHOD_DEF __nvoc_exported_method_def_DiagApi[
         /*func=*/       "diagapiCtrlCmdGrInjectCtxswUcodeError"
 #endif
     },
-    {               /*  [15] */
-#if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
-        /*pFunc=*/      (void (*)(void)) NULL,
-#else
-        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeCoverageGetState_IMPL,
-#endif // NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
-        /*flags=*/      0x8u,
-        /*accessRight=*/0x0u,
-        /*methodId=*/   0x208f1901u,
-        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS),
-        /*pClassInfo=*/ &(__nvoc_class_def_DiagApi.classInfo),
-#if NV_PRINTF_STRINGS_ALLOWED
-        /*func=*/       "diagapiCtrlCmdUcodeCoverageGetState"
-#endif
-    },
     {               /*  [16] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
-        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeCoverageSetState_IMPL,
+        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeInstrumentationGetState_IMPL,
 #endif // NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
         /*flags=*/      0x8u,
         /*accessRight=*/0x0u,
-        /*methodId=*/   0x208f1902u,
-        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_COVERAGE_SET_STATE_PARAMS),
+        /*methodId=*/   0x208f1901u,
+        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS),
         /*pClassInfo=*/ &(__nvoc_class_def_DiagApi.classInfo),
 #if NV_PRINTF_STRINGS_ALLOWED
-        /*func=*/       "diagapiCtrlCmdUcodeCoverageSetState"
+        /*func=*/       "diagapiCtrlCmdUcodeInstrumentationGetState"
 #endif
     },
     {               /*  [17] */
 #if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
         /*pFunc=*/      (void (*)(void)) NULL,
 #else
-        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeCoverageGetData_IMPL,
+        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeInstrumentationSetState_IMPL,
+#endif // NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
+        /*flags=*/      0x8u,
+        /*accessRight=*/0x0u,
+        /*methodId=*/   0x208f1902u,
+        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_INSTRUMENTATION_SET_STATE_PARAMS),
+        /*pClassInfo=*/ &(__nvoc_class_def_DiagApi.classInfo),
+#if NV_PRINTF_STRINGS_ALLOWED
+        /*func=*/       "diagapiCtrlCmdUcodeInstrumentationSetState"
+#endif
+    },
+    {               /*  [18] */
+#if NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
+        /*pFunc=*/      (void (*)(void)) NULL,
+#else
+        /*pFunc=*/      (void (*)(void)) &diagapiCtrlCmdUcodeInstrumentationGetData_IMPL,
 #endif // NVOC_EXPORTED_METHOD_DISABLED_BY_FLAG(0x8u)
         /*flags=*/      0x8u,
         /*accessRight=*/0x0u,
         /*methodId=*/   0x208f1903u,
-        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS),
+        /*paramSize=*/  sizeof(NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS),
         /*pClassInfo=*/ &(__nvoc_class_def_DiagApi.classInfo),
 #if NV_PRINTF_STRINGS_ALLOWED
-        /*func=*/       "diagapiCtrlCmdUcodeCoverageGetData"
+        /*func=*/       "diagapiCtrlCmdUcodeInstrumentationGetData"
 #endif
     },
 };
@@ -722,7 +737,7 @@ NV_STATUS __nvoc_up_thunk_Notifier_diagapiGetOrAllocNotifShare(struct DiagApi *p
 
 const struct NVOC_EXPORT_INFO __nvoc_export_info__DiagApi = 
 {
-    /*numEntries=*/     18,
+    /*numEntries=*/     19,
     /*pExportEntries=*/ __nvoc_exported_method_def_DiagApi
 };
 
@@ -826,17 +841,26 @@ void __nvoc_init__DiagApi(DiagApi *pThis, RmHalspecOwner *pRmhalspecowner) {
     __nvoc_init_funcTable_DiagApi(pThis, pRmhalspecowner);
 }
 
-NV_STATUS __nvoc_objCreate_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 createFlags, struct CALL_CONTEXT * arg_pCallContext, struct RS_RES_ALLOC_PARAMS_INTERNAL * arg_pParams)
+NV_STATUS __nvoc_objCreate_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 createFlags, struct CALL_CONTEXT *arg_pCallContext, struct RS_RES_ALLOC_PARAMS_INTERNAL *arg_pParams)
 {
     NV_STATUS status;
     Object *pParentObj = NULL;
     DiagApi *pThis;
     RmHalspecOwner *pRmhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(DiagApi), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(DiagApi));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(DiagApi));
@@ -844,7 +868,7 @@ NV_STATUS __nvoc_objCreate_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 cre
     pThis->__nvoc_base_GpuResource.__nvoc_base_RmResource.__nvoc_base_RsResource.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_DiagApi_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -857,10 +881,12 @@ NV_STATUS __nvoc_objCreate_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 cre
         pThis->__nvoc_base_GpuResource.__nvoc_base_RmResource.__nvoc_base_RsResource.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pRmhalspecowner = dynamicCast(pParent, RmHalspecOwner)) == NULL)
         pRmhalspecowner = objFindAncestorOfType(RmHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_DiagApi_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__DiagApi(pThis, pRmhalspecowner);
     status = __nvoc_ctor_DiagApi(pThis, pRmhalspecowner, arg_pCallContext, arg_pParams);
     if (status != NV_OK) goto __nvoc_objCreate_DiagApi_cleanup;
@@ -868,31 +894,35 @@ NV_STATUS __nvoc_objCreate_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 cre
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_DiagApi_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_GpuResource.__nvoc_base_RmResource.__nvoc_base_RsResource.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(DiagApi));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 
 NV_STATUS __nvoc_objCreateDynamic_DiagApi(DiagApi **ppThis, Dynamic *pParent, NvU32 createFlags, va_list args) {
     NV_STATUS status;
-    struct CALL_CONTEXT * arg_pCallContext = va_arg(args, struct CALL_CONTEXT *);
-    struct RS_RES_ALLOC_PARAMS_INTERNAL * arg_pParams = va_arg(args, struct RS_RES_ALLOC_PARAMS_INTERNAL *);
+    struct CALL_CONTEXT *arg_pCallContext = va_arg(args, struct CALL_CONTEXT *);
+    struct RS_RES_ALLOC_PARAMS_INTERNAL *arg_pParams = va_arg(args, struct RS_RES_ALLOC_PARAMS_INTERNAL *);
 
     status = __nvoc_objCreate_DiagApi(ppThis, pParent, createFlags, arg_pCallContext, arg_pParams);
 

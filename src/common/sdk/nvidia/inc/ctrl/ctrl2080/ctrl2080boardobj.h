@@ -177,7 +177,8 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E255, @ref
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E512, @ref
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E1024, @ref
- *          NV2080_CTRL_BOARDOBJGRP_MASK_E2048.
+ *          NV2080_CTRL_BOARDOBJGRP_MASK_E2048, @ref
+ *          NV2080_CTRL_BOARDOBJGRP_MASK_E8192.
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_ARRAY_START_SIZE      1U
 
@@ -209,6 +210,9 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro to set input bit in NV2080_CTRL_BOARDOBJGRP_MASK.
  *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_BIT_SET variant 
+ *
  * @param[in]   _pMask      PBOARDOBJGRPMASK of mask.
  * @param[in]   _bitIdx     Index of the target bit within the mask.
  */
@@ -223,6 +227,9 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 
 /*!
  * @brief   Macro to clear input bit in NV2080_CTRL_BOARDOBJGRP_MASK.
+ *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_BIT_CLR variant 
  *
  * @param[in]   _pMask      PBOARDOBJGRPMASK of mask.
  * @param[in]   _bitIdx     Index of the target bit within the mask.
@@ -239,6 +246,9 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro to test input bit in NV2080_CTRL_BOARDOBJGRP_MASK.
  *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_BIT_GET variant 
+ *
  * @param[in]   _pMask      PBOARDOBJGRPMASK of mask.
  * @param[in]   _bitIdx     Index of the target bit within the mask.
  */
@@ -250,6 +260,9 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Not to be called directly. Helper macro allowing simple iteration
  *          over bits set in a NV2080_CTRL_BOARDOBJGRP_MASK.
+ *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_FOR_EACH_INDEX_TYPED variant 
  *
  * @param[in]       _maxObjects
  *     Maximum number of objects/bits in BOARDOJBGRP and its
@@ -281,6 +294,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro allowing simple iteration over bits set in a
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E32.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E32_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX()
@@ -292,6 +309,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro allowing simple iteration over bits set in a
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E255.
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E255_FOR_EACH_INDEX_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
  *
@@ -305,6 +326,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro allowing simple iteration over bits set in a
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E512.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E512_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX()
@@ -316,6 +341,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro allowing simple iteration over bits set in a
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E1024.
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E1024_FOR_EACH_INDEX_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
  *
@@ -329,6 +358,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro allowing simple iteration over bits set in a
  *          NV2080_CTRL_BOARDOBJGRP_MASK_E2048.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E2048_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX()
@@ -336,9 +369,29 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E2048_FOR_EACH_INDEX(_index,_pMask)       \
     NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX(                               \
         NV2080_CTRL_BOARDOBJGRP_E2048_MAX_OBJECTS,_index,_pMask)
+
+/*!
+ * @brief   Macro allowing simple iteration over bits set in a
+ *          NV2080_CTRL_BOARDOBJGRP_MASK_E8192. 
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E8192_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
+ * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX().
+ *
+ * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX()
+ */
+#define NV2080_CTRL_BOARDOBJGRP_MASK_E8192_FOR_EACH_INDEX(_index,_pMask)       \
+    NV2080_CTRL_BOARDOBJGRP_MASK_FOR_EACH_INDEX(                               \
+        NV2080_CTRL_BOARDOBJGRP_E8192_MAX_OBJECTS,_index,_pMask)
+
 /*!
  * @brief   Not to be called directly. Macro to initialize a
  *          NV2080_CTRL_BOARDOBJGRP_MASK to an empty mask.
+ *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_INIT_TYPED variant 
  *
  * @param[in]   _pMask      NV2080_CTRL_BOARDOBJGRP_MASK to initialize.
  * @param[in]   _bitSize    NvU8 specifying size of the mask in bits.
@@ -358,6 +411,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E32 to an empty
  *          mask.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E32_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_INIT()
@@ -369,6 +426,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E255 to an empty
  *          mask.
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E255_FOR_EACH_INDEX_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
  *
@@ -382,6 +443,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E512 to an empty
  *          mask.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E512_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_INIT()
@@ -393,6 +458,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
 /*!
  * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E1024 to an empty
  *          mask.
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E1024_FOR_EACH_INDEX_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
  *
@@ -406,6 +475,10 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
  * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E2048 to an empty
  *          mask.
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E2048_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_INIT()
@@ -415,8 +488,27 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
         NV2080_CTRL_BOARDOBJGRP_E2048_MAX_OBJECTS)
 
 /*!
+ * @brief   Macro to initialize NV2080_CTRL_BOARDOBJGRP_MASK_E8192 to an empty
+ *          mask.
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E8192_FOR_EACH_INDEX_TYPED
+ *              instead
+ *
+ * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_INIT().
+ *
+ * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_INIT()
+ */
+#define NV2080_CTRL_BOARDOBJGRP_MASK_E8192_INIT(_pMask)                        \
+    NV2080_CTRL_BOARDOBJGRP_MASK_INIT(_pMask,                                  \
+        NV2080_CTRL_BOARDOBJGRP_E8192_MAX_OBJECTS)
+
+/*!
  * @brief   Not to be called directly. Macro to perform a bitwise AND of a
  *          NV2080_CTRL_BOARDOBJGRP_MASK with another NV2080_CTRL_BOARDOBJGRP_MASK.
+ *
+ * @deprecated  Use a sub-class specific
+ *              NV2080_CTRL_BOARDOBJGRP_MASK_E*_AND variant 
  *
  * @param[out]  _pMaskOut    NV2080_CTRL_BOARDOBJGRP_MASK with bitwise and output.
  * @param[in]   _pMask1      NV2080_CTRL_BOARDOBJGRP_MASK to bitwise and.
@@ -432,64 +524,99 @@ typedef NvU32 NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE;
         NvBoardObjIdx _dataIndex;                                                       \
         for (_dataIndex = 0; _dataIndex < _dataCount; _dataIndex++)                     \
         {                                                                               \
-            _pDataOut[_dataIndex] = _pData1[_dataIndex] & _pData2[_dataIndex];                                  \
+            _pDataOut[_dataIndex] = _pData1[_dataIndex] & _pData2[_dataIndex];          \
         }                                                                               \
     } while (NV_FALSE)
 
 /*!
  * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_32 with another NV2080_CTRL_BOARDOBJGRP_MASK_32
  *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E32_AND_TYPED
+ *              instead
+ *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E32_AND(_pMaskOut, _pMask1, _pMask2)      \
-    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,               \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
         NV2080_CTRL_BOARDOBJGRP_E32_MAX_OBJECTS)
 
 /*!
  * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_255 with another NV2080_CTRL_BOARDOBJGRP_MASK_255
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E255_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E255_AND(_pMaskOut, _pMask1, _pMask2)     \
-    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,               \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
         NV2080_CTRL_BOARDOBJGRP_E255_MAX_OBJECTS)
 
 /*!
  * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_512 with another NV2080_CTRL_BOARDOBJGRP_MASK_512
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E512_AND_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E512_AND(_pMaskOut, _pMask1, _pMask2)     \
-    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,               \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
         NV2080_CTRL_BOARDOBJGRP_E512_MAX_OBJECTS)
 
 /*!
  * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_1024 with another NV2080_CTRL_BOARDOBJGRP_MASK_1024
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E1024_AND_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E1024_AND(_pMaskOut, _pMask1, _pMask2)    \
-    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,               \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
         NV2080_CTRL_BOARDOBJGRP_E1024_MAX_OBJECTS)
 
 /*!
  * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_2048 with another NV2080_CTRL_BOARDOBJGRP_MASK_2048
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E2048_AND_TYPED
+ *              instead
  *
  * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
  *
  * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
  */
 #define NV2080_CTRL_BOARDOBJGRP_MASK_E2048_AND(_pMaskOut, _pMask1, _pMask2)    \
-    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,               \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
         NV2080_CTRL_BOARDOBJGRP_E2048_MAX_OBJECTS)
+
+/*!
+ * @brief   Macro to bitwise and a NV2080_CTRL_BOARDOBJGRP_MASK_8192 with another NV2080_CTRL_BOARDOBJGRP_MASK_8192
+ *
+ * @deprecated  Use type-safe
+ *              @ref NV2080_CTRL_BOARDOBJGRP_MASK_E8192_AND_TYPED
+ *              instead
+ *
+ * Wrapper for @ref NV2080_CTRL_BOARDOBJGRP_MASK_AND().
+ *
+ * @copydetails NV2080_CTRL_BOARDOBJGRP_MASK_AND()
+ */
+#define NV2080_CTRL_BOARDOBJGRP_MASK_E8192_AND(_pMaskOut, _pMask1, _pMask2)    \
+    NV2080_CTRL_BOARDOBJGRP_MASK_AND(_pMaskOut, _pMask1, _pMask2,              \
+        NV2080_CTRL_BOARDOBJGRP_E8192_MAX_OBJECTS)
 
 /*!
  * @brief   Board Object Group Mask base class.
@@ -626,6 +753,32 @@ typedef struct NV2080_CTRL_BOARDOBJGRP_MASK_E2048 {
     NvU32 pDataE2048[63] /* 2016 bits */;
 } NV2080_CTRL_BOARDOBJGRP_MASK_E2048;
 typedef struct NV2080_CTRL_BOARDOBJGRP_MASK_E2048 *PNV2080_CTRL_BOARDOBJGRP_MASK_E2048;
+
+/*!
+ * @brief   NV2080_CTRL_BOARDOBJGRP_MASK child class capable of storing 8192 bits
+ *          indexed between 0..8191.
+ */
+typedef struct NV2080_CTRL_BOARDOBJGRP_MASK_E8192 {
+    /*!
+     * @brief   NV2080_CTRL_BOARDOBJGRP_MASK super-class. Must be the first
+     *          member of the structure.
+     */
+    NV2080_CTRL_BOARDOBJGRP_MASK super;
+
+    /*!
+     * @brief   Continuation of the array of
+     *          NV2080_CTRL_BOARDOBJGRP_MASK_PRIMITIVE elements representing the
+     *          bit-mask.   
+     *
+     * @note    Must be the second member of the structure.
+     */
+
+    // FINN PORT: The below field is a bit vector!
+    // In FINN, bit vectors are arrays of bools and each bool becomes 1 bit when used in an array
+    // FINN generates an array of NvU32's on the back end for these bit vectors 
+    NvU32 pDataE8192[255] /* 8160 bits */;
+} NV2080_CTRL_BOARDOBJGRP_MASK_E8192;
+typedef struct NV2080_CTRL_BOARDOBJGRP_MASK_E8192 *PNV2080_CTRL_BOARDOBJGRP_MASK_E8192;
 
 /*!
  * @brief   Macro to provide the BOARDOBJ type for a given (UNIT, CLASS, TYPE)
@@ -1258,6 +1411,68 @@ typedef struct NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_READINGS_E2048 {
      */
     NV2080_CTRL_BOARDOBJGRP_MASK_E2048               objMask;
 } NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_READINGS_E2048;
+
+
+/*!
+ * CLIENT_INFO for @ref BOARDOBJGRP_E8192
+ */
+typedef struct NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_INFO_E8192 {
+    /*!
+     * Base class CLIENT_INFO
+     */
+    NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_INFO super;
+
+    /*!
+     * Mask of valid @ref BOARDOBJ objects within the payload
+     */
+    NV2080_CTRL_BOARDOBJGRP_MASK_E8192           objMask;
+} NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_INFO_E8192;
+
+/*!
+ * CLIENT_STATUS for @ref BOARDOBJGRP_E8192
+ */
+typedef struct NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_STATUS_E8192 {
+    /*!
+     * Base class CLIENT_STATUS
+     */
+    NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_STATUS super;
+
+    /*!
+     * Mask of valid @ref BOARDOBJ objects within the payload
+     */
+    NV2080_CTRL_BOARDOBJGRP_MASK_E8192             objMask;
+} NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_STATUS_E8192;
+
+/*!
+ * CLIENT_CONTROL for @ref BOARDOBJGRP_E8192
+ */
+typedef struct NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_CONTROL_E8192 {
+    /*!
+     * Base class CLIENT_CONTROL
+     */
+    NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_CONTROL super;
+
+    /*!
+     * Mask of valid @ref BOARDOBJ objects within the payload
+     */
+    NV2080_CTRL_BOARDOBJGRP_MASK_E8192              objMask;
+} NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_CONTROL_E8192;
+
+/*!
+ * CLIENT_READINGS for @ref BOARDOBJGRP_E8192
+ */
+typedef struct NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_READINGS_E8192 {
+    /*!
+     * Base class CLIENT_READINGS
+     */
+    NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_READINGS super;
+
+    /*!
+     * Mask of valid @ref BOARDOBJ objects within the payload
+     */
+    NV2080_CTRL_BOARDOBJGRP_MASK_E8192               objMask;
+} NV2080_CTRL_BOARDOBJ_BOARDOBJGRP_CLIENT_READINGS_E8192;
+
 
 /*!
  * @brief   Structure representing CLIENT_INFO for a BOARDOBJGRP_INTERFACE in RMCTRL.

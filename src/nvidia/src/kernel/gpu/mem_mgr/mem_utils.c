@@ -961,7 +961,6 @@ void memUtilsInitFBAllocInfo
     pFbAllocInfo->comprCovg         = pAllocParams->comprCovg;
     pFbAllocInfo->zcullCovg         = 0;
     pFbAllocInfo->ctagOffset        = pAllocParams->ctagOffset;
-    pFbAllocInfo->bIsKernelAlloc    = NV_FALSE;
     pFbAllocInfo->internalflags     = 0;
     pFbAllocInfo->hClient           = hClient;
     pFbAllocInfo->hDevice           = hDevice;
@@ -1170,6 +1169,16 @@ memmgrMemReadOrWriteInBlocks
         {
             NV_ASSERT_OK_OR_RETURN(
                 memdescCreateSubMem(&pSubMemDesc, pMemDesc, pMemDesc->pGpu, offset + baseOffset, copySize));
+
+            if (memdescGetPageSize(pSubMemDesc, AT_GPU) > RM_PAGE_SIZE_HUGE)
+            {
+                //
+                // Downgrade page size if more than 2MB because BAR2
+                // cannot handle massive page sizes in the copy
+                //
+                memdescSetPageSize(pSubMemDesc, AT_GPU, RM_PAGE_SIZE_HUGE);
+            }
+
             tmpSurf.pMemDesc = pSubMemDesc;
             tmpSurf.offset = 0;
         }

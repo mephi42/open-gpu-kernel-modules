@@ -389,6 +389,8 @@ NV_STATUS eventbuffertBufferCtrlCmdPostTelemetryEvent_IMPL(struct EventBuffer *p
 
 NV_STATUS eventBufferAdd(struct EventBuffer *pEventBuffer, void* pEventData, NvU32 recordType, NvBool* bNotify, NvP64 *pHandle);
 
+NvBool eventBufferIsEmpty(struct EventBuffer *pEventBuffer);
+
 #endif
 
 #ifdef __cplusplus

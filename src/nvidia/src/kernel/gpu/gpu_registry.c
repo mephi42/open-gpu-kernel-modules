@@ -29,6 +29,7 @@
 #include "core/thread_state.h"
 #include "nvdevid.h"
 #include "nvrm_registry.h"
+#include "gpu/conf_compute/conf_compute.h"
 
 #include "virtualization/hypervisor/hypervisor.h"
 
@@ -57,7 +58,7 @@ gpuInitRegistryOverrides_KERNEL
     }
 
     // for 0FB set as though FB memory is broken to cover all the tests
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb)
     {
         data32 = FLD_SET_DRF(_REG_STR_GPU, _BROKEN_FB, _MEMORY, _BROKEN, data32);
     }
@@ -154,7 +155,7 @@ gpuInitRegistryOverrides_KERNEL
     {
         pGpu->bClientRmAllocatedCtxBuffer = NV_TRUE;
     }
-    else if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) &&
+    else if (pGpu->pGpuArch->bGpuArchIsZeroFb &&
         (pGpu->bSriovEnabled || IS_VIRTUAL_WITH_SRIOV(pGpu)))
     {
         // For zero-FB config + SRIOV
@@ -217,13 +218,20 @@ gpuInitRegistryOverrides_KERNEL
             data32 = NV_REG_STR_RM_RUSD_POLLING_INTERVAL_MIN;
         if (data32 > NV_REG_STR_RM_RUSD_POLLING_INTERVAL_MAX)
             data32 = NV_REG_STR_RM_RUSD_POLLING_INTERVAL_MAX;
-        pGpu->userSharedData.pollingFrequencyMs = data32;
-        pGpu->userSharedData.bPollFrequencyOverridden = NV_TRUE;
+        pGpu->userSharedData.pollingIntervalMs = data32;
+        pGpu->userSharedData.bPollIntervalOverridden = NV_TRUE;
     }
     else
     {
-        pGpu->userSharedData.pollingFrequencyMs = NV_REG_STR_RM_RUSD_POLLING_INTERVAL_DEFAULT;
-        pGpu->userSharedData.bPollFrequencyOverridden = NV_FALSE;
+        if (RMCFG_FEATURE_PLATFORM_WINDOWS && IS_GSP_CLIENT(pGpu))
+        {
+            pGpu->userSharedData.pollingIntervalMs = NV_REG_STR_RM_RUSD_POLLING_INTERVAL_WINDOWS_GSP;
+        }
+        else
+        {
+            pGpu->userSharedData.pollingIntervalMs = NV_REG_STR_RM_RUSD_POLLING_INTERVAL_DEFAULT;
+        }
+        pGpu->userSharedData.bPollIntervalOverridden = NV_FALSE;
     }
     
     if ((osReadRegistryDword(pGpu, NV_REG_STR_RM_INIT_MEM_REUSE, &data32) == NV_OK) &&
@@ -245,16 +253,19 @@ gpuInitInstLocOverrides_IMPL
 )
 {
     NvU32 data32 = 0;
+    NvBool bRegKeyCCEnabled = 
+        ((osReadRegistryDword(pGpu, NV_REG_STR_RM_CONFIDENTIAL_COMPUTE, &data32) == NV_OK) &&
+          FLD_TEST_DRF(_REG_STR, _RM_CONFIDENTIAL_COMPUTE, _ENABLED, _YES, data32));
+
     //
     // If Hopper CC mode or protected pcie is enabled, move all except few buffers to FB
+    // Exception: when TDISP mode is enabled.
     //
-    if (((osReadRegistryDword(pGpu, NV_REG_STR_RM_CONFIDENTIAL_COMPUTE, &data32) == NV_OK) &&
-         FLD_TEST_DRF(_REG_STR, _RM_CONFIDENTIAL_COMPUTE, _ENABLED, _YES, data32) &&
-         pGpu->getProperty(pGpu, PDB_PROP_GPU_CC_FEATURE_CAPABLE)) ||
-        gpuIsCCEnabledInHw_HAL(pGpu) ||
-        gpuIsMultiGpuNvleEnabledInHw_HAL(pGpu))
+    if ((bRegKeyCCEnabled ||
+         gpuIsCCEnabledInHw_HAL(pGpu) ||
+         gpuIsMultiGpuNvleEnabledInHw_HAL(pGpu))
+        )
     {
-
         pGpu->instLocOverrides  = NV_REG_STR_RM_INST_LOC_ALL_VID;
         pGpu->instLocOverrides2 = NV_REG_STR_RM_INST_LOC_ALL_VID;
         pGpu->instLocOverrides3 = NV_REG_STR_RM_INST_LOC_ALL_VID;

@@ -312,7 +312,6 @@ typedef struct GMMU_FAULT_PACKET_METADATA
  */
 typedef struct
 {
-    NvBool               bIsClientAdmin;
     NvBool               bIsFaultReplayable;
     /*
      * Defer the bus flush during the instance block init.
@@ -322,7 +321,6 @@ typedef struct
      * For e.g. Subcontext array init during channel setup.
      */
     NvBool               bDeferFlush;
-    NvU64                uvmKernelPrivRegion;
 
     // Instance block is being updated for a zombie subcontext.
     NvBool               bIsZombieSubctx;
@@ -1612,7 +1610,7 @@ static inline void kgmmuStateDestroy_DISPATCH(OBJGPU *pGpu, struct KernelGmmu *p
     pKernelGmmu->__nvoc_metadata_ptr->vtable.__kgmmuStateDestroy__(pGpu, pKernelGmmu);
 }
 
-static inline void kgmmuRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu, IntrServiceRecord arg3[179]) {
+static inline void kgmmuRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu, IntrServiceRecord arg3[180]) {
     pKernelGmmu->__nvoc_metadata_ptr->vtable.__kgmmuRegisterIntrService__(pGpu, pKernelGmmu, arg3);
 }
 
@@ -2140,7 +2138,7 @@ static inline NV_STATUS kgmmuStatePreUnload_56cd7a(OBJGPU *pGpu, struct KernelGm
 
 void kgmmuStateDestroy_IMPL(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu);
 
-void kgmmuRegisterIntrService_IMPL(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu, IntrServiceRecord arg3[179]);
+void kgmmuRegisterIntrService_IMPL(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu, IntrServiceRecord arg3[180]);
 
 NvBool kgmmuClearInterrupt_IMPL(OBJGPU *pGpu, struct KernelGmmu *pKernelGmmu, IntrServiceClearInterruptArguments *pParams);
 

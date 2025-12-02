@@ -738,6 +738,10 @@ static inline NV_STATUS ksmdbgssnCtrlCmdDebugReadMMUFaultInfo_46f6a7(struct Kern
 
 NV_STATUS ksmdbgssnCtrlCmdDebugReadMMUFaultInfo_IMPL(struct KernelSMDebuggerSession *arg1, NV83DE_CTRL_DEBUG_READ_MMU_FAULT_INFO_PARAMS *arg2);
 
+static inline NV_STATUS ksmdbgssnCtrlCmdDebugSetDropDeferredRC_fcf1ac(struct KernelSMDebuggerSession *pKernelSMDebuggerSession, NV83DE_CTRL_DEBUG_SET_DROP_DEFERRED_RC_PARAMS *pParams) {
+    return ksmdbgssnInternalControlForward(pKernelSMDebuggerSession, (2212365335U), pParams, sizeof (*pParams));
+}
+
 #undef PRIVATE_FIELD
 
 

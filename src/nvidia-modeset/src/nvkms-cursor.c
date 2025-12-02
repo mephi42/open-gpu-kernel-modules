@@ -425,8 +425,6 @@ void nvFreeCursorEvo(NVDevEvoPtr pDevEvo)
     }
 }
 
-extern NVEvoCursorHAL nvEvoCursor91;
-extern NVEvoCursorHAL nvEvoCursorC3;
 extern NVEvoCursorHAL nvEvoCursorC5;
 extern NVEvoCursorHAL nvEvoCursorC6;
 extern NVEvoCursorHAL nvEvoCursorC9;
@@ -438,8 +436,6 @@ extern NVEvoCursorHAL nvEvoCursorCC;
 enum NvKmsAllocDeviceStatus nvInitDispHalCursorEvo(NVDevEvoPtr pDevEvo)
 {
     static const NVEvoCursorHALPtr cursorTable[] = {
-        &nvEvoCursor91,
-        &nvEvoCursorC3,
         &nvEvoCursorC5,
         &nvEvoCursorC6,
         &nvEvoCursorC9,

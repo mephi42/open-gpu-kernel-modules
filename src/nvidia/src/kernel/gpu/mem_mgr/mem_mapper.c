@@ -336,10 +336,11 @@ memmapperQueueWork_IMPL
         osQueueWorkItem(GPU_RES_GET_GPU(pMemoryMapper),
                         memoryMapperWorker,
                         pMemoryMapper->pWorkerParams,
-                        OS_QUEUE_WORKITEM_FLAGS_DONT_FREE_PARAMS |
-                            OS_QUEUE_WORKITEM_FLAGS_DROP_ON_UNLOAD_QUEUE_FLUSH |
-                            OS_QUEUE_WORKITEM_FLAGS_FALLBACK_TO_DPC |
-                            OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RW));
+                        (OsQueueWorkItemFlags){
+                            .bDontFreeParams = NV_TRUE,
+                            .bDropOnUnloadQueueFlush = NV_TRUE,
+                            .bFallbackToDpc = NV_TRUE,
+                            .apiLock = WORKITEM_FLAGS_API_LOCK_READ_WRITE}));
 }
 
 static void

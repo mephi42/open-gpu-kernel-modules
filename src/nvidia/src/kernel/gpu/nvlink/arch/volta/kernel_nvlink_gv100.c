@@ -236,14 +236,14 @@ knvlinkApplyNvswitchDegradedModeSettings_GV100
 
     portMemSet(bLinkDisconnected, 0, sizeof(NvBool) * pKernelNvlink->maxSupportedLinks);
     // At least there should be one connection to NVSwitch, else bail out
-    FOR_EACH_INDEX_IN_MASK(64, linkId, KNVLINK_GET_MASK(pKernelNvlink, enabledLinks, 64))
+    FOR_EACH_IN_BITVECTOR(&pKernelNvlink->enabledLinks, linkId)
     {
         if (pKernelNvlink->nvlinkLinks[linkId].remoteEndInfo.deviceType == NVLINK_DEVICE_TYPE_NVSWITCH)
         {
             switchLinks |= NVBIT64(linkId);
         }
     }
-    FOR_EACH_INDEX_IN_MASK_END;
+    FOR_EACH_IN_BITVECTOR_END();
 
     if (switchLinks == 0)
     {
@@ -262,7 +262,7 @@ knvlinkApplyNvswitchDegradedModeSettings_GV100
         _knvlinkAreLinksDisconnected(pGpu, pKernelNvlink, bLinkDisconnected),
         cleanup);
 
-    FOR_EACH_INDEX_IN_MASK(64, linkId, KNVLINK_GET_MASK(pKernelNvlink, enabledLinks, 64))
+    FOR_EACH_IN_BITVECTOR(&pKernelNvlink->enabledLinks, linkId)
     {
         bUpdateConnStatus = NV_FALSE;
 
@@ -303,7 +303,7 @@ knvlinkApplyNvswitchDegradedModeSettings_GV100
             }
         }
     }
-    FOR_EACH_INDEX_IN_MASK_END;
+    FOR_EACH_IN_BITVECTOR_END();
 
 cleanup:
     portMemFree(bLinkDisconnected);
@@ -338,8 +338,6 @@ _knvlinkAreLinksDisconnected
 )
 {
     NV_STATUS status = NV_OK;
-    NvU64     links  = 0;
-    NV2080_NVLINK_BIT_VECTOR localLinkMask;
     NvU32     linkId;
 
     NV_ASSERT_OR_RETURN(bLinkDisconnected != NULL, NV_ERR_INVALID_ARGUMENT);
@@ -353,33 +351,20 @@ _knvlinkAreLinksDisconnected
 
     portMemSet(pParams, 0, sizeof(*pParams));
 
-    links = KNVLINK_GET_MASK(pKernelNvlink, enabledLinks, 32);
-    status = convertMaskToBitVector(links, &localLinkMask);
-    if (status != NV_OK)
-    {
-        NV_PRINTF(LEVEL_ERROR, "Failed to convert linkmask into bit vector! 0x%x\n", status);
-        goto cleanup;
-    }
-
-    status = convertBitVectorToLinkMasks(&localLinkMask,
-                                         &pParams->linkMask,
-                                         sizeof(pParams->linkMask),
-                                         &pParams->links);
-    if (status != NV_OK)
-    {
-        NV_PRINTF(LEVEL_ERROR, "Failed to convert bit vector to link masks! 0x%x\n", status);
-        goto cleanup;
-    }
+    NV_CHECK_OK_OR_GOTO(status, LEVEL_ERROR, 
+        convertBitVectorToLinkMasks(&pKernelNvlink->enabledLinks,
+                                    &pParams->linkMask,
+                                    sizeof(pParams->linkMask),
+                                    &pParams->links), cleanup);
 
     pParams->bSublinkStateInst = NV_TRUE;
 
-    status = knvlinkExecGspRmRpc(pGpu, pKernelNvlink,
-                                 NV2080_CTRL_CMD_INTERNAL_NVLINK_GET_LINK_AND_CLOCK_INFO,
-                                 (void *)pParams, sizeof(*pParams));
-    if (status != NV_OK)
-        goto cleanup;
+    NV_CHECK_OK_OR_GOTO(status, LEVEL_ERROR,
+        knvlinkExecGspRmRpc(pGpu, pKernelNvlink,
+                            NV2080_CTRL_CMD_INTERNAL_NVLINK_GET_LINK_AND_CLOCK_INFO,
+                            (void *)pParams, sizeof(*pParams)), cleanup);
 
-    FOR_EACH_IN_BITVECTOR(&localLinkMask, linkId)
+    FOR_EACH_IN_BITVECTOR(&pKernelNvlink->enabledLinks, linkId)
     {
         if (linkId >= NV2080_CTRL_INTERNAL_NVLINK_MAX_ARR_SIZE)
         {
@@ -600,13 +585,15 @@ knvlinkSetUniqueFabricBaseAddress_GV100
 )
 {
     NV_STATUS status = NV_OK;
+    NvU32 enabledLinks;
 
     if (!knvlinkIsForcedConfig(pGpu, pKernelNvlink))
     {
         knvlinkCoreGetRemoteDeviceInfo(pGpu, pKernelNvlink);
 
+        enabledLinks = KNVLINK_BITVECTOR_TO_MASK(pKernelNvlink, enabledLinks, 32);
         status = knvlinkEnableLinksPostTopology_HAL(pGpu, pKernelNvlink,
-                                        KNVLINK_GET_MASK(pKernelNvlink, enabledLinks, 32));
+                                                    enabledLinks);
         if (status != NV_OK)
         {
             NV_PRINTF(LEVEL_ERROR,

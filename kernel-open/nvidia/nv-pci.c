@@ -35,9 +35,24 @@
 
 #include <linux/clk.h>
 #include <linux/device.h>
+#include <linux/jiffies.h>
+#include <linux/kernel.h>
+#include <linux/workqueue.h>
 
 #if defined(CONFIG_PM_DEVFREQ)
 #include <linux/devfreq.h>
+
+#if defined(CONFIG_DEVFREQ_THERMAL) \
+    && defined(NV_DEVFREQ_DEV_PROFILE_HAS_IS_COOLING_DEVICE) \
+    && defined(NV_THERMAL_ZONE_FOR_EACH_TRIP_PRESENT) \
+    && defined(NV_THERMAL_BIND_CDEV_TO_TRIP_PRESENT) \
+    && defined(NV_THERMAL_UNBIND_CDEV_FROM_TRIP_PRESENT)
+#include <linux/thermal.h>
+#define NV_HAS_COOLING_SUPPORTED 1
+#else
+#define NV_HAS_COOLING_SUPPORTED 0
+#endif
+
 #endif
 
 #if defined(CONFIG_INTERCONNECT) \
@@ -557,6 +572,14 @@ struct nv_pci_tegra_devfreq_data {
     const TEGRASOC_DEVFREQ_CLK devfreq_clk;
 };
 
+#if NV_HAS_COOLING_SUPPORTED
+struct nv_pci_tegra_thermal_data {
+    const char *tz_name;
+    const struct thermal_trip *passive_trip;
+    struct list_head zones;
+};
+#endif
+
 struct nv_pci_tegra_devfreq_dev {
     TEGRASOC_DEVFREQ_CLK devfreq_clk;
     int domain;
@@ -567,8 +590,13 @@ struct nv_pci_tegra_devfreq_dev {
     struct nv_pci_tegra_devfreq_dev *nvd_master;
     struct clk *clk;
     struct devfreq *devfreq;
+    bool boost_enabled;
+    struct delayed_work boost_disable;
 #if NV_HAS_ICC_SUPPORTED
     struct icc_path *icc_path;
+#endif
+#if NV_HAS_COOLING_SUPPORTED
+    struct list_head therm_zones;
 #endif
 };
 
@@ -576,19 +604,19 @@ static const struct nv_pci_tegra_devfreq_data gb10b_tegra_devfreq_table[] = {
     {
         .clk_name = "gpc0clk",
         .icc_name = "gpu-write",
-        .gpc_fuse_field = BIT(0),
+        .gpc_fuse_field = BIT(3),
         .devfreq_clk = TEGRASOC_DEVFREQ_CLK_GPC,
     },
     {
         .clk_name = "gpc1clk",
         .icc_name = "gpu-write",
-        .gpc_fuse_field = BIT(1),
+        .gpc_fuse_field = BIT(4),
         .devfreq_clk = TEGRASOC_DEVFREQ_CLK_GPC,
     },
     {
         .clk_name = "gpc2clk",
         .icc_name = "gpu-write",
-        .gpc_fuse_field = BIT(2),
+        .gpc_fuse_field = BIT(5),
         .devfreq_clk = TEGRASOC_DEVFREQ_CLK_GPC,
     },
     {
@@ -613,6 +641,7 @@ static int
 nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
 {
     struct pci_dev *pdev = to_pci_dev(dev->parent);
+    nv_linux_state_t *nvl = pci_get_drvdata(pdev);
     struct nv_pci_tegra_devfreq_dev *tdev = to_tegra_devfreq_dev(dev), *tptr;
     unsigned long rate;
 #if NV_HAS_ICC_SUPPORTED
@@ -645,6 +674,10 @@ nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
     if (tdev->icc_path != NULL)
     {
         kBps = Bps_to_icc(*freq * gpu_bus_bandwidth * 400 / 1000);
+        if (tdev->boost_enabled)
+        {
+            kBps = UINT_MAX;
+        }
         icc_set_bw(tdev->icc_path, kBps, 0);
     }
 #endif
@@ -662,7 +695,15 @@ nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
             rate = max(rate, clk_get_rate(tptr->nvd_master->clk));
         }
 
-        clk_set_rate(tptr->clk, rate);
+        if (tdev->boost_enabled
+            && (tptr == nvl->sys_devfreq_dev || tptr == nvl->pwr_devfreq_dev))
+        {
+            clk_set_rate(tptr->clk, ULONG_MAX);
+        }
+        else
+        {
+            clk_set_rate(tptr->clk, rate);
+        }
     }
 
     rate = 0;
@@ -678,7 +719,15 @@ nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
             rate = max(rate, clk_get_rate(tptr->nvd_master->clk));
         }
 
-        clk_set_rate(tptr->clk, rate);
+        if (tdev->boost_enabled
+            && (tptr == nvl->sys_devfreq_dev || tptr == nvl->pwr_devfreq_dev))
+        {
+            clk_set_rate(tptr->clk, ULONG_MAX);
+        }
+        else
+        {
+            clk_set_rate(tptr->clk, rate);
+        }
     }
 
     return 0;
@@ -787,16 +836,185 @@ populate_opp_table(struct nv_pci_tegra_devfreq_dev *tdev)
     } while (rate <= max_rate && step);
 }
 
+static void
+nv_pci_tegra_devfreq_remove_opps(struct nv_pci_tegra_devfreq_dev *tdev)
+{
+#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
+    unsigned long *freq_table = tdev->devfreq->freq_table;
+    unsigned int max_state = tdev->devfreq->max_state;
+#else
+    unsigned long *freq_table = tdev->devfreq->profile->freq_table;
+    unsigned int max_state = tdev->devfreq->profile->max_state;
+#endif
+    int i;
+
+    for (i = 0; i < max_state; i++)
+    {
+        dev_pm_opp_remove(&tdev->dev, freq_table[i]);
+    }
+}
+
+#if NV_HAS_COOLING_SUPPORTED
+static int
+nv_pci_tegra_thermal_get_passive_trip_cb(struct thermal_trip *trip, void *arg)
+{
+    const struct thermal_trip **ptrip = arg;
+
+    /* Return zero to continue the search */
+    if (trip->type != THERMAL_TRIP_PASSIVE)
+        return 0;
+
+    /* Return nonzero to terminate the search */
+    *ptrip = trip;
+    return -1;
+}
+
+static int
+nv_pci_tegra_init_cooling_device(struct nv_pci_tegra_devfreq_dev *tdev)
+{
+    struct device *pdev = tdev->dev.parent;
+    const struct thermal_trip *passive_trip = NULL;
+    struct devfreq *devfreq = tdev->devfreq;
+    struct nv_pci_tegra_thermal_data *data;
+    struct thermal_zone_device *tzdev;
+    int i, err, val, n_strings, n_elems;
+    u32 temp_min, temp_max;
+    const char *tz_name;
+
+    if (!devfreq->cdev)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: devfreq cooling cannot be found\n");
+        return -ENODEV;
+    }
+
+    if (!pdev->of_node)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: associated OF node cannot be found\n");
+        return -ENODEV;
+    }
+
+    val = of_property_count_strings(pdev->of_node, "nvidia,thermal-zones");
+    if (val == -EINVAL)
+    {
+        return 0;
+    }
+    else if (val < 0)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: nvidia,thermal-zones DT property format error\n");
+        return val;
+    }
+    n_strings = val;
+
+    val = of_property_count_u32_elems(pdev->of_node, "nvidia,cooling-device");
+    if (val == -EINVAL)
+    {
+        return 0;
+    }
+    else if (val < 0)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: nvidia,cooling-device DT property format error\n");
+        return val;
+    }
+    n_elems = val;
+
+    if ((n_elems >> 1) != n_strings)
+    {
+        nv_printf(NV_DBG_ERRORS,
+            "NVRM: number of strings specified in nvidia,thermal-zones needs to"
+            "be exact half the number of elements specified nvidia,cooling-device\n");
+        return -EINVAL;
+    }
+
+    if (((n_elems >> 1) == 0) && ((n_elems & 1) == 1))
+    {
+        nv_printf(NV_DBG_ERRORS,
+            "NVRM: number of elements specified in nvidia,cooling-device needs"
+            "to be an even number\n");
+        return -EINVAL;
+    }
+
+    for (i = 0; i < n_strings; i++)
+    {
+        data = devm_kzalloc(pdev, sizeof(*data), GFP_KERNEL);
+        if (data == NULL)
+        {
+            err = -ENOMEM;
+            goto err_nv_pci_tegra_init_cooling_device;
+        }
+
+        of_property_read_string_index(pdev->of_node,
+                                      "nvidia,thermal-zones", i, &tz_name);
+        of_property_read_u32_index(pdev->of_node,
+                                   "nvidia,cooling-device", (i << 1) + 0, &temp_min);
+        of_property_read_u32_index(pdev->of_node,
+                                   "nvidia,cooling-device", (i << 1) + 1, &temp_max);
+
+        tzdev = thermal_zone_get_zone_by_name(tz_name);
+        if (IS_ERR(tzdev))
+        {
+            nv_printf(NV_DBG_ERRORS,
+                "NVRM: fail to get %s thermal_zone_device\n", tz_name);
+            err = -ENODEV;
+            goto err_nv_pci_tegra_init_cooling_device;
+        }
+
+        thermal_zone_for_each_trip(tzdev, nv_pci_tegra_thermal_get_passive_trip_cb, &passive_trip);
+        if (passive_trip == NULL)
+        {
+            nv_printf(NV_DBG_ERRORS,
+                "NVRM: fail to find passive_trip in %s thermal_zone_device\n", tz_name);
+            err = -ENODEV;
+            goto err_nv_pci_tegra_init_cooling_device;
+        }
+
+        val = thermal_bind_cdev_to_trip(tzdev,
+                                        passive_trip,
+                                        devfreq->cdev,
+                                        temp_max, temp_min, THERMAL_WEIGHT_DEFAULT);
+        if (val != 0)
+        {
+            nv_printf(NV_DBG_ERRORS,
+                "NVRM: fail to bind devfreq cooling device with %s thermal_zone_device\n", tz_name);
+            err = -ENODEV;
+            goto err_nv_pci_tegra_init_cooling_device;
+        }
+
+        data->tz_name = tz_name;
+        data->passive_trip = passive_trip;
+        list_add_tail(&data->zones, &tdev->therm_zones);
+    }
+
+    return 0;
+
+err_nv_pci_tegra_init_cooling_device:
+    list_for_each_entry(data, &tdev->therm_zones, zones)
+    {
+        tzdev = thermal_zone_get_zone_by_name(data->tz_name);
+        if (IS_ERR(tzdev))
+        {
+            continue;
+        }
+
+        thermal_unbind_cdev_from_trip(tzdev, data->passive_trip, devfreq->cdev);
+    }
+
+    return err;
+}
+#endif
+
 static int
 nv_pci_gb10b_add_devfreq_device(struct nv_pci_tegra_devfreq_dev *tdev)
 {
     struct devfreq_dev_profile *profile;
+    int err;
 
     populate_opp_table(tdev);
+
     profile = devm_kzalloc(&tdev->dev, sizeof(*profile), GFP_KERNEL);
     if (profile == NULL)
     {
-        return -ENOMEM;
+        err = -ENOMEM;
+        goto err_nv_pci_gb10b_add_devfreq_device_opp;
     }
 
     profile->target = nv_pci_gb10b_devfreq_target;
@@ -804,6 +1022,9 @@ nv_pci_gb10b_add_devfreq_device(struct nv_pci_tegra_devfreq_dev *tdev)
     profile->get_dev_status = nv_pci_tegra_devfreq_get_dev_status;
     profile->initial_freq = clk_get_rate(tdev->clk);
     profile->polling_ms = 25;
+#if NV_HAS_COOLING_SUPPORTED
+    profile->is_cooling_device = true;
+#endif
 
     tdev->devfreq = devm_devfreq_add_device(&tdev->dev,
                                             profile,
@@ -811,10 +1032,32 @@ nv_pci_gb10b_add_devfreq_device(struct nv_pci_tegra_devfreq_dev *tdev)
                                             NULL);
     if (IS_ERR(tdev->devfreq))
     {
-        return PTR_ERR(tdev->devfreq);
+        err = PTR_ERR(tdev->devfreq);
+        goto err_nv_pci_gb10b_add_devfreq_device_opp;
     }
 
+#if defined(NV_DEVFREQ_HAS_SUSPEND_FREQ)
+    tdev->devfreq->suspend_freq = tdev->devfreq->scaling_max_freq;
+#endif
+
+#if NV_HAS_COOLING_SUPPORTED
+    err = nv_pci_tegra_init_cooling_device(tdev);
+    if (err)
+    {
+        goto err_nv_pci_gb10b_add_devfreq_device;
+    }
+#endif
+
     return 0;
+
+#if NV_HAS_COOLING_SUPPORTED
+err_nv_pci_gb10b_add_devfreq_device:
+    devm_devfreq_remove_device(&tdev->dev, tdev->devfreq);
+#endif
+err_nv_pci_gb10b_add_devfreq_device_opp:
+    nv_pci_tegra_devfreq_remove_opps(tdev);
+
+    return err;
 }
 
 static int
@@ -829,10 +1072,8 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
     struct icc_path *icc_path;
 #endif
     struct clk *clk;
-    resource_size_t bar0_addr, bar0_size;
-    void *bar0_map;
     int i, err, node;
-    u32 gpc_fuse_mask;
+    u32 gpu_pg_mask;
 
     while (pbus->parent != NULL)
     {
@@ -841,24 +1082,21 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
 
     node = max(0, dev_to_node(to_pci_host_bridge(pbus->bridge)->dev.parent));
 
-    bar0_addr = (resource_size_t)nv->bars[NV_GPU_BAR_INDEX_REGS].cpu_address;
-    bar0_size = (resource_size_t)nv->bars[NV_GPU_BAR_INDEX_REGS].size;
-    bar0_map = devm_ioremap(&pdev->dev, bar0_addr, bar0_size);
-    if (bar0_map == NULL)
+    if (nv->tegra_pci_igpu_pg_mask == NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT)
     {
-        gpc_fuse_mask = 0;
+        gpu_pg_mask = 0;
     }
     else
     {
-#define NV_FUSE_STATUS_OPT_GPC  0x00820c1c
-        gpc_fuse_mask = readl(bar0_map + NV_FUSE_STATUS_OPT_GPC);
+        gpu_pg_mask = nv->tegra_pci_igpu_pg_mask;
+        nv_printf(NV_DBG_INFO, "NVRM: devfreq register receives gpu_pg_mask = %u\n", gpu_pg_mask);
     }
 
     for (i = 0; i < nvl->devfreq_table_size; i++)
     {
         tdata = &nvl->devfreq_table[i];
 
-        if (gpc_fuse_mask && (gpc_fuse_mask & tdata->gpc_fuse_field))
+        if (gpu_pg_mask && (gpu_pg_mask & tdata->gpc_fuse_field))
         {
             continue;
         }
@@ -888,6 +1126,9 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
 
         INIT_LIST_HEAD(&tdev->gpc_cluster);
         INIT_LIST_HEAD(&tdev->nvd_cluster);
+#if NV_HAS_COOLING_SUPPORTED
+        INIT_LIST_HEAD(&tdev->therm_zones);
+#endif
 #if NV_HAS_ICC_SUPPORTED
         tdev->icc_path = icc_path;
 #endif
@@ -940,7 +1181,8 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
         err = nv_pci_gb10b_add_devfreq_device(nvl->gpc_devfreq_dev);
         if (err != 0)
         {
-            goto error_return;
+            nvl->gpc_devfreq_dev->devfreq = NULL;
+            goto error_slave_teardown;
         }
 
         if (nvl->sys_devfreq_dev != NULL)
@@ -961,7 +1203,8 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
         err = nv_pci_gb10b_add_devfreq_device(nvl->nvd_devfreq_dev);
         if (err != 0)
         {
-            goto error_return;
+            nvl->nvd_devfreq_dev->devfreq = NULL;
+            goto error_slave_teardown;
         }
 
         if (nvl->sys_devfreq_dev != NULL)
@@ -979,6 +1222,29 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
 
     return 0;
 
+error_slave_teardown:
+    if (nvl->sys_devfreq_dev != NULL)
+    {
+        if (nvl->sys_devfreq_dev->gpc_master != NULL)
+        {
+            list_del(&nvl->sys_devfreq_dev->gpc_cluster);
+            nvl->sys_devfreq_dev->gpc_master = NULL;
+        }
+
+        device_unregister(&nvl->sys_devfreq_dev->dev);
+        nvl->sys_devfreq_dev = NULL;
+    }
+    if (nvl->pwr_devfreq_dev != NULL)
+    {
+        if (nvl->pwr_devfreq_dev->gpc_master != NULL)
+        {
+            list_del(&nvl->pwr_devfreq_dev->gpc_cluster);
+            nvl->pwr_devfreq_dev->gpc_master = NULL;
+        }
+
+        device_unregister(&nvl->pwr_devfreq_dev->dev);
+        nvl->pwr_devfreq_dev = NULL;
+    }
 error_return:
     /* The caller will call unregister to unwind on failure */
     return err;
@@ -1054,6 +1320,82 @@ nv_pci_gb10b_resume_devfreq(struct device *dev)
     return err;
 }
 
+static void nv_pci_devfreq_disable_boost(struct work_struct *work)
+{
+#if defined(NV_UPDATE_DEVFREQ_PRESENT)
+    struct nv_pci_tegra_devfreq_dev *tdev;
+
+    tdev = container_of(work, struct nv_pci_tegra_devfreq_dev, boost_disable.work);
+    tdev->boost_enabled = 0;
+#endif
+}
+
+static int
+nv_pci_gb10b_devfreq_enable_boost(struct device *dev, unsigned int duration)
+{
+#if defined(NV_UPDATE_DEVFREQ_PRESENT)
+    struct pci_dev *pci_dev = to_pci_dev(dev);
+    nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
+    struct nv_pci_tegra_devfreq_dev *tdev;
+    unsigned long delay;
+
+    if (duration == 0)
+        return 0;
+
+    delay = msecs_to_jiffies(duration * 1000);
+
+    tdev = nvl->gpc_devfreq_dev;
+    if (tdev != NULL && tdev->devfreq != NULL && tdev->boost_enabled == 0)
+    {
+        tdev->boost_enabled = 1;
+
+        INIT_DELAYED_WORK(&tdev->boost_disable, nv_pci_devfreq_disable_boost);
+        schedule_delayed_work(&tdev->boost_disable, delay);
+    }
+
+    tdev = nvl->nvd_devfreq_dev;
+    if (tdev != NULL && tdev->devfreq != NULL && tdev->boost_enabled == 0)
+    {
+        tdev->boost_enabled = 1;
+
+        INIT_DELAYED_WORK(&tdev->boost_disable, nv_pci_devfreq_disable_boost);
+        schedule_delayed_work(&tdev->boost_disable, delay);
+    }
+
+    return 0;
+#else // !defined(NV_UPDATE_DEVFREQ_PRESENT)
+    return -1;
+#endif
+}
+
+static int
+nv_pci_gb10b_devfreq_disable_boost(struct device *dev)
+{
+#if defined(NV_UPDATE_DEVFREQ_PRESENT)
+    struct pci_dev *pci_dev = to_pci_dev(dev);
+    nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
+    struct nv_pci_tegra_devfreq_dev *tdev;
+
+    tdev = nvl->gpc_devfreq_dev;
+    if (tdev != NULL && tdev->devfreq != NULL && tdev->boost_enabled)
+    {
+        tdev->boost_enabled = 0;
+        cancel_delayed_work_sync(&tdev->boost_disable);
+    }
+
+    tdev = nvl->nvd_devfreq_dev;
+    if (tdev != NULL && tdev->devfreq != NULL && tdev->boost_enabled)
+    {
+        tdev->boost_enabled = 0;
+        cancel_delayed_work_sync(&tdev->boost_disable);
+    }
+
+    return 0;
+#else // !defined(NV_UPDATE_DEVFREQ_PRESENT)
+    return -1;
+#endif
+}
+
 struct nv_pci_tegra_data {
     unsigned short vendor;
     unsigned short device;
@@ -1062,6 +1404,8 @@ struct nv_pci_tegra_data {
     int (*devfreq_register)(struct pci_dev*);
     int (*devfreq_suspend)(struct device*);
     int (*devfreq_resume)(struct device*);
+    int (*devfreq_enable_boost)(struct device*, unsigned int);
+    int (*devfreq_disable_boost)(struct device*);
 };
 
 static const struct nv_pci_tegra_data nv_pci_tegra_table[] = {
@@ -1073,35 +1417,38 @@ static const struct nv_pci_tegra_data nv_pci_tegra_table[] = {
         .devfreq_register = nv_pci_gb10b_register_devfreq,
         .devfreq_suspend = nv_pci_gb10b_suspend_devfreq,
         .devfreq_resume = nv_pci_gb10b_resume_devfreq,
+        .devfreq_enable_boost = nv_pci_gb10b_devfreq_enable_boost,
+        .devfreq_disable_boost = nv_pci_gb10b_devfreq_disable_boost,
     },
 };
 
 static void
-nv_pci_tegra_devfreq_remove_opps(struct nv_pci_tegra_devfreq_dev *tdev)
-{
-#if defined(NV_DEVFREQ_HAS_FREQ_TABLE)
-    unsigned long *freq_table = tdev->devfreq->freq_table;
-    unsigned int max_state = tdev->devfreq->max_state;
-#else
-    unsigned long *freq_table = tdev->devfreq->profile->freq_table;
-    unsigned int max_state = tdev->devfreq->profile->max_state;
-#endif
-    int i;
-
-    for (i = 0; i < max_state; i++)
-    {
-        dev_pm_opp_remove(&tdev->dev, freq_table[i]);
-    }
-}
-
-static void
 nv_pci_tegra_devfreq_remove(struct nv_pci_tegra_devfreq_dev *tdev)
 {
-    struct nv_pci_tegra_devfreq_dev *tptr;
+    struct nv_pci_tegra_devfreq_dev *tptr, *next;
+#if NV_HAS_COOLING_SUPPORTED
+    struct nv_pci_tegra_thermal_data *data;
+    struct thermal_zone_device *tzdev;
+#endif
 
-    nv_pci_tegra_devfreq_remove_opps(tdev);
-    devm_devfreq_remove_device(&tdev->dev, tdev->devfreq);
-    tdev->devfreq = NULL;
+    if (tdev->devfreq != NULL)
+    {
+#if NV_HAS_COOLING_SUPPORTED
+        list_for_each_entry(data, &tdev->therm_zones, zones)
+        {
+            tzdev = thermal_zone_get_zone_by_name(data->tz_name);
+            if (IS_ERR(tzdev))
+            {
+                continue;
+            }
+
+            thermal_unbind_cdev_from_trip(tzdev, data->passive_trip, tdev->devfreq->cdev);
+        }
+#endif
+        devm_devfreq_remove_device(&tdev->dev, tdev->devfreq);
+        nv_pci_tegra_devfreq_remove_opps(tdev);
+        tdev->devfreq = NULL;
+    }
 
 #if NV_HAS_ICC_SUPPORTED
     if (tdev->icc_path != NULL)
@@ -1110,7 +1457,7 @@ nv_pci_tegra_devfreq_remove(struct nv_pci_tegra_devfreq_dev *tdev)
     }
 #endif
 
-    list_for_each_entry(tptr, &tdev->gpc_cluster, gpc_cluster)
+    list_for_each_entry_safe(tptr, next, &tdev->gpc_cluster, gpc_cluster)
     {
         if (tptr->clk != NULL)
         {
@@ -1118,9 +1465,12 @@ nv_pci_tegra_devfreq_remove(struct nv_pci_tegra_devfreq_dev *tdev)
             tptr->clk = NULL;
             device_unregister(&tptr->dev);
         }
+
+        list_del(&tptr->gpc_cluster);
+        tptr->gpc_master = NULL;
     }
 
-    list_for_each_entry(tptr, &tdev->nvd_cluster, nvd_cluster)
+    list_for_each_entry_safe(tptr, next, &tdev->nvd_cluster, nvd_cluster)
     {
         if (tptr->clk != NULL)
         {
@@ -1128,6 +1478,9 @@ nv_pci_tegra_devfreq_remove(struct nv_pci_tegra_devfreq_dev *tdev)
             tptr->clk = NULL;
             device_unregister(&tptr->dev);
         }
+
+        list_del(&tptr->nvd_cluster);
+        tptr->nvd_master = NULL;
     }
 
     if (tdev->clk != NULL)
@@ -1194,6 +1547,8 @@ nv_pci_tegra_register_devfreq(struct pci_dev *pdev)
     nvl->devfreq_table_size = tegra_data->devfreq_table_size;
     nvl->devfreq_suspend = tegra_data->devfreq_suspend;
     nvl->devfreq_resume = tegra_data->devfreq_resume;
+    nvl->devfreq_enable_boost = tegra_data->devfreq_enable_boost;
+    nvl->devfreq_disable_boost = tegra_data->devfreq_disable_boost;
 
     err = tegra_data->devfreq_register(pdev);
     if (err != 0)
@@ -1229,10 +1584,32 @@ static void nv_init_dynamic_power_management
         pr3_acpi_method_present = nv_acpi_power_resource_method_present(pci_dev->bus->self);
     }
 
-    // Support dynamic power management if device is a tegra PCI iGPU
-    rm_init_tegra_dynamic_power_management(sp, nv);
-
     rm_init_dynamic_power_management(sp, nv, pr3_acpi_method_present);
+}
+
+static void nv_init_tegra_gpu_pg_mask(nvidia_stack_t *sp, struct pci_dev *pci_dev)
+{
+    nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
+    nv_state_t *nv = NV_STATE_PTR(nvl);
+    struct device_node *np = pci_dev->dev.of_node;
+    u32 gpu_pg_mask = 0;
+
+    /* Only continue with certain Tegra PCI iGPUs */
+    if (!nv->supports_tegra_igpu_rg)
+    {
+        return;
+    }
+
+    nv->tegra_pci_igpu_pg_mask = NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT;
+
+    of_property_read_u32(np, "nvidia,fuse-overrides", &gpu_pg_mask);
+    if (gpu_pg_mask != 0) {
+        nv_printf(NV_DBG_INFO,
+            "NVRM: nvidia,fuse-overrides parsed from device tree: 0x%x\n", gpu_pg_mask);
+        nv->tegra_pci_igpu_pg_mask = gpu_pg_mask;
+    }
+
+    nv_set_gpu_pg_mask(nv);
 }
 
 static NvBool
@@ -1345,6 +1722,20 @@ nv_pci_probe
     }
 #endif /* NV_PCI_SRIOV_SUPPORT */
 
+    if (!rm_wait_for_bar_firewall(
+                sp,
+                NV_PCI_DOMAIN_NUMBER(pci_dev),
+                NV_PCI_BUS_NUMBER(pci_dev),
+                NV_PCI_SLOT_NUMBER(pci_dev),
+                PCI_FUNC(pci_dev->devfn),
+                pci_dev->device,
+                pci_dev->subsystem_device))
+    {
+        nv_printf(NV_DBG_ERRORS,
+            "NVRM: failed to wait for bar firewall to lower\n");
+        goto failed;
+    }
+
     if (!rm_is_supported_pci_device(
                 (pci_dev->class >> 16) & 0xFF,
                 (pci_dev->class >> 8) & 0xFF,
@@ -1406,6 +1797,7 @@ nv_pci_probe
     }
 
     nv  = NV_STATE_PTR(nvl);
+    os_mem_copy(nv->cached_gpu_info.vbios_version, "??.??.??.??.??", 15);
 
     for (i = 0; i < NVRM_PCICFG_NUM_BARS; i++)
     {
@@ -1532,6 +1924,10 @@ nv_pci_probe
                           "Enabling SMMU SVA feature failed! ret: %d\n", ret);
             nv->ats_support = NV_FALSE;
         }
+#else
+        NV_DEV_PRINTF(NV_DBG_ERRORS, nv,
+                      "Enabling SMMU SVA feature failed due to lack of necessary kernel configs.\n");
+        nv->ats_support = NV_FALSE;
 #endif
 #endif // NV_IS_EXPORT_SYMBOL_GPL_iommu_dev_enable_feature
     }
@@ -1602,8 +1998,15 @@ nv_pci_probe
 
     pm_vt_switch_required(nvl->dev, NV_TRUE);
 
+#if defined(CONFIG_PM_DEVFREQ)
+    // Support dynamic power management if device is a tegra PCI iGPU
+    rm_init_tegra_dynamic_power_management(sp, nv);
+#endif
     nv_init_dynamic_power_management(sp, pci_dev);
 
+    nv_init_tegra_gpu_pg_mask(sp, pci_dev);
+
+    rm_get_gpu_uuid_raw(sp, nv);
 
     nv_procfs_add_gpu(nvl);
 
@@ -1918,6 +2321,10 @@ nv_pci_shutdown(struct pci_dev *pci_dev)
         nvl->nv_state.is_shutdown = NV_TRUE;
     }
 
+#if defined(CONFIG_PM_DEVFREQ)
+    nv_pci_tegra_unregister_devfreq(pci_dev);
+#endif
+
     /* pci_clear_master is not defined for !CONFIG_PCI */
 #ifdef CONFIG_PCI
     pci_clear_master(pci_dev);
@@ -2193,6 +2600,7 @@ struct pci_driver nv_pci_driver = {
 #if defined(CONFIG_PM)
     .driver.pm = &nv_pm_ops,
 #endif
+    .driver.probe_type = PROBE_FORCE_SYNCHRONOUS,
 };
 
 void nv_pci_unregister_driver(void)

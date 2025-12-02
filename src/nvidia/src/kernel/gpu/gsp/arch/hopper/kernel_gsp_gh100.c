@@ -113,14 +113,16 @@ kgspResetHw_GH100
 {
     NV_STATUS status = NV_OK;
     RMTIMEOUT timeout;
+    NvU32     timeoutUSec = pGpu->timeoutData.defaultResetFSMStateTransitionUs;
 
     //
-    // Add a delay for 10us. This is a worst case estimate.
+    // Add a default delay for 10us. This is a worst case estimate.
     // See bug 200636529 comment 20
     // Use PTIMER instead of the default ostimer since it is much faster than the
     // former and hence does not cause sufficient delay.
+    // This delay can be overwritten by regkey RmResetFsmStateTimeoutUs.
     //
-    gpuSetTimeout(pGpu, 10, &timeout, GPU_TIMEOUT_FLAGS_TMR);
+    gpuSetTimeout(pGpu, timeoutUSec, &timeout, GPU_TIMEOUT_FLAGS_TMR);
 
     GPU_FLD_WR_DRF_DEF(pGpu, _PGSP, _FALCON_ENGINE, _RESET, _ASSERT);
     status = gpuTimeoutCondWait(pGpu, _kgspWaitForAsserted, NULL, &timeout);
@@ -131,7 +133,7 @@ kgspResetHw_GH100
     }
 
     // Reset timeout
-    gpuSetTimeout(pGpu, 10, &timeout, GPU_TIMEOUT_FLAGS_TMR);
+    gpuSetTimeout(pGpu, timeoutUSec, &timeout, GPU_TIMEOUT_FLAGS_TMR);
 
     GPU_FLD_WR_DRF_DEF(pGpu, _PGSP, _FALCON_ENGINE, _RESET, _DEASSERT);
     status = gpuTimeoutCondWait(pGpu, _kgspWaitForDeasserted, NULL, &timeout);

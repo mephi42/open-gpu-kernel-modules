@@ -180,7 +180,7 @@ NV_STATUS diagapiConstruct_IMPL(struct DiagApi *arg_pDiagApi, struct CALL_CONTEX
 #define __nvoc_diagapiConstruct(arg_pDiagApi, arg_pCallContext, arg_pParams) diagapiConstruct_IMPL(arg_pDiagApi, arg_pCallContext, arg_pParams)
 
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCoverageGetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams) {
+static inline NV_STATUS diagapiCoverageGetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
@@ -189,7 +189,7 @@ static inline NV_STATUS diagapiCoverageGetState(struct DiagApi *pDiagApi, NV208F
 #endif // __nvoc_subdevice_diag_h_disabled
 
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCoverageSetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams) {
+static inline NV_STATUS diagapiCoverageSetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
@@ -198,7 +198,7 @@ static inline NV_STATUS diagapiCoverageSetState(struct DiagApi *pDiagApi, NV208F
 #endif // __nvoc_subdevice_diag_h_disabled
 
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCoverageGetData(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS *pParams) {
+static inline NV_STATUS diagapiCoverageGetData(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
@@ -264,6 +264,16 @@ static inline NV_STATUS diagapiCtrlCmdFbClearRemappedRows(struct DiagApi *pDiagA
 }
 #else // __nvoc_subdevice_diag_h_disabled
 #define diagapiCtrlCmdFbClearRemappedRows(pDiagApi, pRemappedRowsParams) diagapiCtrlCmdFbClearRemappedRows_IMPL(pDiagApi, pRemappedRowsParams)
+#endif // __nvoc_subdevice_diag_h_disabled
+
+NV_STATUS diagapiCtrlCmdFbClearRemappedBanks_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_FB_CLEAR_REMAPPED_BANKS_PARAMS *pRemappedBanksParams);
+#ifdef __nvoc_subdevice_diag_h_disabled
+static inline NV_STATUS diagapiCtrlCmdFbClearRemappedBanks(struct DiagApi *pDiagApi, NV208F_CTRL_FB_CLEAR_REMAPPED_BANKS_PARAMS *pRemappedBanksParams) {
+    NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_subdevice_diag_h_disabled
+#define diagapiCtrlCmdFbClearRemappedBanks(pDiagApi, pRemappedBanksParams) diagapiCtrlCmdFbClearRemappedBanks_IMPL(pDiagApi, pRemappedBanksParams)
 #endif // __nvoc_subdevice_diag_h_disabled
 
 NV_STATUS diagapiCtrlCmdGpuGetRamSvopValues_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_GPU_RAM_SVOP_VALUES_PARAMS *pGetRamSvopParams);
@@ -346,34 +356,34 @@ static inline NV_STATUS diagapiCtrlCmdBifInfo(struct DiagApi *pDiagApi, NV208F_C
 #define diagapiCtrlCmdBifInfo(pDiagApi, pInfo) diagapiCtrlCmdBifInfo_IMPL(pDiagApi, pInfo)
 #endif // __nvoc_subdevice_diag_h_disabled
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageGetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams);
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCtrlCmdUcodeCoverageGetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams) {
+static inline NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
 #else // __nvoc_subdevice_diag_h_disabled
-#define diagapiCtrlCmdUcodeCoverageGetState(pDiagApi, pParams) diagapiCtrlCmdUcodeCoverageGetState_IMPL(pDiagApi, pParams)
+#define diagapiCtrlCmdUcodeInstrumentationGetState(pDiagApi, pParams) diagapiCtrlCmdUcodeInstrumentationGetState_IMPL(pDiagApi, pParams)
 #endif // __nvoc_subdevice_diag_h_disabled
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageSetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_SET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationSetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_SET_STATE_PARAMS *pParams);
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCtrlCmdUcodeCoverageSetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_SET_STATE_PARAMS *pParams) {
+static inline NV_STATUS diagapiCtrlCmdUcodeInstrumentationSetState(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_SET_STATE_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
 #else // __nvoc_subdevice_diag_h_disabled
-#define diagapiCtrlCmdUcodeCoverageSetState(pDiagApi, pParams) diagapiCtrlCmdUcodeCoverageSetState_IMPL(pDiagApi, pParams)
+#define diagapiCtrlCmdUcodeInstrumentationSetState(pDiagApi, pParams) diagapiCtrlCmdUcodeInstrumentationSetState_IMPL(pDiagApi, pParams)
 #endif // __nvoc_subdevice_diag_h_disabled
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageGetData_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetData_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS *pParams);
 #ifdef __nvoc_subdevice_diag_h_disabled
-static inline NV_STATUS diagapiCtrlCmdUcodeCoverageGetData(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS *pParams) {
+static inline NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetData(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS *pParams) {
     NV_ASSERT_FAILED_PRECOMP("DiagApi was disabled!");
     return NV_ERR_NOT_SUPPORTED;
 }
 #else // __nvoc_subdevice_diag_h_disabled
-#define diagapiCtrlCmdUcodeCoverageGetData(pDiagApi, pParams) diagapiCtrlCmdUcodeCoverageGetData_IMPL(pDiagApi, pParams)
+#define diagapiCtrlCmdUcodeInstrumentationGetData(pDiagApi, pParams) diagapiCtrlCmdUcodeInstrumentationGetData_IMPL(pDiagApi, pParams)
 #endif // __nvoc_subdevice_diag_h_disabled
 
 
@@ -570,13 +580,13 @@ static inline NV_STATUS diagapiGetOrAllocNotifShare_DISPATCH(struct DiagApi *pNo
     return pNotifier->__nvoc_metadata_ptr->vtable.__diagapiGetOrAllocNotifShare__(pNotifier, hNotifierClient, hNotifierResource, ppNotifShare);
 }
 
-NV_STATUS diagapiCoverageGetState_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCoverageGetState_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams);
 
 
-NV_STATUS diagapiCoverageSetState_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCoverageSetState_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams);
 
 
-NV_STATUS diagapiCoverageGetData_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS *pParams);
+NV_STATUS diagapiCoverageGetData_KERNEL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS *pParams);
 
 
 NV_STATUS diagapiControl_IMPL(struct DiagApi *pDiagApi, struct CALL_CONTEXT *pCallContext, struct RS_RES_CONTROL_PARAMS_INTERNAL *pParams);
@@ -601,6 +611,8 @@ NV_STATUS diagapiCtrlCmdFbEccInjectionSupported_IMPL(struct DiagApi *pDiagApi, N
 
 NV_STATUS diagapiCtrlCmdFbClearRemappedRows_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_FB_CLEAR_REMAPPED_ROWS_PARAMS *pRemappedRowsParams);
 
+NV_STATUS diagapiCtrlCmdFbClearRemappedBanks_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_FB_CLEAR_REMAPPED_BANKS_PARAMS *pRemappedBanksParams);
+
 NV_STATUS diagapiCtrlCmdGpuGetRamSvopValues_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_GPU_RAM_SVOP_VALUES_PARAMS *pGetRamSvopParams);
 
 NV_STATUS diagapiCtrlCmdGpuSetRamSvopValues_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_GPU_RAM_SVOP_VALUES_PARAMS *pSetRamSvopParams);
@@ -617,11 +629,11 @@ NV_STATUS diagapiCtrlCmdBifConfigRegWrite_IMPL(struct DiagApi *pDiagApi, NV208F_
 
 NV_STATUS diagapiCtrlCmdBifInfo_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_BIF_INFO_PARAMS *pInfo);
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageGetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_STATE_PARAMS *pParams);
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageSetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_SET_STATE_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationSetState_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_SET_STATE_PARAMS *pParams);
 
-NV_STATUS diagapiCtrlCmdUcodeCoverageGetData_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_COVERAGE_GET_DATA_PARAMS *pParams);
+NV_STATUS diagapiCtrlCmdUcodeInstrumentationGetData_IMPL(struct DiagApi *pDiagApi, NV208F_CTRL_UCODE_INSTRUMENTATION_GET_DATA_PARAMS *pParams);
 
 #undef PRIVATE_FIELD
 

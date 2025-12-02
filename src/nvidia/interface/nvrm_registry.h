@@ -31,6 +31,46 @@
 
 #include "nvtypes.h"
 
+#define NV_REG_STR_PCIPOWERCONTROL_MAX_LENGTH                                34
+#define NV_REG_STR_PCIPOWERCONTROL_CHIPSET_LENGTH                            34
+#define NV_REG_STR_PCIPOWERCONTROL_CHIPSET_GPU_LENGTH                        51
+#define NV_REG_STR_ENABLE_PCIPOWERCONTROL_WITH_SUFFIX                        "PCIEPowerControl_"
+#define NV_REG_STR_ENABLE_PCIPOWERCONTROL_WITHOUT_SUFFIX                     "PCIEPowerControl"
+
+#define NVPCIE_POWER_CONTROL_REGKEY_ENABLE                      0:0
+#define NVPCIE_POWER_CONTROL_REGKEY_ENABLE_FALSE                (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_ENABLE_TRUE                 (0x00000001)
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_RM                 1:1
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_RM_FALSE           (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_RM_TRUE            (0x00000001)
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_PLATFORM           2:2
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_PLATFORM_FALSE     (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_OVERRIDE_PLATFORM_TRUE      (0x00000001)
+#define NVPCIE_POWER_CONTROL_REGKEY_TURNON_COREPOWER            3:3
+#define NVPCIE_POWER_CONTROL_REGKEY_TURNON_COREPOWER_FALSE      (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_TURNON_COREPOWER_TRUE       (0x00000001)
+#define NVPCIE_POWER_CONTROL_REGKEY_ASPM_ENABLE                 5:4
+#define NVPCIE_POWER_CONTROL_REGKEY_ASPM_ENABLE_FALSE           (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_ASPM_ENABLE_L0S             (0x00000001)
+#define NVPCIE_POWER_CONTROL_REGKEY_ASPM_ENABLE_L1              (0x00000002)
+#define NVPCIE_POWER_CONTROL_REGKEY_ASPM_ENABLE_ALL             (0x00000003)
+
+#define NVPCIE_POWER_CONTROL_REGKEY_NOT_IN_REGISTRY             31:31
+#define NVPCIE_POWER_CONTROL_REGKEY_NOT_IN_REGISTRY_FALSE       (0x00000000)
+#define NVPCIE_POWER_CONTROL_REGKEY_NOT_IN_REGISTRY_TRUE        (0x00000000)
+
+// Type BINARY
+// SBIOS hash key for ASPM enablement on DT
+// This has no effect if added in OS registry hive or via MODS
+// Encoding:
+//     Binary Structure:         Description
+//     0:0                   Set to 1 to enable L0s
+//     1:1                   Set to 1 to enable L1
+//     7:2                   Reserved
+#define NV_REG_STR_RM_SBIOS_ENABLE_ASPM_DT                  "RMSbiosEnableASPMDT"
+#define NV_REG_STR_RM_SBIOS_ENABLE_ASPM_DT_L0S              0:0
+#define NV_REG_STR_RM_SBIOS_ENABLE_ASPM_DT_L1               1:1
+
 //
 // Some shared defines with nvReg.h
 //
@@ -64,7 +104,7 @@
 // Type Dword
 // Change all RM internal timeouts to experiment with Bug 5203024.
 //
-// Some timeouts may still silently clamp to different min/max values and this
+// Some timeouts may still silently clamp to differnt min/max values and this
 // regkey does NOT validate their range.
 //
 #define NV_REG_STR_RM_BUG5203024_OVERRIDE_TIMEOUT        "RmOverrideInternalTimeoutsMs"
@@ -82,20 +122,6 @@
 #define NV_REG_STR_RM_BUG5203024_OVERRIDE_TIMEOUT_FLAGS_SET_PMU_INTERNAL_TIMEOUT  27:27
 // Disables FECS watchdog (timeout value is ignored)
 #define NV_REG_STR_RM_BUG5203024_OVERRIDE_TIMEOUT_FLAGS_SET_FECS_WATCHDOG_TIMEOUT 26:26
-
-
-//
-// This regkey is experimental
-//
-// Type Dword
-// Change video Watchdog and GP timeouts to experiment with Bug 5203024.
-// Stores the timeout value in ms.
-// If this regkey is set and has non-zero value, also disables MB timeouts.
-//
-// Some timeouts may still silently clamp to different min/max values and this
-// regkey does NOT validate their range.
-//
-#define NV_REG_STR_RM_BUG5203024_OVERRIDE_VIDEO_TIMEOUT        "RmVideoEngineTimeoutMs"
 
 
 //
@@ -874,6 +900,15 @@
 #define NV_REG_STR_RM_INCREASE_RSVD_MEMORY_SIZE_MB             "RMIncreaseRsvdMemorySizeMB"
 #define NV_REG_STR_RM_INCREASE_RSVD_MEMORY_SIZE_MB_DEFAULT     0x0
 
+//
+// TYPE DWORD
+// This regkey overrides the max context size (used to determine the reserved memory size) to a user-specified value.
+// Exposed to clients for bug 5201785. For internal use only.
+// The value must be greater than 0 and less than the calculated max context size for the regkey to take effect.    .
+//
+#define NV_REG_STR_RM_OVERRIDE_MAX_CONTEXT_SIZE_RSVD_MEMORY_MB             "RMOverrideMaxContextSizeRsvdMemoryMB"
+#define NV_REG_STR_RM_OVERRIDE_MAX_CONTEXT_SIZE_RSVD_MEMORY_MB_DEFAULT     0
+
 // TYPE Dword
 // Determines whether or not RM reserved space should be increased.
 // 1 - Increases RM reserved space
@@ -1186,6 +1221,72 @@
 #define NV_REG_STR_RM_LPWR_C2C_STATE_CL4_DISABLE    0
 #define NV_REG_STR_RM_LPWR_C2C_STATE_CL4_ENABLE     1
 #define NV_REG_STR_RM_LPWR_C2C_STATE_CL4_DEFAULT    NV_REG_STR_RM_LPWR_C2C_STATE_CL4_DISABLE
+
+#define NV_REG_STR_RM_N1X_GPU_PPS_OVERRIDE               "N1xGpuPpsOverride"
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE          "RmLpwrC2cPpsOverride"
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_DECOPULE_MODE             0:0
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_DECOPULE_MODE_ENABLE      0x1
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_DECOPULE_MOD_DISABLE      0x0
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_CL3_PPSINDEX              7:1
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_CL4_PPSINDEX              15:8
+//
+// Coupling support of PPS with C2C LowPower.
+// if SUPPORT == DISABLED, C2C CL3/CL4 will not vote for PPS.
+// if SUPPORT == ENABLE, it will follow the VBIOS Settings
+//
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_COUPLING_SUPPORT          31:31
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_COUPLING_SUPPORT_DISABLE  0x1
+#define NV_REG_STR_RM_LPWR_C2C_PPS_OVERRIDE_COUPLING_SUPPORT_ENABLE   0x0
+
+
+
+//
+// Type DWORD:
+// This regkey overrides C2C CL3/CL4 Default state for given client
+//
+// At present this interface only support Display Client Override.
+// Other clients are VBIOS Controlled and can not be overriden
+//
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE          "RmLpwrC2cClientDisableOverride"
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL3                 0:0
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL3_ENABLE          0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL3_DISABLE         0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL4                 1:1
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL4_ENABLE          0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_CL4_DISABLE         0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_DISPLAY             2:2
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_DISPLAY_ENABLE      0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_DISPLAY_DIABLE      0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_GPU_LPWR            3:3
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_GPU_LPWR_ENABLE     0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLIENT_VOTE_OVERRIDE_GPU_LPWR_DIABLE     0x0
+
+//
+// Type DWORD:
+// This regkey overrides C2C CL3/CL4 Coupling with GPU MS LowPower Feature
+//
+//
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING          "RmLpwrC2cClxStateCoupling"
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_OVERRIDE              0:0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_OVERRIDE_ENABLED      0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_OVERRIDE_DISABLED     0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_LTC            2:1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_LTC_DEFUALT    0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_LTC_DISABLED   0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_LTC_ENABLED    0x3
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_LTC            4:3
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_LTC_DEFUALT    0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_LTC_DISABLED   0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_LTC_ENABLED    0x3
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_PG             6:5
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_PG_DEFUALT     0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_PG_DISABLED    0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL3_MS_PG_ENABLED     0x3
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_PG             8:7
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_PG_DEFUALT     0x0
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_PG_DISABLED    0x1
+#define NV_REG_STR_RM_LPWR_C2C_CLX_STATE_COUPLING_CL4_MS_PG_ENABLED     0x3
+
 
 //
 // Type DWORD:
@@ -1754,6 +1855,20 @@
 
 //
 // Type DWORD
+// NVLink Disable Link Overrides 2
+// This regkey starts at link 32
+// The supplied value is ANDed with the set of discovered
+// (not necessarily connected) links to remove unwanted links.
+//    A value of DISABLE_ALL removes/disables all links on this device.
+//    A value of DISABLE_NONE removes no links.
+//    If not present, this regkey has no effect.
+//
+#define NV_REG_STR_RM_NVLINK_DISABLE_LINKS2                   "RMNvLinkDisableLinks2"
+#define NV_REG_STR_RM_NVLINK_DISABLE_LINKS2_DISABLE_ALL       (0xFFFFFFFF)
+#define NV_REG_STR_RM_NVLINK_DISABLE_LINKS2_DISABLE_NONE      (0x00000000)
+
+//
+// Type DWORD
 // NVLINK Enable Links Overrides
 // Note that this control does not force enable links, rather, it should be
 // used to disable or mask off SW discovered links supported by the HW.
@@ -2082,6 +2197,10 @@
 // at once before the process terminates.
 //
 #define NV_REG_STR_RM_CLIENT_LIST_DEFERRED_FREE_LIMIT      "RMClientListDeferredFreeLimit"
+
+#define NV_REG_STR_RM_MIG_OVERRIDE_SWIZZID_TO_ZERO               "RMInternalMIGOverrideSwizzIdToZero"
+#define NV_REG_STR_RM_MIG_OVERRIDE_SWIZZID_TO_ZERO_DISABLED       0x00000000
+#define NV_REG_STR_RM_MIG_OVERRIDE_SWIZZID_TO_ZERO_ENABLED        0x00000001
 
 //
 // TYPE Dword
@@ -2446,6 +2565,16 @@
 #define NV_REG_STR_RM_ENABLE_MIG_GFX_DISABLED          0
 #define NV_REG_STR_RM_ENABLE_MIG_GFX_ENABLED           1
 
+// Type DWORD
+// This regkey toggles whether to enable support for Graphics Watchdog channel
+//
+// 0 - Disable Graphics Watchdog
+// 1 - Enable Graphics Watchdog
+//
+#define NV_REG_STR_RM_ENABLE_GR_WATCHDOG                  "RmEnableGrWatchdog"
+#define NV_REG_STR_RM_ENABLE_GR_WATCHDOG_DISABLED          0
+#define NV_REG_STR_RM_ENABLE_GR_WATCHDOG_ENABLED           1
+
 //
 // Type: DWORD
 //
@@ -2663,7 +2792,7 @@
 #define NV_REG_STR_RM_RELAXED_GSP_INIT_LOCKING_DEFAULT      0x00000002
 
 //
-// Regkey to configure Per VM RunList.
+// Regkey to configure Per VM RunList on GR
 // Type Dword
 //  BIT 0:0 - Overall PVMRL enable/disable.
 //   0 - Disable / Default - 1 HW runlist per engine.
@@ -2671,6 +2800,9 @@
 //  BIT 1:1 - Adaptive Round Robin Scheduler
 //   0 - Enable / Default - Use Adaptive Round Robin Scheduler
 //   1 - Disable          - Use Legacy PVMRL
+//  BIT 3:3 - Weighted Scheduler
+//   0 - Enable / Default  - Weighted scheduler
+//   1 - Disable           - Regular timesliced scheduler
 //  BIT 7:4 - PVMRL scheduler to run.
 //   0 - equal share / Default - equal share amongst running vGPUs.
 //   1 - fixed share           - fixed share of the physical GPU.
@@ -2693,6 +2825,10 @@
 #define NV_REG_STR_RM_PVMRL_ARR_DISABLE_DEFAULT                   0x00000000
 #define NV_REG_STR_RM_PVMRL_ARR_DISABLE_NO                        0x00000000
 #define NV_REG_STR_RM_PVMRL_ARR_DISABLE_YES                       0x00000001
+#define NV_REG_STR_RM_PVMRL_WEIGHTED                              3:3
+#define NV_REG_STR_RM_PVMRL_WEIGHTED_DEFAULT                      0x00000000
+#define NV_REG_STR_RM_PVMRL_WEIGHTED_ENABLE                       0x00000000
+#define NV_REG_STR_RM_PVMRL_WEIGHTED_DISABLE                      0x00000001
 #define NV_REG_STR_RM_PVMRL_SCHED_POLICY                          7:4
 #define NV_REG_STR_RM_PVMRL_SCHED_POLICY_DEFAULT                  0x00000000
 #define NV_REG_STR_RM_PVMRL_SCHED_POLICY_VGPU_EQUAL_SHARE         0x00000000
@@ -2702,13 +2838,82 @@
 #define NV_REG_STR_RM_PVMRL_AVERAGE_FACTOR                        31:24
 
 //
+// Regkey to configure Per VM RunList on NVENC
+// Type Dword
+//  BIT 0:0 - Overall PVMRL enable/disable.
+//   0 - Disable - 1 HW runlist per engine.
+//   1 - Enable  - 1 SW runlist per VM for some engines.
+//  BIT 4:4 - PVMRL scheduler to run.
+//   0 - equal share - equal share amongst running vGPUs.
+//   1 - fixed share - fixed share of the physical GPU.
+//
+#define NV_REG_STR_RM_PVMRL_NVENC                                 "RmNvencPVMRL"
+#define NV_REG_STR_RM_PVMRL_NVENC_ENABLE                                     0:0
+#define NV_REG_STR_RM_PVMRL_NVENC_ENABLE_NO                           0x00000000
+#define NV_REG_STR_RM_PVMRL_NVENC_ENABLE_YES                          0x00000001
+#define NV_REG_STR_RM_PVMRL_NVENC_SCHED_POLICY                               4:4
+#define NV_REG_STR_RM_PVMRL_NVENC_SCHED_POLICY_VGPU_EQUAL_SHARE       0x00000000
+#define NV_REG_STR_RM_PVMRL_NVENC_SCHED_POLICY_VGPU_FIXED_SHARE       0x00000001
+
+//
+// Regkey to enable and set elastic scheduling
+// The value of the reg-key is used to determine the maximum extra elastic time that can be
+// given to the VMs running on this host.
+// The value consists of 2 parts, the upper 16 bits denote the numrator
+// and the lower 16 bits denote the denominator of the fraction.
+// The num/denum value denotes cap on the percentage of extra engine time that the VM will get
+// if number of currently running VMs is less than the maximum instances of VMs for that profile.
+// This regkey will be ignored in equal share mode of PVMRL, is only applicable for
+// fixed share mode. Also, this regkey will be ignored when weighted scheduling is
+// disabled.
+// There is no minimum or maximum limit on the value of this elastic cap, but the fraction
+// is capped at 32 which is the maximum performance the lowest vGPU profile can request
+// 32:1 profile can request the whole engine time which is 32 times its current weight.
+// Type Dword
+//  BIT 15:0 - Denominator of the max elastic time allocated to VM
+//  BIT 31:16 - Numerator of the max elastic time allocate to VM
+//  e.g.
+//
+//  To set max extra elastic time of 30% => 0.3 times = 3/10 = 0x0003000A or 30/100 = 0x001E0064
+//  To set max extra elastic time of 31 times the current weight => 3100% => 31/1 =  0x001F0001
+//  To set max extra elastic time of 1/3 times the current weight => 0.3333 = 1/3 =  0x00010003
+//
+#define NV_REG_STR_RM_PVMRL_ELASTIC_SCHEDULING_CAP                    "RmPVMRLElasticSchedulingCap"
+#define NV_REG_STR_RM_PVMRL_ELASTIC_SCHEDULING_CAP_DENOMINATOR        15:0
+#define NV_REG_STR_RM_PVMRL_ELASTIC_SCHEDULING_CAP_NUMERATOR          31:16
+
+//
 // Type: Dword
-// This regkey is used to enable Nvlink Encryption. By default it is disabled
+// This regkey is used to enable/disable Nvlink Encryption
 //
 #define NV_REG_STR_RM_NVLINK_ENCRYPTION                   "RmNvlinkEncryption"
 #define NV_REG_STR_RM_NVLINK_ENCRYPTION_MODE              0:0
 #define NV_REG_STR_RM_NVLINK_ENCRYPTION_MODE_DEFAULT      0x00000000
 #define NV_REG_STR_RM_NVLINK_ENCRYPTION_MODE_ENABLE       0x00000001
+#define NV_REG_STR_RM_NVLINK_ENCRYPTION_MODE_DISABLE      0x00000000
+
+//
+// Type: Dword
+// This regkey is used to control the NVLE key refresh settings.
+// Note: Irrespective of this regkey setting, NVLE key refresh will be disabled
+//       when Nvlink encryption is disabled. When Nvlink encryption is enabled,
+//       this regkey will take effect.
+// BIT 31:31 - Controls whether NVLE key refresh is enabled or disabled.
+//             Default setting is disabled for now.
+// BIT 30:0  - Sets the NVLE key refresh interval (in seconds). Input should be
+//             between NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL_MIN and
+//             NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL_MAX.
+// .           Default NVLE key refresh interval is 1 hour.
+//
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH                   "RmNvlinkNvleKeyRefresh"
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_ENABLE            31:31
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_ENABLE_DEFAULT    0x00000000
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_ENABLE_YES        0x00000001
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_ENABLE_NO         0x00000000
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL          30:0
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL_DEFAULT  0x00000E10
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL_MIN      0x0000003C
+#define NV_REG_STR_RM_NVLINK_NVLE_KEY_REFRESH_INTERVAL_MAX      0x00000E10
 
 //
 // Type: Dword
@@ -2718,12 +2923,6 @@
 #define NV_REG_STR_RM_FORCE_GR_SCRUBBER_CHANNEL             "RmForceGrScrubberChannel"
 #define NV_REG_STR_RM_FORCE_GR_SCRUBBER_CHANNEL_DISABLE     0x00000000
 #define NV_REG_STR_RM_FORCE_GR_SCRUBBER_CHANNEL_ENABLE      0x00000001
-
-// Type DWORD
-// Allows extending PMU FB Operationg Timeout (DMA / FBFlush) on certain profiles
-// This currently takes effect on GB10X profile only
-#define NV_REG_STR_RM_PMU_FB_TIMEOUT_US                    "RmPmuFBTimeoutUs"
-#define NV_REG_STR_RM_PMU_FB_TIMEOUT_US_DEFAULT            (0)
 
 //
 // Type: Dword
@@ -2778,6 +2977,7 @@
 //
 #define NV_REG_STR_RM_RUSD_POLLING_INTERVAL                  "RMRusdPollingInterval"
 #define NV_REG_STR_RM_RUSD_POLLING_INTERVAL_DEFAULT          500
+#define NV_REG_STR_RM_RUSD_POLLING_INTERVAL_WINDOWS_GSP      250
 #define NV_REG_STR_RM_RUSD_POLLING_INTERVAL_TESLA            100
 #define NV_REG_STR_RM_RUSD_POLLING_INTERVAL_MIN              100
 #define NV_REG_STR_RM_RUSD_POLLING_INTERVAL_MAX              1000
@@ -2881,16 +3081,17 @@
 #define NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT_ENABLE              1
 #define NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT_DISABLE             0
 
-// Type DWORD
-// If set, RM will Align the circular buffer size up to 64k
-#define NV_REG_STR_RM_64K_BUG_5123775_WAR                         "RM64kBug5123775War"
-
 // Type DWORD (Boolean)
-// Enable the extended buffer for HWPM PMA channel.
+// Enable the iGPU DState HFRP command
 #define NV_REG_STR_RM_ENABLE_DSTATE_HFRP                          "RmEnableDStateHfrp"
 #define NV_REG_STR_RM_ENABLE_DSTATE_HFRP_TRUE                     (0x00000001)
 #define NV_REG_STR_RM_ENABLE_DSTATE_HFRP_FALSE                    (0x00000000)
 
+// Type DWORD (Boolean)
+// Enable the iGPU HDA DState HFRP command
+#define NV_REG_STR_RM_ENABLE_HDA_DSTATE_HFRP                      "RmEnableHdaDStateHfrp"
+#define NV_REG_STR_RM_ENABLE_HDA_DSTATE_HFRP_TRUE                 (0x00000001)
+#define NV_REG_STR_RM_ENABLE_HDA_DSTATE_HFRP_FALSE                (0x00000000)
 //
 // TYPE DWORD
 // Regkey to override Non-PASID ATS support
@@ -2912,6 +3113,13 @@
 #define NV_REG_STR_RM_ALLOW_UNKNOWN_4PART_IDS_ENABLE            0x00000001
 #define NV_REG_STR_RM_ALLOW_UNKNOWN_4PART_IDS_DISABLE           0x00000000
 #define NV_REG_STR_RM_ALLOW_UNKNOWN_4PART_IDS_DEFAULT           NV_REG_STR_RM_ALLOW_UNKNOWN_4PART_IDS_DISABLE
+
+//
+// Type: DWORD
+// Timeout(in microseconds) value for the reset FSM state transitions between ASSERT -> ASSERTED and DEASSERT -> DEASSERTED
+// This is for presilicon test only.
+//
+#define NV_REG_STR_RM_RESET_FSM_STATE_TRANSITION_TIMEOUT_US     "RmResetFsmStateTimeoutUs"
 
 //
 // Type DWORD

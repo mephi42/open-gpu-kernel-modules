@@ -38,20 +38,20 @@ memmgrIsFlaSysmemSupported_GB100(OBJGPU *pGpu, MemoryManager *pMemoryManager)
 NvBool
 memmgrIsMemDescSupportedByFla_GB100
 (
-    OBJGPU *pGpu,
-    MemoryManager *pMemoryManager,
-    MEMORY_DESCRIPTOR *pMemDesc
+    OBJGPU            *pFlaOwnerGpu,
+    MemoryManager     *pFlaOwnerMemoryManager,
+    MEMORY_DESCRIPTOR *pPhysMemDesc
 )
 {
-    NV_ADDRESS_SPACE addrSpace = memdescGetAddressSpace(pMemDesc);
+    NV_ADDRESS_SPACE addrSpace = memdescGetAddressSpace(pPhysMemDesc);
 
     if ((addrSpace == ADDR_SYSMEM) &&
-        memmgrIsFlaSysmemSupported_HAL(pGpu, pMemoryManager))
+        memmgrIsFlaSysmemSupported_HAL(pFlaOwnerGpu, pFlaOwnerMemoryManager))
     {
         return NV_TRUE;
     }
 
-    return memmgrIsMemDescSupportedByFla_GA100(pGpu, pMemoryManager, pMemDesc);
+    return memmgrIsMemDescSupportedByFla_GA100(pFlaOwnerGpu, pFlaOwnerMemoryManager, pPhysMemDesc);
 }
 
 NvU32
@@ -74,4 +74,37 @@ memmgrGetLocalizedOffset_GB100
 )
 {
     return NV_LOCALIZATION_MODE_BIT_IN_ADDRESS_OFFSET;
+}
+
+/*!
+ *  @brief Validates the page size for FLA memory
+ *
+ *  @returns NvBool
+ */
+NvBool
+memmgrIsValidFlaPageSize_GB100
+(
+    OBJGPU *pGpu,
+    MemoryManager *pMemoryManager,
+    NvU64 pageSize,
+    NvBool bIsMulticast
+)
+{
+    NvBool bIsSupported;
+
+    switch(pageSize)
+    {
+        case RM_PAGE_SIZE_2M:
+            bIsSupported = !bIsMulticast;
+            break;
+        case RM_PAGE_SIZE_512M:
+        case RM_PAGE_SIZE_256G:
+            bIsSupported = NV_TRUE;
+            break;
+        default:
+            bIsSupported = NV_FALSE;
+            break;
+    }
+
+    return bIsSupported;
 }

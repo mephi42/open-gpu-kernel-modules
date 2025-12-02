@@ -174,7 +174,6 @@ namespace DisplayPort
             bool bDP2XPreferNonDSCForLowPClk;
             bool bSkipCableIdCheck;
             bool bAllocateManualTimeslots;
-            bool bSkipResetMSTMBeforeLt;
         }_WARFlags;
 
         _WARFlags WARFlags;

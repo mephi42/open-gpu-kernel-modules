@@ -3655,4 +3655,47 @@ typedef struct NV0073_CTRL_STUFF_DUMMY_SYMBOL_WAR_PARAMS {
 
 #define NV0073_CTRL_CMD_STUFF_DUMMY_SYMBOL_WAR (0x73138eU) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_DP_INTERFACE_ID << 8) | NV0073_CTRL_STUFF_DUMMY_SYMBOL_WAR_PARAMS_MESSAGE_ID" */
 
+/*
+ * NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO
+ *
+ * Get USB4 DP_IN Adapter number from RM
+ *
+ *   subDeviceInstance
+ *     This parameter specifies the subdevice instance within the
+ *     NV04_DISPLAY_COMMON parent device to which the operation should be
+ *     directed. This parameter must specify a value between zero and the
+ *     total number of subdevices within the parent device.  This parameter
+ *     should be set to zero for default behavior.
+ *   displayId
+ *     This parameter specifies the ID of the display for which the control
+ *     is being issued.  The display ID must be valid.
+ *   driverId
+ *     This parameter uniquely identifies the host router in the system.
+ *   dpInAdapterNumber
+ *     DP_IN adapter number that belongs to the displayId
+ *   topologyId
+ *     Unique number to identify the USB4 router topology
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_INVALID_PARAM_STRUCT
+ *   NV_ERR_INVALID_ARGUMENT
+ */
+#define NV0073_CTRL_DP_USB_TOPOLOGY_ID_LENGTH  5
+
+typedef struct NV0073_CTRL_DP_USB4_INFO {
+    NvU8 driverId;
+    NvU8 dpInAdapterNumber;
+    NvU8 topologyId[NV0073_CTRL_DP_USB_TOPOLOGY_ID_LENGTH];
+} NV0073_CTRL_DP_USB4_INFO;
+
+#define NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO_PARAMS_MESSAGE_ID (0x8FU)
+
+typedef struct NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO_PARAMS {
+    NvU32                    subDeviceInstance;
+    NvU32                    displayId;
+    NV0073_CTRL_DP_USB4_INFO usb4Info;
+} NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO_PARAMS;
+
+#define NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO (0x73138fU) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_DP_INTERFACE_ID << 8) | NV0073_CTRL_CMD_GET_USB_DPIN_ADAPTER_INFO_PARAMS_MESSAGE_ID" */
+
 /* _ctrl0073dp_h_ */

@@ -724,39 +724,6 @@ clTeardown_IMPL(
     }
 }
 
-NV_STATUS
-subdeviceCtrlCmdBusGetBFD_IMPL
-(
-    Subdevice *pSubdevice,
-    NV2080_CTRL_BUS_GET_BFD_PARAMSARR *pBusGetBFDParams
-)
-{
-    OBJSYS *pSys = SYS_GET_INSTANCE();
-    OBJCL  *pCl = SYS_GET_CL(pSys);
-    BUSTOPOLOGYINFO *pBusTopologyInfo = pCl->pBusTopologyInfo;
-    NvU32 i = 0;
-
-    while(pBusTopologyInfo && i < 32)
-    {
-        pBusGetBFDParams->params[i].valid    = NV_TRUE;
-        pBusGetBFDParams->params[i].deviceID = pBusTopologyInfo->busInfo.deviceID;
-        pBusGetBFDParams->params[i].vendorID = pBusTopologyInfo->busInfo.vendorID;
-        pBusGetBFDParams->params[i].domain   = pBusTopologyInfo->domain;
-        pBusGetBFDParams->params[i].bus      = (NvU16)pBusTopologyInfo->bus;
-        pBusGetBFDParams->params[i].device   = (NvU16)pBusTopologyInfo->device;
-        pBusGetBFDParams->params[i].function = (NvU8)pBusTopologyInfo->func;
-        i++;
-        pBusTopologyInfo = pBusTopologyInfo->next;
-    }
-    if(i < 32)
-    {
-        pBusGetBFDParams->params[i].valid = NV_FALSE;
-    }
-
-    pBusTopologyInfo = pCl->pBusTopologyInfo;
-    return NV_OK;
-}
-
 void clSyncWithGsp_IMPL(OBJCL *pCl, GspSystemInfo *pGSI)
 {
     NvU32 idx = 0;

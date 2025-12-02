@@ -211,11 +211,14 @@ _sysmemscrubQueueProcessCompletedEntries(void *pArg)
 
     // queue work to run it outside interrupt context
     NV_ASSERT_OR_RETURN_VOID(
-        osQueueWorkItem(pSysmemScrubber->pGpu, _sysmemscrubProcessCompletedEntriesCb, pWorkerParams,
-                        OS_QUEUE_WORKITEM_FLAGS_DONT_FREE_PARAMS |
-                        OS_QUEUE_WORKITEM_FLAGS_FALLBACK_TO_DPC |
-                        OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE |
-                        OS_QUEUE_WORKITEM_FLAGS_FULL_GPU_SANITY) == NV_OK);
+        osQueueWorkItem(pSysmemScrubber->pGpu,
+                        _sysmemscrubProcessCompletedEntriesCb,
+                        pWorkerParams,
+                        (OsQueueWorkItemFlags){
+                            .bDontFreeParams = NV_TRUE,
+                            .bFallbackToDpc = NV_TRUE,
+                            .bLockGpuGroupDevice = NV_TRUE,
+                            .bFullGpuSanity = NV_TRUE}) == NV_OK);
 
     portAtomicSetU32(&pWorkerParams->bWorkerQueued, NV_TRUE);
     portAtomicIncrementU32(&pWorkerParams->refCount);

@@ -153,6 +153,7 @@ typedef NvU8 FLCN_STATUS;
 #define FLCN_ERR_VPR_APP_VPR_IS_ALREADY_ENABLED                            (0x62U)
 #define FLCN_ERR_VPR_APP_UNEXPECTEDLY_RUNNING_ON_RISCV                     (0x63U)
 #define FLCN_ERR_INVALID_SR_CONFIGURATION                                  (0x64U)
+#define FLCN_ERR_VPR_CMD_NOT_SUPPORTED                                     (0x65U)
 
 // Clocks Errors
 #define FLCN_ERR_CYCLE_DETECTED                                            (0x70U)
@@ -242,6 +243,7 @@ typedef NvU8 FLCN_STATUS;
 #define FLCN_ERR_HS_SWKG_INVALID_SIGNATURE                                 (0xD2U)
 #define FLCN_ERR_HS_SCP_LIB_DMHASH_FAILED                                  (0xD3U)
 #define FLCN_ERR_HS_SCP_LIB_AESKDF_FAILED                                  (0xD4U)
+#define FLCN_ERR_INSUFFICIENT_NOPS                                         (0xD5U)
 
 //
 // BAR0/CSB Priv Read/Write Error Handling Defines

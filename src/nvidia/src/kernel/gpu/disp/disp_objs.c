@@ -446,6 +446,8 @@ dispapiControl_IMPL
     RmCtrlParams     *pRmCtrlParams = pParams->pLegacyParams;
     OBJGPU           *pGpu          = pGpuResource->pGpu;
 
+    NvU32 prevGpuInst = gpumgrSetCurrentGpuInstance(pGpu->gpuInstance);
+
     NV_PRINTF(LEVEL_INFO, "class: 0x%x cmd 0x%x\n",
               RES_GET_EXT_CLASS_ID(pDisplayApi),
               pRmCtrlParams->cmd);
@@ -471,6 +473,8 @@ dispapiControl_IMPL
     {
         bitVectorClrAll(&pIntr->helperEngineMask);
     }
+
+    gpumgrSetCurrentGpuInstance(prevGpuInst);
 
     return status;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,12 +25,12 @@
 #if defined(NV_DRM_AVAILABLE)
 
 #include "nvidia-drm-priv.h"
-#include "nvidia-drm-ioctl.h"
 #include "nvidia-drm-fb.h"
 #include "nvidia-drm-utils.h"
 #include "nvidia-drm-gem.h"
 #include "nvidia-drm-helper.h"
 #include "nvidia-drm-format.h"
+#include "nv_drm_common_ioctl.h"
 
 #include <drm/drm_crtc_helper.h>
 

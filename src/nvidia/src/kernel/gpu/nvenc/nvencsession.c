@@ -442,8 +442,9 @@ _gpuNvEncSessionDataProcessingCallback(OBJGPU *pGpu, void *data)
         status = osQueueWorkItem(pGpu,
             _gpuNvEncSessionDataProcessingWorkItem,
             NULL,
-            OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA |
-                OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE);
+            (OsQueueWorkItemFlags){
+                .bLockSema = NV_TRUE,
+                .bLockGpuGroupDevice = NV_TRUE});
         if (status != NV_OK)
         {
             NV_PRINTF(LEVEL_ERROR,

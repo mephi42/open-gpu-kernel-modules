@@ -348,19 +348,6 @@ typedef enum
     UVM_VA_BLOCK_TRANSFER_MODE_COPY = 2
 } uvm_va_block_transfer_mode_t;
 
-struct uvm_reverse_map_struct
-{
-    // VA block where the VA region of this Phys/DMA -> Virt translation
-    // belongs to
-    uvm_va_block_t             *va_block;
-
-    // VA block region covered by this translation
-    uvm_va_block_region_t         region;
-
-    // Processor the physical memory range belongs to
-    uvm_processor_id_t             owner;
-};
-
 typedef enum
 {
     UVM_SERVICE_OPERATION_REPLAYABLE_FAULTS,

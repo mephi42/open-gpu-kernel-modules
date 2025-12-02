@@ -83,33 +83,40 @@
 
 #define NV_DP2X_REGKEY_VCONN_SOURCE_UNKNOWN_WAR         "DP2X_VCONN_SOURCE_UNKNOWN_WAR"
 
+#define NV_DP2X_REGKEY_DISABLE_WATERMARK_CACHING        "DP2X_DISABLE_WATERMARK_CACHING"
+
 #define NV_DP2X_REGKEY_DISABLE_EFF_BPP_SST_8b10b        "DP2X_REGKEY_DISABLE_EFF_BPP_SST_8b10b"
 
 //
 // Bug 4388987 : This regkey will disable reading PCON caps for MST.
 //
-#define NV_DP_REGKEY_MST_PCON_CAPS_READ_DISABLED                  "DP_BUG_4388987_WAR"
-#define NV_DP_REGKEY_DISABLE_TUNNEL_BW_ALLOCATION                 "DP_DISABLE_TUNNEL_BW_ALLOCATION"
+#define NV_DP_REGKEY_MST_PCON_CAPS_READ_DISABLED    "DP_BUG_4388987_WAR"
+#define NV_DP_REGKEY_DISABLE_TUNNEL_BW_ALLOCATION   "DP_DISABLE_TUNNEL_BW_ALLOCATION"
 
-#define NV_DP_REGKEY_DISABLE_AVOID_HBR3_WAR                       "DP_DISABLE_AVOID_HBR3_WAR"
+#define NV_DP_REGKEY_DISABLE_AVOID_HBR3_WAR         "DP_DISABLE_AVOID_HBR3_WAR"
 
 // Bug 4793112 : On eDP panel, do not cache source OUI if it reads zero
-#define NV_DP_REGKEY_SKIP_ZERO_OUI_CACHE                          "DP_SKIP_ZERO_OUI_CACHE"
+#define NV_DP_REGKEY_SKIP_ZERO_OUI_CACHE            "DP_SKIP_ZERO_OUI_CACHE"
 
-#define NV_DP_REGKEY_ENABLE_FIX_FOR_5147205                       "DP_ENABLE_5147205_FIX"
+#define NV_DP_REGKEY_ENABLE_FIX_FOR_5147205         "DP_ENABLE_5147205_FIX"
 // Bug 5088957 : Force head shutdown in DpLib
-#define NV_DP_REGKEY_FORCE_HEAD_SHUTDOWN                          "DP_WAR_5088957"
+#define NV_DP_REGKEY_FORCE_HEAD_SHUTDOWN            "DP_WAR_5088957"
+
+// Use max DSC compression for MST topologies
+#define NV_DP_REGKEY_USE_MAX_DSC_COMPRESSION_MST   "DP_USE_MAX_DSC_COMPRESSION_MST"
 
 // This regkey forces devID to be exposed to vendors via DPCD 0x309 for DSC-enabled SKUs.
-#define NV_DP_REGKEY_EXPOSE_DSC_DEVID_WAR                         "DP_DSC_DEVID_WAR"
+#define NV_DP_REGKEY_EXPOSE_DSC_DEVID_WAR           "DP_DSC_DEVID_WAR"
 
-// This regkey ensures DPLib takes into account Displayport++ supports HDMI.
-#define NV_DP_REGKEY_HDMI_ON_DP_PLUS_PLUS                         "HDMI_ON_DP_PLUS_PLUS"
+#define NV_DP_REGKEY_ENABLE_CQA_STATS_COLLECTION    "DP_ENABLE_CQA_STATS_COLLECTION"
+
+#define NV_DP_REGKEY_IGNORE_CAPS_AND_FORCE_HIGHEST_LC  "DP_IGNORE_CAPS_AND_FORCE_HIGHEST_LC_WAR"
 
 // This regkey ensures DP IMP takes DP tunnelling BW into account while calculating DSC BPP
 #define NV_DP_REGKEY_OPTIMIZE_DSC_BPP_FOR_TUNNELLING_BW            "OPTIMIZE_DSC_BPP_FOR_TUNNELLING_BW"
 
-#define NV_DP_REGKEY_IGNORE_CAPS_AND_FORCE_HIGHEST_LC             "DP_IGNORE_CAPS_AND_FORCE_HIGHEST_LC_WAR"
+// This regkey disables GR-3336 that disables minimizing link config if it is 128b/132b.
+#define NV_DP_REGKEY_ENABLE_128b132b_DSC_LNK_CFG_REDUCTION        "ENABLE_128b132b_DSC_LNK_CFG_REDUCTION"
 
 //
 // Data Base used to store all the regkey values.
@@ -145,6 +152,7 @@ struct DP_REGKEY_DATABASE
     NvU32 supportInternalUhbrOnFpga;
     bool  bIgnoreCableIdCaps;
     bool  bDisableEffBppSST8b10b;
+    bool  bDisableWatermarkCaching;
     bool  bMSTPCONCapsReadDisabled;
     bool  bForceDisableTunnelBwAllocation;
     bool  bDownspreadDisabled;
@@ -154,9 +162,11 @@ struct DP_REGKEY_DATABASE
     bool  bEnable5147205Fix;
     bool  bForceHeadShutdown;
     bool  bEnableDevId;
-    bool  bHDMIOnDPPlusPlus;
+    bool  bEnableCqaStatsCollection;
     bool  bIgnoreCapsAndForceHighestLc;
     bool  bOptimizeDscBppForTunnellingBw;
+    bool  bEnable128b132bDSCLnkCfgReduction;
+    bool  bUseMaxDSCCompressionMST;
 };
 
 extern struct DP_REGKEY_DATABASE dpRegkeyDatabase;

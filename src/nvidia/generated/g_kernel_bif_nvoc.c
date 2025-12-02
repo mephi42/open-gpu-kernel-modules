@@ -225,7 +225,7 @@ void __nvoc_init_dataField_KernelBif(KernelBif *pThis, GpuHalspecOwner *pGpuhals
     PORT_UNREFERENCED_VARIABLE(rmVariantHal_HalVarIdx);
 
     // NVOC Property Hal field -- PDB_PROP_KBIF_IS_MISSING
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->setProperty(pThis, PDB_PROP_KBIF_IS_MISSING, NV_TRUE);
     }
@@ -282,7 +282,7 @@ void __nvoc_init_dataField_KernelBif(KernelBif *pThis, GpuHalspecOwner *pGpuhals
     }
 
     // NVOC Property Hal field -- PDB_PROP_KBIF_P2P_READS_DISABLED
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->setProperty(pThis, PDB_PROP_KBIF_P2P_READS_DISABLED, NV_TRUE);
     }
@@ -293,7 +293,7 @@ void __nvoc_init_dataField_KernelBif(KernelBif *pThis, GpuHalspecOwner *pGpuhals
     }
 
     // NVOC Property Hal field -- PDB_PROP_KBIF_P2P_WRITES_DISABLED
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->setProperty(pThis, PDB_PROP_KBIF_P2P_WRITES_DISABLED, NV_TRUE);
     }
@@ -391,7 +391,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDestruct -- halified (2 hals) override (engstate) base (engstate) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDestruct__ = &kbifDestruct_b3696a;
     }
@@ -422,7 +422,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifSavePcieConfigRegisters -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifSavePcieConfigRegisters__ = &kbifSavePcieConfigRegisters_56cd7a;
     }
@@ -436,7 +436,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifRestorePcieConfigRegisters -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifRestorePcieConfigRegisters__ = &kbifRestorePcieConfigRegisters_56cd7a;
     }
@@ -483,7 +483,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifGetXveStatusBits -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifGetXveStatusBits__ = &kbifGetXveStatusBits_56cd7a;
     }
@@ -502,7 +502,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifClearXveStatus -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifClearXveStatus__ = &kbifClearXveStatus_56cd7a;
     }
@@ -521,7 +521,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifGetXveAerBits -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifGetXveAerBits__ = &kbifGetXveAerBits_56cd7a;
     }
@@ -540,7 +540,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifClearXveAer -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifClearXveAer__ = &kbifClearXveAer_56cd7a;
     }
@@ -579,7 +579,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifRearmMSI -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifRearmMSI__ = &kbifRearmMSI_b3696a;
     }
@@ -608,7 +608,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifIsMSIXEnabledInHW -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifIsMSIXEnabledInHW__ = &kbifIsMSIXEnabledInHW_3dd2c9;
     }
@@ -643,7 +643,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifIs3dController -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifIs3dController__ = &kbifIs3dController_3dd2c9;
     }
@@ -689,7 +689,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifPcieConfigEnableRelaxedOrdering -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifPcieConfigEnableRelaxedOrdering__ = &kbifPcieConfigEnableRelaxedOrdering_b3696a;
     }
@@ -708,7 +708,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifPcieConfigDisableRelaxedOrdering -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifPcieConfigDisableRelaxedOrdering__ = &kbifPcieConfigDisableRelaxedOrdering_b3696a;
     }
@@ -745,7 +745,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifEnableNoSnoop -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifEnableNoSnoop__ = &kbifEnableNoSnoop_46f6a7;
     }
@@ -764,7 +764,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDisableP2PTransactions -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDisableP2PTransactions__ = &kbifDisableP2PTransactions_b3696a;
     }
@@ -784,7 +784,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifGetVFSparseMmapRegions -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifGetVFSparseMmapRegions__ = &kbifGetVFSparseMmapRegions_46f6a7;
     }
@@ -906,7 +906,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifGetMSIXTableVectorControlSize -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifGetMSIXTableVectorControlSize__ = &kbifGetMSIXTableVectorControlSize_b3787c;
     }
@@ -963,11 +963,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifGetBusOptionsAddr -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
-    {
-        pThis->__kbifGetBusOptionsAddr__ = &kbifGetBusOptionsAddr_46f6a7;
-    }
-    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x01f0ffe0UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x01f0ffe0UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 */ 
     {
         pThis->__kbifGetBusOptionsAddr__ = &kbifGetBusOptionsAddr_GM107;
     }
@@ -976,9 +972,15 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     {
         pThis->__kbifGetBusOptionsAddr__ = &kbifGetBusOptionsAddr_GB100;
     }
-    else
+    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x90000000UL) ) ||
+             ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000fe0UL) )) /* ChipHal: GH100 | GB10B | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C */ 
     {
         pThis->__kbifGetBusOptionsAddr__ = &kbifGetBusOptionsAddr_GH100;
+    }
+    // default
+    else
+    {
+        pThis->__kbifGetBusOptionsAddr__ = &kbifGetBusOptionsAddr_46f6a7;
     }
 
     // kbifPreOsGlobalErotGrantRequest -- halified (2 hals) body
@@ -1021,7 +1023,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDisableSysmemAccess -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDisableSysmemAccess__ = &kbifDisableSysmemAccess_46f6a7;
     }
@@ -1232,7 +1234,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifInit -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifInit__ = &kbifInit_46f6a7;
     }
@@ -1246,7 +1248,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifPrepareForFullChipReset -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifPrepareForFullChipReset__ = &kbifPrepareForFullChipReset_b3696a;
     }
@@ -1287,7 +1289,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDoFullChipReset -- halified (4 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDoFullChipReset__ = &kbifDoFullChipReset_56cd7a;
     }
@@ -1316,8 +1318,8 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
         pThis->__kbifResetHostEngines__ = &kbifResetHostEngines_b3696a;
     }
 
-    // kbifGetValidEnginesToReset -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    // kbifGetValidEnginesToReset -- halified (4 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifGetValidEnginesToReset__ = &kbifGetValidEnginesToReset_15a734;
     }
@@ -1325,9 +1327,13 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     {
         pThis->__kbifGetValidEnginesToReset__ = &kbifGetValidEnginesToReset_TU102;
     }
-    else
+    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x11f0fc00UL) )) /* ChipHal: GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 */ 
     {
         pThis->__kbifGetValidEnginesToReset__ = &kbifGetValidEnginesToReset_GA100;
+    }
+    else
+    {
+        pThis->__kbifGetValidEnginesToReset__ = &kbifGetValidEnginesToReset_GB100;
     }
 
     // kbifGetValidDeviceEnginesToReset -- halified (2 hals) body
@@ -1404,7 +1410,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDoSecondaryBusResetOrFunctionLevelReset -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDoSecondaryBusResetOrFunctionLevelReset__ = &kbifDoSecondaryBusResetOrFunctionLevelReset_46f6a7;
     }
@@ -1414,7 +1420,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     }
 
     // kbifDoSecondaryBusHotReset -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__kbifDoSecondaryBusHotReset__ = &kbifDoSecondaryBusHotReset_56cd7a;
     }
@@ -1426,7 +1432,7 @@ static void __nvoc_init_funcTable_KernelBif_1(KernelBif *pThis, GpuHalspecOwner 
     {
         pThis->__kbifDoSecondaryBusHotReset__ = &kbifDoSecondaryBusHotReset_GH100;
     }
-} // End __nvoc_init_funcTable_KernelBif_1 with approximately 203 basic block(s).
+} // End __nvoc_init_funcTable_KernelBif_1 with approximately 204 basic block(s).
 
 
 // Initialize vtable(s) for 80 virtual method(s).
@@ -1464,10 +1470,19 @@ NV_STATUS __nvoc_objCreate_KernelBif(KernelBif **ppThis, Dynamic *pParent, NvU32
     GpuHalspecOwner *pGpuhalspecowner;
     RmHalspecOwner *pRmhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(KernelBif), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(KernelBif));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(KernelBif));
@@ -1475,7 +1490,7 @@ NV_STATUS __nvoc_objCreate_KernelBif(KernelBif **ppThis, Dynamic *pParent, NvU32
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelBif_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -1488,13 +1503,15 @@ NV_STATUS __nvoc_objCreate_KernelBif(KernelBif **ppThis, Dynamic *pParent, NvU32
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
         pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelBif_cleanup);
     if ((pRmhalspecowner = dynamicCast(pParent, RmHalspecOwner)) == NULL)
         pRmhalspecowner = objFindAncestorOfType(RmHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelBif_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__KernelBif(pThis, pGpuhalspecowner, pRmhalspecowner);
     status = __nvoc_ctor_KernelBif(pThis, pGpuhalspecowner, pRmhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_KernelBif_cleanup;
@@ -1502,24 +1519,28 @@ NV_STATUS __nvoc_objCreate_KernelBif(KernelBif **ppThis, Dynamic *pParent, NvU32
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_KernelBif_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(KernelBif));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

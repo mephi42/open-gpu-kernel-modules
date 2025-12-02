@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,7 +33,7 @@
 #include <drm/drm_drv.h>
 
 #include "nvidia-drm-gem-dma-buf.h"
-#include "nvidia-drm-ioctl.h"
+#include "nv_drm_common_ioctl.h"
 
 #include "linux/dma-buf.h"
 

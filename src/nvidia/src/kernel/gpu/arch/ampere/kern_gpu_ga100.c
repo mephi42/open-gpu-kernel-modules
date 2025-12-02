@@ -29,7 +29,6 @@
 #include "published/ampere/ga100/dev_fb.h"
 #include "published/ampere/ga100/dev_vm.h"
 #include "published/ampere/ga100/dev_fuse.h"
-#include "published/ampere/ga100/dev_top.h"
 #include "virtualization/hypervisor/hypervisor.h"
 
 /*!

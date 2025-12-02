@@ -161,8 +161,6 @@ void nvSetDVCEvo(NVDispEvoPtr pDispEvo,
                  const NvU32 head,
                  NvS32 dvc,
                  NVEvoUpdateState *updateState);
-void nvSetImageSharpeningEvo(NVDispEvoRec *pDispEvo, const NvU32 head,
-                             const NvU32 value, NVEvoUpdateState *updateState);
 
 NvBool nvLayerSetPositionEvo(
     NVDevEvoPtr pDevEvo,

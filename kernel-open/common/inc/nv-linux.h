@@ -102,17 +102,6 @@
 #include <linux/dma-buf.h>
 #endif
 
-#if defined(NV_DRM_AVAILABLE)
-#include <drm/drm_device.h>
-#include <drm/drm_drv.h>
-
-#if defined(NV_DRM_DRMP_H_PRESENT)
-#include <drm/drmP.h>
-#endif
-
-#include <drm/drm_gem.h>
-#endif /* NV_DRM_AVAILABLE */
-
 /* task and signal-related items */
 #include <linux/sched/signal.h>
 #include <linux/sched/task.h>
@@ -140,8 +129,6 @@
 #include <asm/pgtable.h>            /* pte bit definitions              */
 #include <asm/bitops.h>             /* __set_bit()                      */
 #include <linux/time.h>             /* FD_SET()                         */
-
-#include "nv-list-helpers.h"
 
 /*
  * Use current->cred->euid, instead of calling current_euid().
@@ -274,14 +261,8 @@ extern int nv_pat_mode;
             user_function, NULL, args)
 #endif
 
-#if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_RT_FULL)
-#define NV_CONFIG_PREEMPT_RT 1
-#endif
-
 #define NV_PAGE_COUNT(page) \
   ((unsigned int)page_count(page))
-#define NV_GET_PAGE_FLAGS(page_ptr) \
-  (NV_GET_PAGE_STRUCT(page_ptr->phys_addr)->flags)
 
 #if !defined(DEBUG) && defined(__GFP_NOWARN)
 #define NV_GFP_KERNEL (GFP_KERNEL | __GFP_NOWARN)
@@ -298,9 +279,9 @@ extern int nv_pat_mode;
  * such as Linux/x86-64; the alternative is to use an IOMMU such
  * as the one implemented with the K8 GART, if available.
  */
-#define NV_GFP_DMA32 (NV_GFP_KERNEL | GFP_DMA32)
+#define NV_GFP_DMA32 (GFP_DMA32)
 #else
-#define NV_GFP_DMA32 (NV_GFP_KERNEL)
+#define NV_GFP_DMA32 0
 #endif
 
 #if defined(NVCPU_AARCH64) || defined(NVCPU_RISCV64)
@@ -388,11 +369,7 @@ static inline void nv_vfree(void *ptr, NvU64 size)
 
 static inline void *nv_ioremap(NvU64 phys, NvU64 size)
 {
-#if IS_ENABLED(CONFIG_INTEL_TDX_GUEST) && defined(NV_IOREMAP_DRIVER_HARDENED_PRESENT)
-    void *ptr = ioremap_driver_hardened(phys, size);
-#else
     void *ptr = ioremap(phys, size);
-#endif
     NV_MEMDBG_ADD(ptr, size);
     return ptr;
 }
@@ -405,9 +382,7 @@ static inline void *nv_ioremap_nocache(NvU64 phys, NvU64 size)
 static inline void *nv_ioremap_cache(NvU64 phys, NvU64 size)
 {
     void *ptr = NULL;
-#if IS_ENABLED(CONFIG_INTEL_TDX_GUEST) && defined(NV_IOREMAP_CACHE_SHARED_PRESENT)
-    ptr = ioremap_cache_shared(phys, size);
-#elif defined(NV_IOREMAP_CACHE_PRESENT)
+#if defined(NV_IOREMAP_CACHE_PRESENT)
     ptr = ioremap_cache(phys, size);
 #else
     return nv_ioremap(phys, size);
@@ -421,9 +396,7 @@ static inline void *nv_ioremap_cache(NvU64 phys, NvU64 size)
 static inline void *nv_ioremap_wc(NvU64 phys, NvU64 size)
 {
     void *ptr = NULL;
-#if IS_ENABLED(CONFIG_INTEL_TDX_GUEST) && defined(NV_IOREMAP_DRIVER_HARDENED_WC_PRESENT)
-    ptr = ioremap_driver_hardened_wc(phys, size);
-#elif defined(NV_IOREMAP_WC_PRESENT)
+#if defined(NV_IOREMAP_WC_PRESENT)
     ptr = ioremap_wc(phys, size);
 #else
     return nv_ioremap_nocache(phys, size);
@@ -465,13 +438,7 @@ static NvBool nv_numa_node_has_memory(int node_id)
         NV_MEMDBG_ADD(ptr, size);             \
     }
 
-#if defined(__GFP_RETRY_MAYFAIL)
 #define NV_GFP_NO_OOM (NV_GFP_KERNEL | __GFP_RETRY_MAYFAIL)
-#elif defined(__GFP_NORETRY)
-#define NV_GFP_NO_OOM (NV_GFP_KERNEL | __GFP_NORETRY)
-#else
-#define NV_GFP_NO_OOM (NV_GFP_KERNEL)
-#endif
 
 #define NV_KMALLOC_NO_OOM(ptr, size) \
     { \
@@ -528,21 +495,11 @@ static inline pgprot_t nv_adjust_pgprot(pgprot_t vm_prot)
 #endif
 #endif
 
-#define NV_GET_CURRENT_PROCESS()        current->tgid
-#define NV_IN_ATOMIC()                  in_atomic()
-#define NV_COPY_TO_USER(to, from, n)    copy_to_user(to, from, n)
-#define NV_COPY_FROM_USER(to, from, n)  copy_from_user(to, from, n)
-
 #define NV_IS_SUSER()                   capable(CAP_SYS_ADMIN)
-#define NV_CLI()                        local_irq_disable()
-#define NV_SAVE_FLAGS(eflags)           local_save_flags(eflags)
-#define NV_RESTORE_FLAGS(eflags)        local_irq_restore(eflags)
-#define NV_MAY_SLEEP()                  (!irqs_disabled() && !in_interrupt() && !NV_IN_ATOMIC())
+#define NV_MAY_SLEEP()                  (!irqs_disabled() && !in_interrupt() && !in_atomic())
 #define NV_MODULE_PARAMETER(x)          module_param(x, int, 0)
 #define NV_MODULE_STRING_PARAMETER(x)   module_param(x, charp, 0)
 #undef  MODULE_PARM
-
-#define NV_NUM_CPUS()                   num_possible_cpus()
 
 #define NV_HAVE_MEMORY_ENCRYPT_DECRYPT 0
 
@@ -596,7 +553,6 @@ static inline dma_addr_t nv_phys_to_dma(struct device *dev, NvU64 pa)
 #endif
 }
 
-#define NV_GET_OFFSET_IN_PAGE(phys_page) offset_in_page(phys_page)
 #define NV_GET_PAGE_STRUCT(phys_page) virt_to_page(__va(phys_page))
 #define NV_VMA_PGOFF(vma)             ((vma)->vm_pgoff)
 #define NV_VMA_SIZE(vma)              ((vma)->vm_end - (vma)->vm_start)
@@ -709,13 +665,6 @@ static inline dma_addr_t nv_phys_to_dma(struct device *dev, NvU64 pa)
 
 #ifndef minor
 # define minor(x) MINOR(x)
-#endif
-
-#if !defined(PCI_COMMAND_SERR)
-#define PCI_COMMAND_SERR            0x100
-#endif
-#if !defined(PCI_COMMAND_INTX_DISABLE)
-#define PCI_COMMAND_INTX_DISABLE    0x400
 #endif
 
 #ifndef PCI_CAP_ID_EXP
@@ -983,6 +932,7 @@ typedef struct nv_alloc_s {
         NvBool unencrypted : 1;
         NvBool coherent    : 1;
         NvBool carveout    : 1;
+        NvBool pool        : 1;
     } flags;
     unsigned int   cache_type;
     unsigned int   num_pages;
@@ -1143,14 +1093,18 @@ typedef struct nv_dma_map_s {
          i++, sm = &dm->mapping.discontig.submaps[i])
 
 /*
- * On 4K ARM kernels, use max submap size a multiple of 64K to keep nv-p2p happy.
- * Despite 4K OS pages, we still use 64K P2P pages due to dependent modules still using 64K.
- * Instead of using (4G-4K), use max submap size as (4G-64K) since the mapped IOVA range
- * must be aligned at 64K boundary.
+ * On 4K ARM kernels, use max submap size a multiple of 2M to avoid breaking up 2M page size
+ *  sysmem allocations. 
+ *
+ * Instead of using (4G-4K), use max submap size as (4G-2M) since the mapped IOVA range
+ * must be aligned at 2M boundary.
+ *
+ * Bug 5401803: Tracks migrating away from making IOMMU mappings using submaps in favor of
+ * using sg_chain() to chain a single large scatterlist.
  */
 #if defined(CONFIG_ARM64_4K_PAGES)
 #define NV_DMA_U32_MAX_4K_PAGES           ((NvU32)((NV_U32_MAX >> PAGE_SHIFT) + 1))
-#define NV_DMA_SUBMAP_MAX_PAGES           ((NvU32)(NV_DMA_U32_MAX_4K_PAGES - 16))
+#define NV_DMA_SUBMAP_MAX_PAGES           ((NvU32)(NV_DMA_U32_MAX_4K_PAGES - 512))
 #else
 #define NV_DMA_SUBMAP_MAX_PAGES           ((NvU32)(NV_U32_MAX >> PAGE_SHIFT))
 #endif
@@ -1294,7 +1248,8 @@ struct nv_pci_tegra_devfreq_dev;
 typedef struct nv_linux_state_s {
     nv_state_t nv_state;
 
-    atomic_t usage_count;
+    atomic_t   usage_count;
+
     NvU32    suspend_count;
 
     struct device  *dev;
@@ -1470,6 +1425,8 @@ typedef struct nv_linux_state_s {
 
     int (*devfreq_suspend)(struct device *dev);
     int (*devfreq_resume)(struct device *dev);
+    int (*devfreq_enable_boost)(struct device *dev, unsigned int duration);
+    int (*devfreq_disable_boost)(struct device *dev);
 #endif
 } nv_linux_state_t;
 
@@ -1640,6 +1597,7 @@ extern NvU32 NVreg_EnableUserNUMAManagement;
 extern NvU32 NVreg_RegisterPCIDriver;
 extern NvU32 NVreg_RegisterPlatformDeviceDriver;
 extern NvU32 NVreg_EnableResizableBar;
+extern NvU32 NVreg_TegraGpuPgMask;
 extern NvU32 NVreg_EnableNonblockingOpen;
 
 extern NvU32 num_probed_nv_devices;
@@ -1697,10 +1655,7 @@ static inline NvU32 nv_default_irq_flags(nv_state_t *nv)
     return flags;
 }
 
-#define MODULE_BASE_NAME "nvidia"
-#define MODULE_INSTANCE_NUMBER 0
-#define MODULE_INSTANCE_STRING ""
-#define MODULE_NAME MODULE_BASE_NAME MODULE_INSTANCE_STRING
+#define MODULE_NAME "nvidia"
 
 NvS32 nv_request_soc_irq(nv_linux_state_t *, NvU32, nv_soc_irq_type_t, NvU32, NvU32, const char*);
 NV_STATUS nv_imp_icc_get(nv_state_t *nv);

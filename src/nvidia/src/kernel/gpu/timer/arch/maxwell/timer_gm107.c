@@ -79,9 +79,6 @@ tmrSetCurrentTime_GM107
     GPU_REG_WR32(pGpu, NV_PTIMER_TIME_1, NvU64_HI32(ns));
     GPU_REG_WR32(pGpu, NV_PTIMER_TIME_0, NvU64_LO32(ns));
 
-    // Mark that time has been initialized
-    pTmr->bInitialized = NV_TRUE;
-
     return NV_OK;
 }
 
@@ -278,6 +275,26 @@ tmrGetTimeEx_GM107
     return Time;
 }
 
+NvU32
+tmrGetTmrBaseAddr_GM107
+(
+    OBJGPU *pGpu,
+    OBJTMR *pTmr
+)
+{
+    return NV_PTIMER_TIME_0;
+}
+
+NvU32
+tmrGetNsecShiftMask_GM107
+(
+    OBJGPU *pGpu,
+    OBJTMR *pTmr
+)
+{
+    return DRF_SHIFTMASK(NV_PTIMER_TIME_0_NSEC);
+}
+
 //
 // For functions that only need a short delta of time elapsed (~ 4.29 seconds)
 // NOTE: Since it wraps around every 4.29 seconds, for general GetTime purposes,
@@ -298,7 +315,7 @@ tmrGetTimeLo_GM107
     // check if it's a stable TIME_0, otherwise, we just call a regular
     // tmrGetTime to handle all error book-keeping, resetting timer, etc.
     //
-    if ((lo & ~DRF_SHIFTMASK(NV_PTIMER_TIME_0_NSEC)) != 0)
+    if ((lo & ~tmrGetNsecShiftMask_HAL(pGpu, pTmr)) != 0)
     {
         // let tmrGetTime() handle all the mess..
         NV_PRINTF(LEVEL_WARNING,

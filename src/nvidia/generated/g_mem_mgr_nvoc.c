@@ -252,7 +252,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
     // Hal field -- bClientPageTablesPmaManaged
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xf1f0ffe0UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000fe6UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 | GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 | GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C | T234D | T264D */ 
     {
         pThis->bClientPageTablesPmaManaged = NV_TRUE;
     }
@@ -260,7 +260,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
     // Hal field -- bScanoutSysmem
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: GB10B | GB20B | GB20C | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: GB10B | GB20B | GB20C | T234D | T264D */ 
     {
         pThis->bScanoutSysmem = NV_TRUE;
     }
@@ -271,7 +271,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
     }
 
     // Hal field -- bDisallowSplitLowerMemory
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->bDisallowSplitLowerMemory = NV_TRUE;
     }
@@ -296,7 +296,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
     // Hal field -- bSysmemCompressionSupportDef
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: GB10B | GB20B | GB20C | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: GB10B | GB20B | GB20C | T234D | T264D */ 
     {
         pThis->bSysmemCompressionSupportDef = NV_TRUE;
     }
@@ -356,12 +356,10 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
         pThis->bPlatformFullyCoherent = NV_FALSE;
     }
 
-    pThis->bEnableDynamicGranularityPageArrays = NV_FALSE;
-
     // Hal field -- bAllowNoncontiguousAllocation
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xf1f0ffe0UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000fe6UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 | GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 | GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C | T234D | T264D */ 
     {
         pThis->bAllowNoncontiguousAllocation = NV_TRUE;
     }
@@ -432,7 +430,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
     {
         pThis->bMonitoredFenceSupported = NV_TRUE;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->bMonitoredFenceSupported = NV_FALSE;
     }
@@ -444,7 +442,7 @@ void __nvoc_init_dataField_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *
         pThis->b64BitSemaphoresSupported = NV_TRUE;
     }
     else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000007e0UL) ) ||
-             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | T234D | T264D */ 
+             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | T234D | T264D */ 
     {
         pThis->b64BitSemaphoresSupported = NV_FALSE;
     }
@@ -512,7 +510,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     PORT_UNREFERENCED_VARIABLE(rmVariantHal_HalVarIdx);
 
     // memmgrDeterminePageSize -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrDeterminePageSize__ = &memmgrDeterminePageSize_b845ef;
     }
@@ -522,7 +520,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrFreeHwResources -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrFreeHwResources__ = &memmgrFreeHwResources_46f6a7;
     }
@@ -533,7 +531,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrCreateHeap -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrCreateHeap__ = &memmgrCreateHeap_56cd7a;
     }
@@ -543,7 +541,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrInitFbRegions -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrInitFbRegions__ = &memmgrInitFbRegions_56cd7a;
     }
@@ -578,7 +576,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrScrubHandlePostSchedulingEnable -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrScrubHandlePostSchedulingEnable__ = &memmgrScrubHandlePostSchedulingEnable_56cd7a;
     }
@@ -588,7 +586,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrScrubHandlePreSchedulingDisable -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrScrubHandlePreSchedulingDisable__ = &memmgrScrubHandlePreSchedulingDisable_56cd7a;
     }
@@ -598,7 +596,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrMemUtilsChannelInitialize -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrMemUtilsChannelInitialize__ = &memmgrMemUtilsChannelInitialize_56cd7a;
     }
@@ -608,7 +606,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrMemUtilsCopyEngineInitialize -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrMemUtilsCopyEngineInitialize__ = &memmgrMemUtilsCopyEngineInitialize_56cd7a;
     }
@@ -630,7 +628,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrMemUtilsGetCopyEngineClass -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrMemUtilsGetCopyEngineClass__ = &memmgrMemUtilsGetCopyEngineClass_56cd7a;
     }
@@ -640,7 +638,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrMemUtilsCreateMemoryAlias -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrMemUtilsCreateMemoryAlias__ = &memmgrMemUtilsCreateMemoryAlias_56cd7a;
     }
@@ -661,7 +659,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrAllocHal -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrAllocHal__ = &memmgrAllocHal_92bfc3;
     }
@@ -671,7 +669,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrFreeHal -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrFreeHal__ = &memmgrFreeHal_92bfc3;
     }
@@ -681,7 +679,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetBankPlacementData -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetBankPlacementData__ = &memmgrGetBankPlacementData_46f6a7;
     }
@@ -691,7 +689,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrDirtyForPmTest -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrDirtyForPmTest__ = &memmgrDirtyForPmTest_b3696a;
     }
@@ -701,7 +699,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetReservedHeapSizeMb -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetReservedHeapSizeMb__ = &memmgrGetReservedHeapSizeMb_4a4dee;
     }
@@ -711,7 +709,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrAllocDetermineAlignment -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrAllocDetermineAlignment__ = &memmgrAllocDetermineAlignment_5baef9;
     }
@@ -729,7 +727,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     {
         pThis->__memmgrGetMaxContextSize__ = &memmgrGetMaxContextSize_AD104;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetMaxContextSize__ = &memmgrGetMaxContextSize_4a4dee;
     }
@@ -751,7 +749,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrHandleSizeOverrides -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrHandleSizeOverrides__ = &memmgrHandleSizeOverrides_b3696a;
     }
@@ -761,7 +759,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrFinishHandleSizeOverrides -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrFinishHandleSizeOverrides__ = &memmgrFinishHandleSizeOverrides_56cd7a;
     }
@@ -771,7 +769,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetBAR1InfoForDevice -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetBAR1InfoForDevice__ = &memmgrGetBAR1InfoForDevice_46f6a7;
     }
@@ -791,7 +789,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrScrubRegistryOverrides -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrScrubRegistryOverrides__ = &memmgrScrubRegistryOverrides_b3696a;
     }
@@ -805,7 +803,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetRsvdSizeForSr -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetRsvdSizeForSr__ = &memmgrGetRsvdSizeForSr_4a4dee;
     }
@@ -815,7 +813,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrComparePhysicalAddresses -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrComparePhysicalAddresses__ = &memmgrComparePhysicalAddresses_86b752;
     }
@@ -825,7 +823,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetInvalidOffset -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetInvalidOffset__ = &memmgrGetInvalidOffset_c732fb;
     }
@@ -835,7 +833,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetAddrSpaceSizeMB -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetAddrSpaceSizeMB__ = &memmgrGetAddrSpaceSizeMB_474d46;
     }
@@ -845,7 +843,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetUsableMemSizeMB -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetUsableMemSizeMB__ = &memmgrGetUsableMemSizeMB_13cd8d;
     }
@@ -855,7 +853,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrIsKindCompressible -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrIsKindCompressible__ = &memmgrIsKindCompressible_3dd2c9;
     }
@@ -865,7 +863,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetPteKindBl -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetPteKindBl__ = &memmgrGetPteKindBl_4a4dee;
     }
@@ -879,7 +877,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetPteKindPitch -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetPteKindPitch__ = &memmgrGetPteKindPitch_4a4dee;
     }
@@ -893,7 +891,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     {
         pThis->__memmgrChooseKindZ__ = &memmgrChooseKindZ_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrChooseKindZ__ = &memmgrChooseKindZ_474d46;
     }
@@ -911,7 +909,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     {
         pThis->__memmgrChooseKindCompressZ__ = &memmgrChooseKindCompressZ_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrChooseKindCompressZ__ = &memmgrChooseKindCompressZ_474d46;
     }
@@ -934,12 +932,24 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
         pThis->__memmgrChooseKindCompressC__ = &memmgrChooseKindCompressC_474d46;
     }
 
+    // memmgrGetPteKindGenericMemoryCompressible -- halified (2 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xf1f0ffe0UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000fe6UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 | GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C */ 
+    {
+        pThis->__memmgrGetPteKindGenericMemoryCompressible__ = &memmgrGetPteKindGenericMemoryCompressible_TU102;
+    }
+    // default
+    else
+    {
+        pThis->__memmgrGetPteKindGenericMemoryCompressible__ = &memmgrGetPteKindGenericMemoryCompressible_4a4dee;
+    }
+
     // memmgrGetUncompressedKind -- halified (4 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) )) /* ChipHal: GB20B | GB20C */ 
     {
         pThis->__memmgrGetUncompressedKind__ = &memmgrGetUncompressedKind_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetUncompressedKind__ = &memmgrGetUncompressedKind_474d46;
     }
@@ -957,7 +967,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     {
         pThis->__memmgrGetCompressedKind__ = &memmgrGetCompressedKind_GB20B;
     }
-    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    else if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetCompressedKind__ = &memmgrGetCompressedKind_d1515c;
     }
@@ -971,7 +981,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrChooseKind -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrChooseKind__ = &memmgrChooseKind_474d46;
     }
@@ -995,7 +1005,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetMessageKind -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetMessageKind__ = &memmgrGetMessageKind_4a4dee;
     }
@@ -1005,7 +1015,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetDefaultPteKindForNoHandle -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetDefaultPteKindForNoHandle__ = &memmgrGetDefaultPteKindForNoHandle_4a4dee;
     }
@@ -1016,7 +1026,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
 
     // memmgrGetFlaKind -- halified (2 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__memmgrGetFlaKind__ = &memmgrGetFlaKind_46f6a7;
     }
@@ -1025,7 +1035,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
         pThis->__memmgrGetFlaKind__ = &memmgrGetFlaKind_GA100;
     }
 
-    // memmgrIsMemDescSupportedByFla -- halified (3 hals) body
+    // memmgrIsMemDescSupportedByFla -- halified (3 hals)
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xe0000000UL) ) ||
         ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c06UL) )) /* ChipHal: GB100 | GB102 | GB10B | GB110 | GB112 | GB20B | GB20C */ 
     {
@@ -1042,8 +1052,24 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
         pThis->__memmgrIsMemDescSupportedByFla__ = &memmgrIsMemDescSupportedByFla_46f6a7;
     }
 
+    // memmgrIsValidFlaPageSize -- halified (3 hals) body
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x11f0fc00UL) )) /* ChipHal: GA100 | GA102 | GA103 | GA104 | GA106 | GA107 | AD102 | AD103 | AD104 | AD106 | AD107 | GH100 */ 
+    {
+        pThis->__memmgrIsValidFlaPageSize__ = &memmgrIsValidFlaPageSize_GA100;
+    }
+    else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0xe0000000UL) ) ||
+             ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000fe6UL) )) /* ChipHal: GB100 | GB102 | GB10B | GB110 | GB112 | GB202 | GB203 | GB205 | GB206 | GB207 | GB20B | GB20C */ 
+    {
+        pThis->__memmgrIsValidFlaPageSize__ = &memmgrIsValidFlaPageSize_GB100;
+    }
+    // default
+    else
+    {
+        pThis->__memmgrIsValidFlaPageSize__ = &memmgrIsValidFlaPageSize_3dd2c9;
+    }
+
     // memmgrGetHwPteKindFromSwPteKind -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetHwPteKindFromSwPteKind__ = &memmgrGetHwPteKindFromSwPteKind_6a0a80;
     }
@@ -1053,7 +1079,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetSwPteKindFromHwPteKind -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetSwPteKindFromHwPteKind__ = &memmgrGetSwPteKindFromHwPteKind_6a0a80;
     }
@@ -1063,7 +1089,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetPteKindForScrubber -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetPteKindForScrubber__ = &memmgrGetPteKindForScrubber_f2d351;
     }
@@ -1073,7 +1099,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetCtagOffsetFromParams -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetCtagOffsetFromParams__ = &memmgrGetCtagOffsetFromParams_1a0c2b;
     }
@@ -1083,7 +1109,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrSetCtagOffsetInParams -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrSetCtagOffsetInParams__ = &memmgrSetCtagOffsetInParams_b3696a;
     }
@@ -1103,7 +1129,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrScrubMapDoorbellRegion -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrScrubMapDoorbellRegion__ = &memmgrScrubMapDoorbellRegion_56cd7a;
     }
@@ -1113,7 +1139,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrSetAllocParameters -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrSetAllocParameters__ = &memmgrSetAllocParameters_dffb6f;
     }
@@ -1123,7 +1149,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrCalcReservedFbSpaceForUVM -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrCalcReservedFbSpaceForUVM__ = &memmgrCalcReservedFbSpaceForUVM_b3696a;
     }
@@ -1133,7 +1159,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrCalcReservedFbSpaceHal -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrCalcReservedFbSpaceHal__ = &memmgrCalcReservedFbSpaceHal_b3696a;
     }
@@ -1159,7 +1185,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
     else
     {
-        if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+        if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
         {
             pThis->__memmgrGetRunlistEntriesReservedFbSpace__ = &memmgrGetRunlistEntriesReservedFbSpace_4a4dee;
         }
@@ -1176,7 +1202,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
     else
     {
-        if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+        if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
         {
             pThis->__memmgrGetUserdReservedFbSpace__ = &memmgrGetUserdReservedFbSpace_4a4dee;
         }
@@ -1198,7 +1224,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrInitReservedMemory -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrInitReservedMemory__ = &memmgrInitReservedMemory_56cd7a;
     }
@@ -1208,7 +1234,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrPreInitReservedMemory -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrPreInitReservedMemory__ = &memmgrPreInitReservedMemory_56cd7a;
     }
@@ -1259,7 +1285,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
 
     // memmgrGetDisablePlcKind -- halified (2 hals) body
     if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+        ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__memmgrGetDisablePlcKind__ = &memmgrGetDisablePlcKind_b3696a;
     }
@@ -1274,7 +1300,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
         pThis->__memmgrEnableDynamicPageOfflining__ = &memmgrEnableDynamicPageOfflining_GA100;
     }
     else if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x000003e0UL) ) ||
-             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
+             ( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: TU102 | TU104 | TU106 | TU116 | TU117 | T234D | T264D */ 
     {
         pThis->__memmgrEnableDynamicPageOfflining__ = &memmgrEnableDynamicPageOfflining_b3696a;
     }
@@ -1284,7 +1310,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrSetMemDescPageSize -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrSetMemDescPageSize__ = &memmgrSetMemDescPageSize_56cd7a;
     }
@@ -1315,7 +1341,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetBlackListPagesForHeap -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetBlackListPagesForHeap__ = &memmgrGetBlackListPagesForHeap_46f6a7;
     }
@@ -1325,7 +1351,7 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     }
 
     // memmgrGetBlackListPages -- halified (3 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__memmgrGetBlackListPages__ = &memmgrGetBlackListPages_46f6a7;
     }
@@ -1502,13 +1528,13 @@ static void __nvoc_init_funcTable_MemoryManager_1(MemoryManager *pThis, GpuHalsp
     {
         pThis->__memmgrGetLocalizedMemorySupported__ = &memmgrGetLocalizedMemorySupported_3dd2c9;
     }
-} // End __nvoc_init_funcTable_MemoryManager_1 with approximately 193 basic block(s).
+} // End __nvoc_init_funcTable_MemoryManager_1 with approximately 198 basic block(s).
 
 
-// Initialize vtable(s) for 99 virtual method(s).
+// Initialize vtable(s) for 101 virtual method(s).
 void __nvoc_init_funcTable_MemoryManager(MemoryManager *pThis, GpuHalspecOwner *pGpuhalspecowner, RmHalspecOwner *pRmhalspecowner) {
 
-    // Initialize vtable(s) with 85 per-object function pointer(s).
+    // Initialize vtable(s) with 87 per-object function pointer(s).
     __nvoc_init_funcTable_MemoryManager_1(pThis, pGpuhalspecowner, pRmhalspecowner);
 }
 
@@ -1540,10 +1566,19 @@ NV_STATUS __nvoc_objCreate_MemoryManager(MemoryManager **ppThis, Dynamic *pParen
     GpuHalspecOwner *pGpuhalspecowner;
     RmHalspecOwner *pRmhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(MemoryManager), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(MemoryManager));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(MemoryManager));
@@ -1551,7 +1586,7 @@ NV_STATUS __nvoc_objCreate_MemoryManager(MemoryManager **ppThis, Dynamic *pParen
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
     // pParent must be a valid object that derives from a halspec owner class.
-    NV_ASSERT_OR_RETURN(pParent != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_MemoryManager_cleanup);
 
     // Link the child into the parent unless flagged not to do so.
     if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
@@ -1564,13 +1599,15 @@ NV_STATUS __nvoc_objCreate_MemoryManager(MemoryManager **ppThis, Dynamic *pParen
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
+    // HALs are defined by the parent or the first super class.
     if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
         pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_MemoryManager_cleanup);
     if ((pRmhalspecowner = dynamicCast(pParent, RmHalspecOwner)) == NULL)
         pRmhalspecowner = objFindAncestorOfType(RmHalspecOwner, pParent);
-    NV_ASSERT_OR_RETURN(pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pRmhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_MemoryManager_cleanup);
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__MemoryManager(pThis, pGpuhalspecowner, pRmhalspecowner);
     status = __nvoc_ctor_MemoryManager(pThis, pGpuhalspecowner, pRmhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_MemoryManager_cleanup;
@@ -1578,24 +1615,28 @@ NV_STATUS __nvoc_objCreate_MemoryManager(MemoryManager **ppThis, Dynamic *pParen
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_MemoryManager_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(MemoryManager));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

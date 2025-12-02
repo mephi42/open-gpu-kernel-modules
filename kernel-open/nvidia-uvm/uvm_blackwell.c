@@ -26,6 +26,7 @@
 #include "uvm_gpu.h"
 #include "uvm_mem.h"
 #include "uvm_blackwell_fault_buffer.h"
+#include "ctrl2080mc.h"
 
 void uvm_hal_blackwell_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
 {
@@ -81,6 +82,16 @@ void uvm_hal_blackwell_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
 
     parent_gpu->non_replayable_faults_supported = true;
 
+    parent_gpu->access_counters_serialize_clear_ops_by_type = parent_gpu->rm_info.accessCntrBufferCount == 2;
+
+    // TODO: Bug 5262806: Remove this WAR once the bug is fixed.
+    // Before this override, accessCntrBufferCount has only been used to
+    // determine the support for access counters in uvm_gpu.c and the statement
+    // above. After the HAL init, it is used for buffer allocations, and must
+    // not change its value.
+    if (parent_gpu->rm_info.accessCntrBufferCount > 1)
+        parent_gpu->rm_info.accessCntrBufferCount = 1;
+
     parent_gpu->fault_cancel_va_supported = true;
 
     parent_gpu->scoped_atomics_supported = true;
@@ -98,6 +109,10 @@ void uvm_hal_blackwell_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
     parent_gpu->plc_supported = true;
 
     parent_gpu->ats.no_ats_range_required = true;
+
+    parent_gpu->ats.gmmu_pt_depth0_init_required = parent_gpu->ats.non_pasid_ats_enabled;
+
+    parent_gpu->access_bits_supported = false;
 
     // Blackwell has a physical translation prefetcher, meaning SW must assume
     // that any physical ATS translation can be fetched at any time. The
@@ -142,16 +157,26 @@ void uvm_hal_blackwell_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
     // TODO: Bug 5023085: this should be queried from RM instead of determined
     // by UVM.
     if (parent_gpu->rm_info.gpuArch == NV2080_CTRL_MC_ARCH_INFO_ARCHITECTURE_GB100 &&
-        parent_gpu->rm_info.gpuImplementation ==
-            NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB10B) {
+        parent_gpu->rm_info.gpuImplementation == NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB10B) {
         parent_gpu->is_integrated_gpu = true;
+        parent_gpu->access_bits_supported = false;
         // GB10B has sticky L2 coherent cache lines.
         // For details, refer to the comments in uvm_gpu.h
         // where this field is declared.
         parent_gpu->sticky_l2_coherent_cache_lines = true;
     }
     if (parent_gpu->rm_info.gpuArch == NV2080_CTRL_MC_ARCH_INFO_ARCHITECTURE_GB200 &&
-        parent_gpu->rm_info.gpuImplementation ==
-            NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB20B)
+        parent_gpu->rm_info.gpuImplementation == NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB20B) {
         parent_gpu->is_integrated_gpu = true;
+        parent_gpu->access_bits_supported = false;
+    }
+    if (parent_gpu->rm_info.gpuArch == NV2080_CTRL_MC_ARCH_INFO_ARCHITECTURE_GB200 &&
+        (parent_gpu->rm_info.gpuImplementation == NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB206 ||
+         parent_gpu->rm_info.gpuImplementation == NV2080_CTRL_MC_ARCH_INFO_IMPLEMENTATION_GB207)) {
+        // TODO: Bug 3186788 : As reported in Bug 5309034, GB206
+        // and GB207 experience a GSP crash with VAB. Depending
+        // on whether RM fixes it or marks it as cannot fix, the
+        // below checks can be removed or retained.
+        parent_gpu->access_bits_supported = false;
+    }
 }

@@ -107,6 +107,7 @@ typedef struct {
 enum FailAllocCoreChannelMethod {
     FAIL_ALLOC_CORE_CHANNEL_RM_SETUP_CORE_CHANNEL = 0,
     FAIL_ALLOC_CORE_CHANNEL_RESTORE_CONSOLE = 1,
+    FAIL_ALLOC_CORE_CHANNEL_NO_CLASS = 2,
 };
 
 NvBool nvkms_test_fail_alloc_core_channel(enum FailAllocCoreChannelMethod method);

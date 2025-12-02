@@ -157,7 +157,7 @@ void on_uvm_assert(void);
 #define UVM_ASSERT_MSG_IGNORE(expr, fmt, ...)   \
     do {                                        \
         UVM_IGNORE_EXPR(expr);                  \
-        UVM_NO_PRINT(fmt, ##__VA_ARGS__);       \
+        no_printk(fmt, ##__VA_ARGS__);          \
     } while (0)
 
 // UVM_ASSERT and UVM_ASSERT_MSG are only enabled on non-release and Coverity

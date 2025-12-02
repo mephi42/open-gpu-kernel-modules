@@ -495,14 +495,6 @@ gvaspaceConstruct__IMPL
     // Save off flags.
     pGVAS->flags = flags;
 
-    // Save off UVM mirroring flag.
-    if (flags & VASPACE_FLAGS_SET_MIRRORED)
-    {
-        NV_ASSERT_OR_RETURN(!(pGVAS->flags & VASPACE_FLAGS_BAR), NV_ERR_ILLEGAL_ACTION);
-        NV_ASSERT_OR_RETURN(!(pGVAS->flags & VASPACE_FLAGS_IS_EXTERNALLY_OWNED), NV_ERR_INVALID_ARGUMENT);
-        pGVAS->bIsMirrored = NV_TRUE;
-    }
-
     if (flags & VASPACE_FLAGS_ENABLE_FAULTING)
     {
         // All channels in this address space will have faulting enabled.
@@ -1090,12 +1082,6 @@ _gvaspaceGpuStateConstruct
     NV_ASSERT_OR_RETURN(NULL != pFmt, NV_ERR_NOT_SUPPORTED);
     pGpuState->pFmt = pFmt;
 
-    // UVM mirroring works only with pre-Pascal format.
-    if (flags & VASPACE_FLAGS_SET_MIRRORED)
-    {
-        NV_ASSERT_OR_RETURN(GMMU_FMT_VERSION_1 == pFmt->version, NV_ERR_ILLEGAL_ACTION);
-    }
-
     // Determine GPU's page size settings.
     pageSizeMask = mmuFmtAllPageSizes(pFmt->pRoot);
     bigPageSize = pageSizeMask & (RM_PAGE_SIZE_64K | RM_PAGE_SIZE_128K);
@@ -1264,132 +1250,9 @@ _gvaspaceGpuStateDestruct
         rmMemPoolRelease(pGpuState->pPageTableMemPool, pGVAS->flags);
 
     pGpuState->pWalk = NULL;
-    NV_ASSERT(NULL == pGpuState->pMirroredRoot);
 
     NV_ASSERT(NULL == listHead(&pGpuState->reservedPageTableEntries));
     listDestroy(&pGpuState->reservedPageTableEntries);
-}
-
-static void
-_gvaspaceCleanupFlaDummyPagesForFlaRange
-(
-    OBJGVASPACE    *pGVAS,
-    OBJGPU         *pGpu,
-    GVAS_GPU_STATE *pGpuState
-)
-{
-    RM_API *pRmApi = rmapiGetInterface(RMAPI_API_LOCK_INTERNAL);
-    KernelBus *pKernelBus = GPU_GET_KERNEL_BUS(pGpu);
-
-    if (pGpuState->flaDummyPage.hMemory != NV01_NULL_OBJECT)
-    {
-        portMemSet(&pGpuState->flaDummyPage.pte, 0, sizeof(pGpuState->flaDummyPage.pte));
-        pRmApi->Free(pRmApi, pKernelBus->flaInfo.hClient, pGpuState->flaDummyPage.hMemory);
-        pGpuState->flaDummyPage.hMemory =  NV01_NULL_OBJECT;
-    }
-}
-
-static NV_STATUS
-_gvaspaceAllocateFlaDummyPagesForFlaRange
-(
-    OBJGVASPACE    *pGVAS,
-    OBJGPU         *pGpu,
-    GVAS_GPU_STATE *pGpuState
-)
-{
-    NV_STATUS                   status;
-    KernelGmmu                 *pKernelGmmu = GPU_GET_KERNEL_GMMU(pGpu);
-    KernelBus                  *pKernelBus  = GPU_GET_KERNEL_BUS(pGpu);
-    const GMMU_FMT_FAMILY      *pFam = kgmmuFmtGetFamily(pKernelGmmu, pGpuState->pFmt->version);
-    NvU64                       addr;
-    NvBool                      bAcquireLock = NV_FALSE;
-    RM_API                     *pRmApi = rmapiGetInterface(RMAPI_API_LOCK_INTERNAL);
-    NV_MEMORY_ALLOCATION_PARAMS memAllocParams;
-    RsClient                   *pClient;
-    Memory                     *pMemory;
-
-    if (!kbusIsFlaDummyPageEnabled(pKernelBus))
-        return NV_OK;
-
-    portMemSet(&memAllocParams, 0, sizeof(memAllocParams));
-    memAllocParams.owner     = VAS_EHEAP_OWNER_NVRM;
-    memAllocParams.size      = RM_PAGE_SIZE_64K;
-    memAllocParams.type      = NVOS32_TYPE_IMAGE;
-    memAllocParams.attr      = DRF_DEF(OS32, _ATTR, _LOCATION, _VIDMEM) |
-                               DRF_DEF(OS32, _ATTR, _PAGE_SIZE, _BIG) |
-                               DRF_DEF(OS32, _ATTR, _PHYSICALITY, _CONTIGUOUS);
-    memAllocParams.flags     = NVOS32_ALLOC_FLAGS_PERSISTENT_VIDMEM |
-                               NVOS32_ALLOC_FLAGS_ALIGNMENT_FORCE;
-    memAllocParams.alignment = RM_PAGE_SIZE_64K;
-
-    NV_ASSERT_OK_OR_GOTO(status,
-       serverutilGenResourceHandle(pKernelBus->flaInfo.hClient, &pGpuState->flaDummyPage.hMemory),
-       cleanup);
-
-    //
-    // Allocate memory using vidHeapControl
-    //
-    // vidHeapControl calls should happen outside GPU locks
-    // This is a PMA requirement as memory allocation calls may invoke eviction
-    // which UVM could get stuck behind GPU lock
-    //
-    if (rmDeviceGpuLockIsOwner(pGpu->gpuInstance) || rmGpuLockIsOwner())
-    {
-        rmDeviceGpuLocksRelease(pGpu, GPUS_LOCK_FLAGS_NONE, NULL);
-        bAcquireLock = NV_TRUE;
-        pRmApi = rmapiGetInterface(RMAPI_API_LOCK_INTERNAL);
-    }
-
-    status = pRmApi->AllocWithHandle(pRmApi, pKernelBus->flaInfo.hClient, pKernelBus->flaInfo.hSubDevice,
-                                    pGpuState->flaDummyPage.hMemory, NV01_MEMORY_LOCAL_USER,
-                                    &memAllocParams, sizeof(memAllocParams));
-
-    if (bAcquireLock)
-    {
-        // Reacquire the GPU locks
-        if (rmDeviceGpuLocksAcquire(pGpu, GPUS_LOCK_FLAGS_NONE, RM_LOCK_MODULES_MEM) != NV_OK)
-        {
-            NV_ASSERT(0);
-            status = NV_ERR_GENERIC;
-            goto cleanup;
-        }
-        bAcquireLock = NV_FALSE;
-    }
-
-    if (status != NV_OK)
-    {
-        NV_PRINTF(LEVEL_ERROR, "failed to allocate dummy page for FLA, status: %x\n", status);
-        goto cleanup;
-    }
-
-    NV_ASSERT_OK_OR_GOTO(status,
-                         serverGetClientUnderLock(&g_resServ, pKernelBus->flaInfo.hClient, &pClient),
-                         cleanup);
-
-    NV_ASSERT_OK_OR_GOTO(status,
-                         memGetByHandle(pClient, pGpuState->flaDummyPage.hMemory, &pMemory),
-                         cleanup);
-
-    // prefill the big pte
-    const GMMU_APERTURE pgAperture = kgmmuGetMemAperture(pKernelGmmu, pMemory->pMemDesc);
-
-    nvFieldSetBool(&pFam->pte.fldValid, NV_TRUE, pGpuState->flaDummyPage.pte.v8);
-    nvFieldSetBool(&pFam->pte.fldVolatile, memdescGetVolatility(pMemory->pMemDesc),
-                    pGpuState->flaDummyPage.pte.v8);
-    gmmuFieldSetAperture(&pFam->pte.fldAperture, pgAperture,
-                            pGpuState->flaDummyPage.pte.v8);
-
-    addr = kgmmuEncodePhysAddr(pKernelGmmu, pgAperture,
-                       memdescGetPtePhysAddr(pMemory->pMemDesc, AT_GPU, 0),
-                       NVLINK_INVALID_FABRIC_ADDR);
-
-    gmmuFieldSetAddress(gmmuFmtPtePhysAddrFld(&pFam->pte, pgAperture), addr, pGpuState->flaDummyPage.pte.v8);
-
-    return NV_OK;
-
-cleanup:
-    _gvaspaceCleanupFlaDummyPagesForFlaRange(pGVAS, pGpu, pGpuState);
-    return status;
 }
 
 NV_STATUS
@@ -1483,48 +1346,6 @@ gvaspaceAlloc_IMPL
                 }
                 // else do nothing as the ranges are disjoint
             }
-        }
-    }
-
-    //
-    // If this address space is marked as mirrored, then we will
-    // cap user allocations to be under the top PDE.
-    // If the allocations are privileged, then we will restrict the
-    // allocations to the top PDE.
-    //
-    if (pGVAS->bIsMirrored)
-    {
-        if (flags.bPrivileged)
-        {
-            //
-            // This is a kernel allocation so restrict the Allocations to
-            // the topmost PDE.
-            //
-            rangeLo = NV_MAX(rangeLo, pGVAS->vaLimitInternal -
-                                      UVM_KERNEL_PRIVILEGED_REGION_LENGTH + 1);
-            rangeHi = NV_MIN(rangeHi, pGVAS->vaLimitInternal);
-
-            // Verify the allocation range is within UVM_PRIVILEGED_REGION
-            NV_ASSERT_OR_RETURN(rangeLo >= UVM_KERNEL_PRIVILEGED_REGION_START,
-                              NV_ERR_OUT_OF_RANGE);
-            NV_ASSERT_OR_RETURN(rangeHi < UVM_KERNEL_PRIVILEGED_REGION_START +
-                                        UVM_KERNEL_PRIVILEGED_REGION_LENGTH,
-                              NV_ERR_OUT_OF_RANGE);
-        }
-        else
-        {
-            //
-            // This is a user space allocation. Restrict allocation from the last PDB
-            // because that is privileged
-            // vaRangeLo can still be based on the users override. We will return an error
-            // if the user requested for an address in the last PDE range
-            //
-            rangeHi = NV_MIN(rangeHi, pGVAS->vaLimitInternal -
-                                      UVM_KERNEL_PRIVILEGED_REGION_LENGTH);
-
-            // Verify range is not in the priviledged region.
-            NV_ASSERT_OR_RETURN(rangeHi < UVM_KERNEL_PRIVILEGED_REGION_START,
-                              NV_ERR_OUT_OF_RANGE);
         }
     }
 
@@ -1649,13 +1470,6 @@ gvaspaceAlloc_IMPL
             status = gvaspaceWalkUserCtxAcquire(pGVAS, pGpu, pVASBlock, &userCtx);
             NV_ASSERT_OR_ELSE(status == NV_OK, break);
 
-
-            if (pGVAS->flags & VASPACE_FLAGS_FLA)
-            {
-                // currently FLA VASpace is associated with only GPU.
-                NV_ASSERT(ONEBITSET(pVAS->gpuMask));
-                status = _gvaspaceAllocateFlaDummyPagesForFlaRange(pGVAS, pGpu, userCtx.pGpuState);
-            }
             // Loop over each page size requested by client.
             FOR_EACH_INDEX_IN_MASK(64, pageShift, pVASBlock->pageSizeLockMask)
             {
@@ -1690,10 +1504,6 @@ gvaspaceAlloc_IMPL
                 NV_STATUS acquireStatus = gvaspaceWalkUserCtxAcquire(pGVAS, pGpu, pVASBlock, &userCtx);
                 NV_ASSERT_OR_ELSE(acquireStatus == NV_OK, continue);
 
-                if (pGVAS->flags & VASPACE_FLAGS_FLA)
-                {
-                    _gvaspaceCleanupFlaDummyPagesForFlaRange(pGVAS, pGpu, userCtx.pGpuState);
-                }
                 // Loop over each page size requested by client during VA reservation.
                 FOR_EACH_INDEX_IN_MASK(64, pageShift, pVASBlock->pageSizeLockMask)
                 {
@@ -2009,12 +1819,6 @@ gvaspaceGetBigPageSize_IMPL(OBJGVASPACE *pGVAS)
 }
 
 NvBool
-gvaspaceIsMirrored_IMPL(OBJGVASPACE *pGVAS)
-{
-    return pGVAS->bIsMirrored;
-}
-
-NvBool
 gvaspaceIsFaultCapable_IMPL(OBJGVASPACE *pGVAS)
 {
     return pGVAS->bIsFaultCapable;
@@ -2089,15 +1893,6 @@ gvaspaceGetPageDirBase_IMPL(OBJGVASPACE *pGVAS, OBJGPU *pGpu)
     mmuWalkGetPageLevelInfo(pGpuState->pWalk, pGpuState->pFmt->pRoot, 0,
                             (const MMU_WALK_MEMDESC**)&pRootMem, &rootSize);
     return pRootMem;
-}
-
-MEMORY_DESCRIPTOR*
-gvaspaceGetKernelPageDirBase_IMPL(OBJGVASPACE *pGVAS, OBJGPU *pGpu)
-{
-    NV_ASSERT_OR_RETURN(!gpumgrGetBcEnabledStatus(pGpu), NULL);
-
-    GVAS_GPU_STATE *pGpuState = gvaspaceGetGpuState(pGVAS, pGpu);
-    return (MEMORY_DESCRIPTOR*)pGpuState->pMirroredRoot;
 }
 
 const GMMU_FMT *
@@ -2335,15 +2130,6 @@ gvaspaceInvalidateTlb_IMPL
                               pGVAS->flags,
                               update_type, gfid,
                               invalidation_scope);
-
-        if (pGVAS->bIsMirrored)
-        {
-            kgmmuInvalidateTlb_HAL(pGpu, pKernelGmmu,
-                                  (MEMORY_DESCRIPTOR*)pGpuState->pMirroredRoot,
-                                  pGVAS->flags,
-                                  update_type, gfid,
-                                  invalidation_scope);
-        }
     }
 }
 
@@ -3085,7 +2871,6 @@ gvaspaceExternalRootDirCommit_IMPL
             NV_ASSERT_OR_RETURN(!"invalid aperture", NV_ERR_INVALID_ARGUMENT);
     }
 
-    NV_ASSERT_OR_RETURN(!pGVAS->bIsMirrored, NV_ERR_NOT_SUPPORTED);
     // Ensure new page directory is not smaller than RM-managed region of the VA heap.
     vaLimitOld = pVAS->vasLimit;
     vaLimitNew = mmuFmtEntryIndexVirtAddrHi(pGpuState->pFmt->pRoot, 0, pParams->numEntries - 1);
@@ -3328,7 +3113,6 @@ gvaspaceExternalRootDirRevoke_IMPL
         return status;
     }
 
-    NV_ASSERT_OR_RETURN(!pGVAS->bIsMirrored, NV_ERR_NOT_SUPPORTED);
     NV_ASSERT_OR_RETURN(NULL != pGpuState->pRootInternal, NV_ERR_INVALID_STATE);
 
     pRootMemNew = pGpuState->pRootInternal;
@@ -3392,7 +3176,6 @@ gvaspaceResize_IMPL
     NvU64           vaLimitNew;
     NV_STATUS       status = NV_OK;
 
-    NV_ASSERT_OR_RETURN(!pGVAS->bIsMirrored, NV_ERR_NOT_SUPPORTED);
     NV_ASSERT_OR_RETURN(!(pGVAS->flags & VASPACE_FLAGS_SHARED_MANAGEMENT),
                      NV_ERR_NOT_SUPPORTED);
 
@@ -5145,13 +4928,6 @@ _gvaspaceReleaseUnreservedPTEs
         }
     }
 
-
-    if (pGVAS->flags & VASPACE_FLAGS_FLA)
-    {
-        // free the dummy vas block
-        _gvaspaceCleanupFlaDummyPagesForFlaRange(pGVAS, pGpu, userCtx.pGpuState);
-    }
-
     gvaspaceWalkUserCtxRelease(pGVAS, &userCtx);
 
     return status;
@@ -5289,7 +5065,7 @@ gvaspaceReserveMempool_IMPL
     if ((pGVAS->flags & VASPACE_FLAGS_PTETABLE_PMA_MANAGED) == 0)
         return NV_OK;
 
-    pGpuState   = gvaspaceGetGpuState(pGVAS, pGpu);
+    pGpuState = gvaspaceGetGpuState(pGVAS, pGpu);
     if ((pGpuState == NULL) ||
         (pGpuState->pPageTableMemPool == NULL))
         return NV_OK;

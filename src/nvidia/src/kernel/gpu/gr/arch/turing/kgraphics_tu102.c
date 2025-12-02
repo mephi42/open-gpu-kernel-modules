@@ -172,6 +172,9 @@ kgraphicsAllocGrGlobalCtxBuffers_TU102
             memmgrSetMemDescPageSize_HAL(pGpu, pMemoryManager, *ppMemDesc, AT_GPU, RM_ATTR_PAGE_SIZE_4KB);
             NV_ASSERT_OK_OR_RETURN(memdescSetCtxBufPool(*ppMemDesc, pCtxBufPool));
         }
+
+        kgraphicsSetContextBufferPteKind(pGpu, pKernelGraphics, ppMemDesc, GR_GLOBALCTX_BUFFER_RTV_CB, NV_TRUE, memmgrGetPteKindGenericMemoryCompressible_HAL(pGpu, GPU_GET_MEMORY_MANAGER(pGpu)));
+
         memdescTagAllocList(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_113,
                     (*ppMemDesc), pCtxAttr[GR_GLOBALCTX_BUFFER_RTV_CB].pAllocList);
         NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, status);

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2011-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2011-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -660,6 +660,14 @@ NV_STATUS RmThirdPartyP2PNVLinkGetPages
     RmPhysAddr physAddr;
     KernelMemorySystem *pKernelMemorySystem = GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu);
 
+    // On localized allocations over C2C/nvlink mappings, RDMA is not supported
+    if (memdescGetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_AS_LOCALIZED))
+    {
+        NV_PRINTF(LEVEL_ERROR, "RDMA is not supported for localized memory"
+                              " over coherent mappings\n");
+        return NV_ERR_NOT_SUPPORTED;
+    }
+
     if (memdescGetPageSize(pMemDesc, AT_CPU) < NVRM_P2P_PAGESIZE_BIG_64K)
     {
         return NV_ERR_INVALID_STATE;
@@ -937,7 +945,6 @@ NV_STATUS RmP2PGetInfoWithoutToken
         if ((pThirdPartyP2PInfo->type == CLI_THIRD_PARTY_P2P_TYPE_PROPRIETARY) &&
             !(pThirdPartyP2PInfo->flags & CLI_THIRD_PARTY_P2P_FLAGS_INITIALIZED))
         {
-            status = NV_ERR_INVALID_STATE;
             continue;
         }
 

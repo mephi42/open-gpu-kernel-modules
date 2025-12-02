@@ -524,36 +524,6 @@ typedef struct NV0000_CTRL_GPU_GET_VIDEO_LINKS_PARAMS {
 
 
 /*
- * NV0000_CTRL_CMD_GPU_GET_SVM_SIZE
- *
- * This command is used to get the SVM size.
- *
- *   gpuId
- *     This parameter uniquely identifies the GPU whose associated
- *     SVM size is to be returned. The value of this field must
- *     match one of those in the table returned by
- *     NV0000_CTRL_CMD_GPU_GET_ATTACHED_IDS
- *
- *   SvmSize
- *     SVM size is returned in this.
- * Possible status values returned are:
- *   NV_OK
- *   NV_ERR_INVALID_ARGUMENT
- *   NV_ERR_INVALID_STATE
- *
- */
-#define NV0000_CTRL_CMD_GPU_GET_SVM_SIZE (0x240U) /* finn: Evaluated from "(FINN_NV01_ROOT_GPU_INTERFACE_ID << 8) | NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS_MESSAGE_ID" */
-
-#define NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS_MESSAGE_ID (0x40U)
-
-typedef struct NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS {
-    NvU32 gpuId;
-    NvU32 svmSize;
-} NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS;
-
-
-
-/*
  * NV0000_CTRL_CMD_GPU_GET_UUID_INFO
  *
  * This command returns requested information pertaining to the GPU

@@ -2769,16 +2769,6 @@ NV_STATUS heapAllocHint_IMPL
         alignment = memUtilsLeastCommonAlignment(alignment, hostPageSize);
     }
 
-    if (memmgrAllocGetAddrSpace(pMemoryManager, pAllocHint->flags, *pAllocHint->pAttr) == ADDR_FBMEM)
-    {
-        if (alignment >= pHeap->total)
-        {
-            status = NV_ERR_INVALID_ARGUMENT;
-            NV_PRINTF(LEVEL_ERROR, "heapAllocHint failed due to alignmend >= pHeap->total\n");
-            goto exit;
-        }
-    }
-
     *pAllocHint->pHeight = pFbAllocInfo->height;
     pAllocHint->pad = pFbAllocInfo->pad;
 
@@ -3274,6 +3264,7 @@ _heapAllocNoncontig
     NvU32       k, shuffleStride = 1;
     NvU64       addr, j, numPages;
     RM_ATTR_PAGE_SIZE pageSizeAttr = dmaNvos32ToPageSizeAttr(pFbAllocInfo->retAttr, pFbAllocInfo->retAttr2);
+    NvU64       pageArrayGranularity = RM_PAGE_SIZE;
     NvU64       alignedSize = NV_ALIGN_UP64(pMemDesc->Size, RM_PAGE_SIZE);
 
     switch (pageSizeAttr)
@@ -3305,6 +3296,12 @@ _heapAllocNoncontig
             pageSize = RM_PAGE_SIZE_512M;
             break;
         }
+    }
+
+    if (SYS_GET_INSTANCE()->bEnableDynamicGranularityPageArrays)
+    {
+        pageArrayGranularity = pageSize;
+        alignedSize = NV_ALIGN_UP64(pMemDesc->Size, pageArrayGranularity);
     }
 
     //
@@ -3356,7 +3353,7 @@ _heapAllocNoncontig
         //
         // Checks above should protect against underflow, but we might still
         // end up with a post-aligned block that is unusable.
-        // "end" should be RM_PAGE_SIZE-1 aligned.
+        // "end" should be pageSize-1 aligned.
         //
         blockBegin = RM_ALIGN_UP(blockBegin, pageSize);
         blockEnd = RM_ALIGN_DOWN(blockEnd+1, pageSize)-1;
@@ -3488,7 +3485,7 @@ _heapAllocNoncontig
 
         pteAddress = RM_PAGE_ALIGN_DOWN(pBlockNew->begin);
 
-        numPages = NV_MIN(blockSizeInPages, ((alignedSize - (((NvU64) pteIndexOffset) * RM_PAGE_SIZE)) / pageSize));
+        numPages = NV_MIN(blockSizeInPages, ((alignedSize - (((NvU64) pteIndexOffset) * pageArrayGranularity)) / pageSize));
 
         if (pHeap->getProperty(pHeap, PDB_PROP_HEAP_PAGE_SHUFFLE))
         {
@@ -3517,7 +3514,7 @@ _heapAllocNoncontig
             for(j = i; j < numPages; j = j + shuffleStride)
             {
                 addr = pteAddress + j * pageSize;
-                for (k = 0; k < pageSize/RM_PAGE_SIZE; k++)
+                for (k = 0; k < pageSize/pageArrayGranularity ; k++)
                 {
                     //
                     // The memDesc has everything in terms of 4k pages.
@@ -3529,7 +3526,7 @@ _heapAllocNoncontig
                     //
                     memdescSetPte(pMemDesc, AT_GPU, pteIndexOffset, addr);
                     pteIndexOffset++;
-                    addr += RM_PAGE_SIZE;
+                    addr += pageArrayGranularity;
                 }
             }
         }
@@ -3596,7 +3593,7 @@ unwind_and_exit:
         }
     }
 
-    NV_ASSERT_OK_OR_RETURN(memdescSetAllocSizeFields(pMemDesc, alignedSize, RM_PAGE_SIZE));
+    NV_ASSERT_OK_OR_RETURN(memdescSetAllocSizeFields(pMemDesc, alignedSize, pageArrayGranularity));
     return status;
 }
 

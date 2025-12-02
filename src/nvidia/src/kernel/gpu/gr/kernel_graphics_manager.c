@@ -30,7 +30,6 @@
 #include "kernel/gpu/device/device.h"
 #include "kernel/gpu/fifo/kernel_channel_group_api.h"
 #include "kernel/gpu/fifo/kernel_channel_group.h"
-#include "kernel/gpu/mem_sys/kern_mem_sys.h"
 
 #include "kernel/rmapi/client.h"
 #include "kernel/rmapi/client_resource.h"

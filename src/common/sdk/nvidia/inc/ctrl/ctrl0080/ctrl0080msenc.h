@@ -68,7 +68,7 @@ typedef struct NV0080_CTRL_MSENC_GET_CAPS_PARAMS {
 
 
 /* size in bytes of MSENC caps table */
-#define NV0080_CTRL_MSENC_CAPS_TBL_SIZE   5
+#define NV0080_CTRL_MSENC_CAPS_TBL_SIZE   6
 
 /*
  * NV0080_CTRL_CMD_MSENC_GET_CAPS_V2

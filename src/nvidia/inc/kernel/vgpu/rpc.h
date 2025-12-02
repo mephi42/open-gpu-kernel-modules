@@ -151,8 +151,7 @@ typedef struct ContextDma ContextDma;
     }                                                                                   \
     while (0)
 
-#define NV_RM_RPC_MAP_MEMORY_DMA(pGpu, hclient, hdevice, hdma, hmemory, offset, length, flags,  \
-                                 dmaoffset, status)                                             \
+#define NV_RM_RPC_MAP_MEMORY_DMA(pGpu, pParams, status)                                         \
     do                                                                                          \
     {                                                                                           \
         OBJRPC *pRpc;                                                                           \
@@ -160,15 +159,13 @@ typedef struct ContextDma ContextDma;
         NV_ASSERT(pRpc != NULL);                                                                \
         if ((status == NV_OK) && (pRpc != NULL) &&                                              \
             !gpuIsSplitVasManagementServerClientRmEnabled(pGpu))                                \
-            status = rpcMapMemoryDma_HAL(pGpu, pRpc, hclient, hdevice, hdma, hmemory, offset,   \
-                                         length, flags, dmaoffset);                             \
+            status = rpcMapMemoryDma_HAL(pGpu, pRpc, pParams);                                  \
         else if (pRpc == NULL)                                                                  \
             status = NV_ERR_INSUFFICIENT_RESOURCES;                                             \
     } while (0)
 
 
-#define NV_RM_RPC_UNMAP_MEMORY_DMA(pGpu, hclient, hdevice, hdma, hmemory, flags, dmaoffset, \
-                                   status)                                                  \
+#define NV_RM_RPC_UNMAP_MEMORY_DMA(pGpu, pParams,  status)                                  \
     do                                                                                      \
     {                                                                                       \
         OBJRPC *pRpc;                                                                       \
@@ -176,8 +173,7 @@ typedef struct ContextDma ContextDma;
         NV_ASSERT(pRpc != NULL);                                                            \
         if ((status == NV_OK) && (pRpc != NULL) &&                                          \
             !gpuIsSplitVasManagementServerClientRmEnabled(pGpu))                            \
-            status = rpcUnmapMemoryDma_HAL(pGpu, pRpc, hclient, hdevice, hdma, hmemory,     \
-                                           flags, dmaoffset);                               \
+            status = rpcUnmapMemoryDma_HAL(pGpu, pRpc, pParams);                            \
         else if (pRpc == NULL)                                                              \
             status = NV_ERR_INSUFFICIENT_RESOURCES;                                         \
     } while (0)

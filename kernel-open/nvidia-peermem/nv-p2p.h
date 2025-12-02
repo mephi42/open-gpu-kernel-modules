@@ -159,9 +159,6 @@ struct nvidia_p2p_page_table {
  *
  *   This API only supports pinned, GPU-resident memory, such as that provided
  *   by cudaMalloc().
- *   This API does not support Coherent Driver-based Memory Management(CDMM) mode.
- *   CDMM allows coherent GPU memory to be managed by the driver and not the OS.
- *   This is done by the driver not onlining the memory as a NUMA node.
  *
  *   This API may sleep.
  *

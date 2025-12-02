@@ -218,7 +218,7 @@ typedef struct ADDRESS_TRANSLATION_ *ADDRESS_TRANSLATION;
 // Defines for commonly used transformations for page size
 //
 #define GET_PAGE_SHIFT(val) (BIT_IDX_32(val))
-#define GET_PAGE_MASK(val) ((1ULL << GET_PAGE_SHIFT(val)) - 1)
+#define GET_PAGE_MASK(val) (val - 1)
 #define GET_SIZE_FROM_PAGE_AND_COUNT(pageCount, pageSize) (((NvU64) pageCount) << (GET_PAGE_SHIFT(pageSize)))
 
 // Invalid PTE value
@@ -294,9 +294,6 @@ typedef struct ADDRESS_TRANSLATION_ *ADDRESS_TRANSLATION;
 // Allocate in "fast" or "slow" memory, if there are multiple grades of memory (like mixed density)
 #define MEMDESC_FLAGS_HIGH_PRIORITY                NVBIT64(19)
 #define MEMDESC_FLAGS_LOW_PRIORITY                 NVBIT64(20)
-
-// Flag to specify if requested size should be rounded to page size
-#define MEMDESC_FLAGS_PAGE_SIZE_ALIGN_IGNORE       NVBIT64(21)
 
 #define MEMDESC_FLAGS_CPU_ONLY                     NVBIT64(22)
 
@@ -623,7 +620,7 @@ typedef enum
     NV_FB_ALLOC_RM_INTERNAL_OWNER_GSP_NOTIFY_OP_SURFACE = 177U,
     NV_FB_ALLOC_RM_INTERNAL_OWNER_FAKE_WPR_RSVD         = 178U,
     NV_FB_ALLOC_RM_INTERNAL_OWNER_GR_SCRUB_CHANNEL      = 179U,
-    NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_147       = 180U,
+    NV_FB_ALLOC_RM_INTERNAL_OWNER_CMC_LOG_BUFFER        = 180U,
     NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_148       = 181U,
     NV_FB_ALLOC_RM_INTERNAL_OWNER_PMU_ACR_SHADOW_COPY   = 182U,
     NV_FB_ALLOC_RM_INTERNAL_OWNER_FLCN_BACKING_STORE    = 183U,
@@ -802,6 +799,8 @@ typedef struct MEMORY_DESCRIPTOR
     // Setting MEMDESC_CACHE_SNOOP_DEFER_TO_MAP defers making the choice to map time.
     //
     MEMDESC_CACHE_SNOOP cpuCacheSnoop;
+
+    NvBool bInvalidateL2OnFree;
 
     // The page kind of this memory
     NvU32 _pteKind;
@@ -1490,25 +1489,6 @@ void memdescOverrideInstLocList(NvU32 loc, const char *name, const NV_ADDRESS_SP
 */
 void memdescOverridePhysicalAddressWidthWindowsWAR(OBJGPU *pGpu, MEMORY_DESCRIPTOR *pMemDesc, NvU32 addressWidth);
 
-/*!
-* @brief Send memory descriptor from CPU-RM to GSP
-*
-* This function will create a MemoryList object with the MEMORY_DESCRIPTOR information on CPU-RM
-* It will then use memRegisterWithGsp API to create a corresponding MemoryList object on GSP-RM
-* with the same Handle as that on CPU-RM
-*
-* This MemoryList object has the same MEMORY_DESCRIPTOR info as the input pMemDesc
-* The CPU-RM handle can be sent to GSP-RM and then used on GSP end to retrieve the MemoryList object
-* and then the corresponding MEMORY_DESCRIPTOR
-*
-* @param[in]  pGpu          OBJGPU pointer
-* @param[in]  pMemDesc      MemDesc pointer
-* @param[out] pHandle       Pointer to handle of MemoryList object
-*
-* @returns NV_STATUS
-*/
-NV_STATUS memdescSendMemDescToGSP(OBJGPU *pGpu, MEMORY_DESCRIPTOR *pMemDesc, NvHandle *pHandle);
-
 // cache maintenance functions
 void memdescFlushGpuCaches(OBJGPU *pGpu, MEMORY_DESCRIPTOR *pMemDesc);
 void memdescFlushCpuCaches(OBJGPU *pGpu, MEMORY_DESCRIPTOR *pMemDesc);
@@ -1606,6 +1586,17 @@ memdescSetCpuCacheSnoop(MEMORY_DESCRIPTOR *pMemDesc, MEMDESC_CACHE_SNOOP cpuCach
 {
     pMemDesc->cpuCacheSnoop = cpuCacheSnoop;
 }
+
+/*!
+ *  @brief Calculate the actual size of the memory descriptor
+ *
+ *  @param[in]  pMemDesc         Memory descriptor pointer
+ *  @param[in]  requestedSize    Requested size of the memory descriptor (pMemDesc->Size)
+ *  @param[out] allocSizeOutput  Pointer to the actual size of the memory descriptor
+ *
+ *  @returns NV_STATUS
+ */
+NV_STATUS memdescCalculateActualSize(MEMORY_DESCRIPTOR *pMemDesc, NvU64 requestedSize, NvU64 *allocSizeOutput);
 
 #endif // _MEMDESC_H_
 

@@ -335,12 +335,12 @@ typedef struct
 
 typedef struct
 {
-    /* Memory for task coverage */
-    MEMORY_DESCRIPTOR                  *pTaskCoverageDescriptor;
-    NvU8                               *pTaskCoverageBuffer;
-    NvP64                               pTaskCoverageMappingPriv;
+    /* Memory for task instrumentation */
+    MEMORY_DESCRIPTOR                  *pTaskInstrumentationDescriptor;
+    NvU8                               *pTaskInstrumentationBuffer;
+    NvP64                               pTaskInstrumentationMappingPriv;
     NvU64                               id8;
-} RM_LIBOS_COVERAGE_MEM;
+} RM_LIBOS_INSTRUMENTATION_MEM;
 
 typedef enum
 {
@@ -353,13 +353,15 @@ typedef enum
 #define GSP_NOCAT_SOURCE_ID "GSP"
 #define GSP_NOCAT_SOURCE_ID_RPC_TIMEOUT "GSP_RPC_TIMEOUT"
 #define GSP_NOCAT_SOURCE_ID_RPC_HISTORY "GSP_RPC_HISTORY"
+#define GSP_NOCAT_SOURCE_ID_RPC_PERF "GSP_RPC_PERF"
 
 typedef enum
 {
     GSP_NOCAT_UNDEFINED           = 0x0,
     GSP_NOCAT_CRASHCAT_REPORT     = 0x1,
     GSP_NOCAT_GSP_RPC_HISTORY     = 0x2,
-    GSP_NOCAT_GSP_RPC_TIMEOUT     = 0x3
+    GSP_NOCAT_GSP_RPC_TIMEOUT     = 0x3,
+    GSP_NOCAT_GSP_RPC_PERF        = 0x4
 } GspNocatEvent;
 
 typedef struct GspNocatData
@@ -420,7 +422,7 @@ struct KernelGsp {
 
     // Vtable with 66 per-object function pointers
     void (*__kgspConfigureFalcon__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (4 hals) body
-    NvBool (*__kgspIsDebugModeEnabled__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (4 hals) body
+    NvBool (*__kgspIsDebugModeEnabled__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (5 hals) body
     NV_STATUS (*__kgspAllocBootArgs__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (4 hals) body
     void (*__kgspFreeBootArgs__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (4 hals) body
     void (*__kgspProgramLibosBootArgsAddr__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (3 hals) body
@@ -438,7 +440,7 @@ struct KernelGsp {
     NV_STATUS (*__kgspPopulateWprMeta__)(struct OBJGPU *, struct KernelGsp * /*this*/, GSP_FIRMWARE *);  // halified (5 hals) body
     NvU32 (*__kgspGetNonWprHeapSize__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (5 hals) body
     NV_STATUS (*__kgspExecuteSequencerCommand__)(struct OBJGPU *, struct KernelGsp * /*this*/, NvU32, NvU32 *, NvU32);  // halified (4 hals) body
-    NvU32 (*__kgspReadUcodeFuseVersion__)(struct OBJGPU *, struct KernelGsp * /*this*/, NvU32);  // halified (4 hals) body
+    NvU32 (*__kgspReadUcodeFuseVersion__)(struct OBJGPU *, struct KernelGsp * /*this*/, NvU32);  // halified (5 hals) body
     NV_STATUS (*__kgspResetHw__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // virtual halified (5 hals) override (kflcn) base (kflcn) body
     NvBool (*__kgspHealthCheck__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (3 hals) body
     NvU32 (*__kgspService__)(struct OBJGPU *, struct KernelGsp * /*this*/);  // halified (3 hals) body
@@ -813,15 +815,6 @@ static inline NV_STATUS kgspAllocateBooterUnloadUcodeImage(struct OBJGPU *pGpu, 
 #define kgspAllocateBooterUnloadUcodeImage(pGpu, pKernelGsp, ppBooterUnloadUcode) kgspAllocateBooterUnloadUcodeImage_IMPL(pGpu, pKernelGsp, ppBooterUnloadUcode)
 #endif // __nvoc_kernel_gsp_h_disabled
 
-void kgspRcAndNotifyAllChannels_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, NvU32 exceptType, NvBool bSkipKernelChannels);
-#ifdef __nvoc_kernel_gsp_h_disabled
-static inline void kgspRcAndNotifyAllChannels(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, NvU32 exceptType, NvBool bSkipKernelChannels) {
-    NV_ASSERT_FAILED_PRECOMP("KernelGsp was disabled!");
-}
-#else // __nvoc_kernel_gsp_h_disabled
-#define kgspRcAndNotifyAllChannels(pGpu, pKernelGsp, exceptType, bSkipKernelChannels) kgspRcAndNotifyAllChannels_IMPL(pGpu, pKernelGsp, exceptType, bSkipKernelChannels)
-#endif // __nvoc_kernel_gsp_h_disabled
-
 NV_STATUS kgspInitNocatData_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, GspNocatEvent gspNocatEvent);
 #ifdef __nvoc_kernel_gsp_h_disabled
 static inline NV_STATUS kgspInitNocatData(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, GspNocatEvent gspNocatEvent) {
@@ -840,6 +833,25 @@ static inline NV_STATUS kgspPostNocatData(struct OBJGPU *pGpu, struct KernelGsp 
 }
 #else // __nvoc_kernel_gsp_h_disabled
 #define kgspPostNocatData(pGpu, pKernelGsp, timestamp) kgspPostNocatData_IMPL(pGpu, pKernelGsp, timestamp)
+#endif // __nvoc_kernel_gsp_h_disabled
+
+NV_STATUS kgspPostCrashcatReportToNocat_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, struct CrashCatReport *pReport, NvU32 xid);
+#ifdef __nvoc_kernel_gsp_h_disabled
+static inline NV_STATUS kgspPostCrashcatReportToNocat(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, struct CrashCatReport *pReport, NvU32 xid) {
+    NV_ASSERT_FAILED_PRECOMP("KernelGsp was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_kernel_gsp_h_disabled
+#define kgspPostCrashcatReportToNocat(pGpu, pKernelGsp, pReport, xid) kgspPostCrashcatReportToNocat_IMPL(pGpu, pKernelGsp, pReport, xid)
+#endif // __nvoc_kernel_gsp_h_disabled
+
+void kgspPrintGspBinBuildId_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp);
+#ifdef __nvoc_kernel_gsp_h_disabled
+static inline void kgspPrintGspBinBuildId(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp) {
+    NV_ASSERT_FAILED_PRECOMP("KernelGsp was disabled!");
+}
+#else // __nvoc_kernel_gsp_h_disabled
+#define kgspPrintGspBinBuildId(pGpu, pKernelGsp) kgspPrintGspBinBuildId_IMPL(pGpu, pKernelGsp)
 #endif // __nvoc_kernel_gsp_h_disabled
 
 
@@ -1106,7 +1118,7 @@ static inline NV_STATUS kgspStateInitLocked_DISPATCH(struct OBJGPU *pGpu, struct
     return pKernelGsp->__nvoc_metadata_ptr->vtable.__kgspStateInitLocked__(pGpu, pKernelGsp);
 }
 
-static inline void kgspRegisterIntrService_DISPATCH(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, IntrServiceRecord pRecords[179]) {
+static inline void kgspRegisterIntrService_DISPATCH(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, IntrServiceRecord pRecords[180]) {
     pKernelGsp->__nvoc_metadata_ptr->vtable.__kgspRegisterIntrService__(pGpu, pKernelGsp, pRecords);
 }
 
@@ -1470,7 +1482,7 @@ NV_STATUS kgspConstructEngine_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKerne
 
 NV_STATUS kgspStateInitLocked_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp);
 
-void kgspRegisterIntrService_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, IntrServiceRecord pRecords[179]);
+void kgspRegisterIntrService_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, IntrServiceRecord pRecords[180]);
 
 NvU32 kgspServiceInterrupt_IMPL(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, IntrServiceServiceInterruptArguments *pParams);
 
@@ -1485,6 +1497,8 @@ static inline void kgspConfigureFalcon_f2d351(struct OBJGPU *pGpu, struct Kernel
 NvBool kgspIsDebugModeEnabled_TU102(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp);
 
 NvBool kgspIsDebugModeEnabled_GA100(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp);
+
+NvBool kgspIsDebugModeEnabled_GB100(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp);
 
 static inline NvBool kgspIsDebugModeEnabled_86b752(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp) {
     NV_ASSERT_OR_RETURN_PRECOMP(0, NV_FALSE);
@@ -1673,6 +1687,8 @@ static inline NvU32 kgspReadUcodeFuseVersion_b2b553(struct OBJGPU *pGpu, struct 
 }
 
 NvU32 kgspReadUcodeFuseVersion_GA100(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, NvU32 ucodeId);
+
+NvU32 kgspReadUcodeFuseVersion_GB100(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, NvU32 ucodeId);
 
 static inline NvU32 kgspReadUcodeFuseVersion_474d46(struct OBJGPU *pGpu, struct KernelGsp *pKernelGsp, NvU32 ucodeId) {
     NV_ASSERT_OR_RETURN_PRECOMP(0, 0);
@@ -2051,7 +2067,6 @@ void kgspFreeVbiosImg(KernelGspVbiosImg *pVbiosImg);
 void kgspFreeFlcnUcode(KernelGspFlcnUcode *pFlcnUcode);
 
 void kgspLogRpcDebugInfo(struct OBJGPU *pGpu, OBJRPC *pRpc, NvU32 errorNum, NvBool bPollingForRpcResponse);
-
 void kgspLogRpcDebugInfoToProtobuf(struct OBJGPU *pGpu, OBJRPC *pRpc, struct KernelGsp *pKernelGsp, PRB_ENCODER *pProtobufData);
 
 #endif // KERNEL_GSP_H

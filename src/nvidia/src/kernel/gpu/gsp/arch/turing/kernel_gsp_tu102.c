@@ -26,7 +26,9 @@
  */
 
 #include "gpu/gsp/kernel_gsp.h"
+#include "gpu/gsp/gsp_init_args.h"
 
+#include "gpu/rc/kernel_rc.h"
 #include "gpu/disp/kern_disp.h"
 #include "gpu/mem_mgr/mem_mgr.h"
 #include "gpu/mem_sys/kern_mem_sys.h"
@@ -195,7 +197,7 @@ kgspAllocBootArgs_TU102
 
     portMemSet(pKernelGsp->pGspArgumentsCached, 0, sizeof(*pKernelGsp->pGspArgumentsCached));
 
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb)
     {
         NvU32 heapSizeMB = 0;
         // Get the sysmem heap size override from the registry, or use default
@@ -770,7 +772,7 @@ kgspPopulateWprMeta_TU102
     pWprMeta->sizeOfRadix3Elf = pGspFw->imageSize;
 
     // End of WPR region (128KB aligned), shifted for any WPR end margin
-    pWprMeta->gspFwWprEnd = NV_ALIGN_DOWN64(vbiosReservedOffset - kgspGetWprEndMargin(pGpu, pKernelGsp), 0x20000);
+    pWprMeta->gspFwWprEnd = NV_ALIGN_DOWN64(vbiosReservedOffset - kgspGetWprEndMargin(pGpu, pKernelGsp), WPR_ALIGNMENT);
 
     pWprMeta->frtsSize = kgspGetFrtsSize(pGpu, pKernelGsp);
     pWprMeta->frtsOffset = pWprMeta->gspFwWprEnd - pWprMeta->frtsSize;
@@ -1023,9 +1025,8 @@ kgspHealthCheck_TU102
     KernelGsp *pKernelGsp
 )
 {
-    NvBool bHealthy = NV_TRUE;
-    char buildIdString[64];
-    LibosElfNoteHeader *pBuildIdNoteHeader = pKernelGsp->pBuildIdSection;
+    KernelRc *pKernelRc = GPU_GET_KERNEL_RC(pGpu);
+    NvBool    bHealthy  = NV_TRUE;
 
     // CrashCat is the primary reporting interface for GSP issues
     KernelCrashCatEngine *pKernelCrashCatEng = staticCast(pKernelGsp, KernelCrashCatEngine);
@@ -1056,36 +1057,12 @@ kgspHealthCheck_TU102
 
             NV_PRINTF(LEVEL_ERROR,
                 "****************************** GSP-CrashCat Report *******************************\n");
+
+            kgspPrintGspBinBuildId(pGpu, pKernelGsp);
+
             crashcatReportLog(pReport);
 
-            kgspInitNocatData(pGpu, pKernelGsp, GSP_NOCAT_CRASHCAT_REPORT);
-
-            // Build id string can be used by offline decoder to decode crashcat data/addresses to symbols
-            if (pKernelGsp->pBuildIdSection != NULL)
-            {
-              portStringBufferToHex(buildIdString, 64, pBuildIdNoteHeader->data + pBuildIdNoteHeader->namesz, pBuildIdNoteHeader->descsz);
-
-              prbEncAddString(&pKernelGsp->nocatData.nocatBuffer,
-                              GSP_XIDREPORT_BUILDID,
-                              &buildIdString[0]);
-            }
-
-            // ErrorCode of nocat event is used for categorizing GSP crash data collected from the field via nocat
-            // Since lowest bit of ra is always empty, we use bit 0 to store the sign bit, for
-            // differentiating task crash vs libos crash
-            // signbit of ra - 1 bit, 0
-            //	ra           - (28 - 1) bits, 27:1
-            //	scause       - 4 bits, 31:28
-            //	stval        - 32 bits, 63:32
-            pKernelGsp->nocatData.errorCode |= (crashcatReportRa_HAL(pReport) >> 63) & 1;
-            pKernelGsp->nocatData.errorCode |= crashcatReportRa_HAL(pReport) & 0xFFFFFFE;
-            pKernelGsp->nocatData.errorCode |= (crashcatReportXcause_HAL(pReport) & 0xF) << 28;
-            pKernelGsp->nocatData.errorCode |= (crashcatReportXtval_HAL(pReport) & 0xFFFFFFFF) << 32;
-
-            prbEncAddUInt32(&pKernelGsp->nocatData.nocatBuffer, GSP_XIDREPORT_XID, 120);
-            prbEncAddUInt32(&pKernelGsp->nocatData.nocatBuffer, GSP_XIDREPORT_GPUINSTANCE, gpuGetInstance(pGpu));
-            crashcatReportLogToProtobuf_HAL(pReport, &pKernelGsp->nocatData.nocatBuffer);
-            kgspPostNocatData(pGpu, pKernelGsp, osGetTimestamp());
+            kgspPostCrashcatReportToNocat(pGpu, pKernelGsp, pReport, GSP_ERROR);
 
             objDelete(pReport);
         }
@@ -1114,7 +1091,11 @@ kgspHealthCheck_TU102
 
         if (bFirstFatal)
         {
-            kgspRcAndNotifyAllChannels(pGpu, pKernelGsp, GSP_ERROR, NV_TRUE);
+            if (pKernelRc != NULL)
+            {
+                krcRcAndNotifyAllChannels(pGpu, pKernelRc, GSP_ERROR, NV_TRUE);
+            }
+
             gpuMarkDeviceForReset(pGpu);
         }
 

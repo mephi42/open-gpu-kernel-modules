@@ -304,7 +304,7 @@ pfmreqhndlrOperatingLimitUpdate_IMPL
         status = osQueueWorkItem(pGpu,
                                  _pfmreqhndlrUpdateSystemParamLimitWorkItem,
                                  NULL,
-                                 OS_QUEUE_WORKITEM_FLAGS_NONE);
+                                 (OsQueueWorkItemFlags){0});
 
         if (status != NV_OK)
         {
@@ -725,11 +725,10 @@ cliresCtrlCmdSystemPfmreqhndlrCtrl_IMPL
             {
                 pPlatformRequestHandler->ppmData.ppmIdxRequested = clientPpmIdx;
                 // Create a workItem to change Platform Power Mode
-                status = osQueueWorkItem(
-                    pGpu,
+                status = osQueueWorkItem(pGpu,
                     _pfmreqhndlrUpdatePlatformPowerModeWorkItem,
                     NULL,
-                    OS_QUEUE_WORKITEM_FLAGS_NONE);
+                    (OsQueueWorkItemFlags){0});
                 if (status == NV_OK)
                 {
                     // Queing workitem succeeded, mark it as pending.
@@ -1768,11 +1767,10 @@ pfmreqhndlrHandlePlatformSetEdppLimitInfo_IMPL
     if (!pEdppLimit->bWorkItemPending)
     {
         // Queue workitem to send the EDP limit info to platform
-        status = osQueueWorkItem(
-            pGpu,
+        status = osQueueWorkItem(pGpu,
             _pfmreqhndlrHandlePlatformSetEdppLimitInfoWorkItem,
             NULL,
-            OS_QUEUE_WORKITEM_FLAGS_NONE);
+            (OsQueueWorkItemFlags){0});
         if(status == NV_OK)
         {
             pEdppLimit->bWorkItemPending = NV_TRUE;

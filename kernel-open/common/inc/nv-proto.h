@@ -57,8 +57,6 @@ int         nv_uvm_init                 (void);
 void        nv_uvm_exit                 (void);
 NV_STATUS   nv_uvm_suspend              (void);
 NV_STATUS   nv_uvm_resume               (void);
-void        nv_uvm_notify_start_device  (const NvU8 *uuid);
-void        nv_uvm_notify_stop_device   (const NvU8 *uuid);
 NV_STATUS   nv_uvm_event_interrupt      (const NvU8 *uuid);
 NV_STATUS   nv_uvm_drain_P2P            (const NvU8 *uuid);
 NV_STATUS   nv_uvm_resume_P2P           (const NvU8 *uuid);

@@ -40,7 +40,6 @@
 #include "platform/chipset/chipset.h" // BUSINFO
 #include "gpu/nvbitmask.h" // NVGPU_ENGINE_CAPS_MASK_ARRAY_MAX
 
-
 // VF related info for GSP-RM
 typedef struct GSP_VF_INFO
 {
@@ -81,6 +80,9 @@ typedef struct GspStaticConfigInfo_t
     NV2080_CTRL_GPU_GET_GID_INFO_PARAMS gidInfo;
     NV2080_CTRL_BIOS_GET_SKU_INFO_PARAMS SKUInfo;
     NV2080_CTRL_CMD_FB_GET_FB_REGION_INFO_PARAMS fbRegionInfoParams;
+
+    NvBool bPdiValid;
+    NvU64 pdi;
 
     NV0080_CTRL_GPU_GET_SRIOV_CAPS_PARAMS sriovCaps;
     NvU32 sriovMaxGfid;
@@ -224,6 +226,8 @@ typedef struct GspSystemInfo
     NvBool bGspNocatEnabled;
     NvBool bS0ixSupport;
     NvBool bWindowChannelAlwaysMapped;
+    NvU32  pciePowerControlValue;
+    NvBool bPciePowerControlPresent;
 } GspSystemInfo;
 
 

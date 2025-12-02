@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -529,7 +529,7 @@ gpuNotifySubDeviceEvent_IMPL
         NV_ASSERT_OR_RETURN_VOID(!(pCurThread->flags & THREAD_STATE_FLAGS_IS_ISR_LOCKLESS));
     }
 
-    NV_ASSERT(notifyIndex < NV2080_NOTIFIERS_MAXCOUNT);
+    NV_ASSERT_OR_RETURN_VOID(notifyIndex < NV2080_NOTIFIERS_MAXCOUNT);
 
     // search notifiers with events hooked up for this gpu
     for (i = 0; i < pGpu->numSubdeviceBackReferences; i++)
@@ -1107,7 +1107,7 @@ gpuFindClientInfoWithPidIterator_IMPL
                         // clients, RM needs to provide the unique list being used by the client
                         _gpuCollectMemInfo(hClient, hDevice, pHeap,
                                            &pData->vidMemUsage, ((subPid != 0) ? NV_TRUE : NV_FALSE),
-                                           bGlobalInfo, pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB));
+                                           bGlobalInfo, pGpu->pGpuArch->bGpuArchIsZeroFb);
                         break;
                     }
                     default:

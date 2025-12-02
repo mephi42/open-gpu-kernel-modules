@@ -348,7 +348,6 @@ done:
 NV_STATUS
 gpuInitRegisterAccessMap_IMPL(OBJGPU *pGpu, NvU8 *pAccessMap, NvU32 accessMapSize, const NvU8 *pComprData, const NvU32 comprDataSize)
 {
-    PGZ_INFLATE_STATE pGzState = NULL;
     NvU32 inflatedBytes        = 0;
 
     NV_ASSERT_OR_RETURN(pAccessMap != NULL, NV_ERR_INVALID_STATE);
@@ -362,13 +361,7 @@ gpuInitRegisterAccessMap_IMPL(OBJGPU *pGpu, NvU8 *pAccessMap, NvU32 accessMapSiz
     //
     pComprData += 10;
 
-    NV_ASSERT_OK_OR_RETURN(utilGzAllocate((NvU8*)pComprData, accessMapSize, &pGzState));
-
-    NV_ASSERT(pGzState);
-
-    inflatedBytes = utilGzGetData(pGzState, 0, accessMapSize, pAccessMap);
-
-    utilGzDestroy(pGzState);
+    inflatedBytes = utilGzGetData(pComprData, accessMapSize, 0, accessMapSize, pAccessMap);
 
     if (inflatedBytes != accessMapSize)
     {

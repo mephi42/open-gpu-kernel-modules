@@ -206,7 +206,9 @@ static NvU32 _getDpAudioSymbolSST
                     cyclesPerPacketInc  = 5;
                     break;
             }
+            break;
         }
+
         case EIGHT_CHANNELS:
         {
             switch (laneCount)
@@ -224,6 +226,7 @@ static NvU32 _getDpAudioSymbolSST
                     cyclesPerPacketInc  = 10;
                     break;
             }
+            break;
         }
     }
 
@@ -511,13 +514,13 @@ kdispComputeDpModeSettings_v05_01
             else
             {
                 effectiveBppxScaler = _calcEffectiveBppxScalerNonDsc(hActive, pDpModesetData->bpp, pDpModesetData->bDP2xChannelCoding,
-                                                                     pDpModesetData->bMultiStream, pDpModesetData->laneCount);        
+                                                                     pDpModesetData->bMultiStream, pDpModesetData->laneCount);
             }
         }
     }
     else
     {
-        
+
         effectiveBppxScaler = pDpModesetData->bpp;
     }
 

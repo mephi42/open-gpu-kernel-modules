@@ -731,7 +731,7 @@ NV_STATUS osQueueWorkItem(
     OBJGPU *pGpu,
     OSWorkItemFunction pFunction,
     void *pParams,
-    NvU32 flags
+    OsQueueWorkItemFlags flags
 )
 {
     nv_work_item_t *pWi;
@@ -745,30 +745,19 @@ NV_STATUS osQueueWorkItem(
         return NV_ERR_NO_MEMORY;
     }
 
-    pWi->flags = NV_WORK_ITEM_FLAGS_REQUIRES_GPU;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_DONT_FREE_PARAMS)
-        pWi->flags |= NV_WORK_ITEM_FLAGS_DONT_FREE_DATA;
+    pWi->flags = (OsQueueWorkItemFlags){0};
+    pWi->flags.bDontFreeParams         = flags.bDontFreeParams;
+    pWi->flags.bLockSema               = flags.bLockSema;
+    pWi->flags.apiLock                 = flags.apiLock;
+    pWi->flags.bLockGpus               = flags.bLockGpus;
+    pWi->flags.bLockGpuGroupDevice     = flags.bLockGpuGroupDevice;
+    pWi->flags.bLockGpuGroupSubdevice  = flags.bLockGpuGroupSubdevice;
+    pWi->flags.bFullGpuSanity          = flags.bFullGpuSanity;
+    pWi->flags.bDropOnUnloadQueueFlush = flags.bDropOnUnloadQueueFlush;
 
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RW)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RW;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RO)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_API_RO;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_GPUS)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_GPUS;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE;
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE;
-
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_FULL_GPU_SANITY)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_FULL_GPU_SANITY;
-
-    if (flags & OS_QUEUE_WORKITEM_FLAGS_DROP_ON_UNLOAD_QUEUE_FLUSH)
-        pWi->flags |= OS_QUEUE_WORKITEM_FLAGS_DROP_ON_UNLOAD_QUEUE_FLUSH;
-
+    pWi->flags.bRequiresGpu = NV_TRUE;
     pWi->gpuInstance = gpuGetInstance(pGpu);
+
     pWi->func.pGpuFunction = pFunction;
     pWi->pData = pParams;
     nv = NV_GET_NV_STATE(pGpu);
@@ -798,7 +787,7 @@ NV_STATUS osQueueSystemWorkItem(
         return NV_ERR_NO_MEMORY;
     }
 
-    pWi->flags = NV_WORK_ITEM_FLAGS_NONE;
+    pWi->flags = (OsQueueWorkItemFlags){0};
     pWi->func.pSystemFunction = pFunction;
     pWi->pData = pParams;
 
@@ -1967,25 +1956,12 @@ void osGetTimeoutParams(OBJGPU *pGpu, NvU32 *pTimeoutUs, NvU32 *pScale, NvU32 *p
 
     if (hypervisorIsVgxHyper())
     {
-        if (IS_GSP_CLIENT(pGpu) && pGpu->getProperty(pGpu, PDB_PROP_GPU_EXTENDED_GSP_RM_INITIALIZATION_TIMEOUT_FOR_VGX) &&
-            !pGpu->gspRmInitialized)
-        {
-            //
-            // For Hopper, 1.8 seconds is not enough to boot GSP-RM.
-            // To avoid this issue, 4 seconds timeout is set on initialization,
-            // and then it's going to be changed 1.8 seconds after GSP initialization.
-            //
-            *pTimeoutUs = 4 * 1000000;
-        }
-        else
-        {
-            //
-            // 1.8 seconds is chosen because it is 90% of the overall hard limit of 2.0
-            // seconds, imposed by WDDM driver rules.
-            // Currently primary use case of VGX is Windows, so setting 1.8 as default
-            //
-            *pTimeoutUs = 1.8 * 1000000;
-        }
+        //
+        // 1.8 seconds is chosen because it is 90% of the overall hard limit of 2.0
+        // seconds, imposed by WDDM driver rules.
+        // Currently primary use case of VGX is Windows, so setting 1.8 as default
+        //
+        *pTimeoutUs = 1.8 * 1000000;
     }
     else
     {
@@ -3056,6 +3032,11 @@ NV_STATUS osGetVersionDump(void * pVoid)
 cleanup:
     os_free_mem(pOsVersionInfo);
     return rmStatus;
+}
+
+NV_STATUS osTegraiGpuPerfBoost(OBJGPU *pGpu, NvBool enable, NvU32 duration)
+{
+    return os_tegra_igpu_perf_boost(pGpu->pOsGpuInfo, enable, duration);
 }
 
 NV_STATUS osGetVersion(NvU32 *majorVer, NvU32 *minorVer, NvU32 *buildNum, NvU16 *unusedPatchVersion, NvU16 *unusedProductType)

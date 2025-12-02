@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,10 +28,8 @@
 
 /*!
  * @file   rmifvideng.h
- * @brief  RISC-V boot arguments / interface
+ * @brief  RM interface for video engine
  */
-
-#include <nvtypes.h>
 
 /*!
  * Video engine's frame-buffer interface block has several slots/indices which can
@@ -58,43 +56,4 @@ typedef enum _RM_VIDENG_DMAIDX_TYPE
     RM_VIDENG_DMAIDX_UCODE         = 6,
     RM_VIDENG_DMAIDX_END           = 7
 } RM_VIDENG_DMAIDX_TYPE;
-
-/*!
- * Configuration for riscv msdecos boot params
- */
-#define NV_VIDENG_BOOT_PARAMS_VERSION                                       2
-
-#define NV_VIDENG_BOOT_PARAMS_MEM_ADDR_LO                                31:0
-#define NV_VIDENG_BOOT_PARAMS_MEM_ADDR_HI                                27:0
-#define NV_VIDENG_BOOT_PARAMS_MEM_DMA_IDX                               31:28
-
-#define NV_VIDENG_TRACESURF_PARAMS_SIZE                                  27:0
-#define NV_VIDENG_TRACESURF_PARAMS_DMA_IDX                              31:28
-
-typedef struct
-{
-    /*
-     *                   *** WARNING ***
-     * First 3 fields must be frozen like that always. Should never
-     * be reordered or changed.
-     */
-    NvU8   version;        // version of boot params
-    NvU8   rsvd;           // reserved byte
-    NvU16  size;           // size of boot params
-    /*
-     * You can reorder or change below this point but update version.
-     * Make sure to align it to 16B as ucode expect 16byte alignment to DMA efficiently.
-     */
-    NvU32  videoPgPmuHandshake;     // Handshake between PMU and Video Ucode for SW controlled IDLE signal.
-    
-#if (defined(NVRM) || defined(GB10X_OVERRIDE_TIMEOUT))
-    NvU32  videngTimeoutMs;         // SW WAR for bug 5203864, increasing timeouts on GB10x via regkey RmOverrideInternalTimeoutsMs.
-                                    // Specify the timeout value in ms. If the value is 0, do not override the timeouts sent from KMD and/or UMD.
-    NvU32  rsvd2;                   // reserved field
-#else
-    NvU64  rsvd2;                   // reserved field
-#endif
-
-} NV_VIDENG_BOOT_PARAMS, *PNV_VIDENG_BOOT_PARAMS;
-
 #endif // RMIFVIDENG_H

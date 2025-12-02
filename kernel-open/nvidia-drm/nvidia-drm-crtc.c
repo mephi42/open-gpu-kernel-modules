@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 #include "nvidia-drm-encoder.h"
 #include "nvidia-drm-utils.h"
 #include "nvidia-drm-fb.h"
-#include "nvidia-drm-ioctl.h"
 #include "nvidia-drm-format.h"
+#include "nv_drm_common_ioctl.h"
 
 #include "nvmisc.h"
 #include "nv_common_utils.h"
@@ -1286,15 +1286,10 @@ plane_req_config_update(struct drm_plane *plane,
     if ((nv_drm_plane_state->input_colorspace == NV_DRM_INPUT_COLOR_SPACE_NONE) &&
         nv_drm_format_is_yuv(plane_state->fb->format->format)) {
 
-        if (nv_plane->supportsColorProperties) {
-            req_config->config.inputColorSpace =
-                nv_drm_color_encoding_to_nvkms_colorspace(plane_state->color_encoding);
-            req_config->config.inputColorRange =
-                nv_drm_color_range_to_nvkms_color_range(plane_state->color_range);
-        } else {
-            req_config->config.inputColorSpace = NVKMS_INPUT_COLOR_SPACE_NONE;
-            req_config->config.inputColorRange = NVKMS_INPUT_COLOR_RANGE_DEFAULT;
-        }
+        req_config->config.inputColorSpace =
+            nv_drm_color_encoding_to_nvkms_colorspace(plane_state->color_encoding);
+        req_config->config.inputColorRange =
+            nv_drm_color_range_to_nvkms_color_range(plane_state->color_range);
         req_config->config.inputTf = NVKMS_INPUT_TF_LINEAR;
     } else {
 #endif
@@ -2844,26 +2839,16 @@ nv_drm_plane_create(struct drm_device *dev,
     }
 
 #if defined(NV_DRM_PLANE_CREATE_COLOR_PROPERTIES_PRESENT)
-    if (pResInfo->caps.supportsInputColorSpace &&
-        pResInfo->caps.supportsInputColorRange) {
-
-        nv_plane->supportsColorProperties = true;
-
-        drm_plane_create_color_properties(
-            plane,
-            NVBIT(DRM_COLOR_YCBCR_BT601) |
-            NVBIT(DRM_COLOR_YCBCR_BT709) |
-            NVBIT(DRM_COLOR_YCBCR_BT2020),
-            NVBIT(DRM_COLOR_YCBCR_FULL_RANGE) |
-            NVBIT(DRM_COLOR_YCBCR_LIMITED_RANGE),
-            DRM_COLOR_YCBCR_BT709,
-            DRM_COLOR_YCBCR_FULL_RANGE
-        );
-    } else {
-        nv_plane->supportsColorProperties = false;
-    }
-#else
-    nv_plane->supportsColorProperties = false;
+    drm_plane_create_color_properties(
+        plane,
+        NVBIT(DRM_COLOR_YCBCR_BT601) |
+        NVBIT(DRM_COLOR_YCBCR_BT709) |
+        NVBIT(DRM_COLOR_YCBCR_BT2020),
+        NVBIT(DRM_COLOR_YCBCR_FULL_RANGE) |
+        NVBIT(DRM_COLOR_YCBCR_LIMITED_RANGE),
+        DRM_COLOR_YCBCR_BT709,
+        DRM_COLOR_YCBCR_FULL_RANGE
+    );
 #endif
 
     drm_plane_helper_add(plane, &nv_plane_helper_funcs);

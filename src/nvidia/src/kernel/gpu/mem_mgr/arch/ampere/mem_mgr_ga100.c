@@ -505,14 +505,63 @@ memmgrInsertUnprotectedRegionAtBottomOfFb_GA100
 NvBool
 memmgrIsMemDescSupportedByFla_GA100
 (
-    OBJGPU *pGpu,
-    MemoryManager *pMemoryManager,
-    MEMORY_DESCRIPTOR *pMemDesc
+    OBJGPU            *pFlaOwnerGpu,
+    MemoryManager     *pFlaOwnerMemoryManager,
+    MEMORY_DESCRIPTOR *pPhysMemDesc
 )
 {
-    if ((memdescGetAddressSpace(pMemDesc) == ADDR_FBMEM) || memdescIsEgm(pMemDesc))
+    NV_ADDRESS_SPACE addrSpace = memdescGetAddressSpace(pPhysMemDesc);
+
+    // For FB, make sure source and dest GPUs are same as peer mappings are not supported.
+    if ((addrSpace == ADDR_FBMEM) && (pFlaOwnerGpu == pPhysMemDesc->pGpu))
     {
         return NV_TRUE;
     }
+
+    //
+    // For EGM, make sure source and dest GPUs belong to the same CPU socket. Remote EGM
+    // is not supported.
+    //
+    if (memdescIsEgm(pPhysMemDesc))
+    {
+        if (pFlaOwnerGpu->cpuNumaNodeId == pPhysMemDesc->pGpu->cpuNumaNodeId)
+        {
+            return NV_TRUE;
+        }
+    }
+
     return NV_FALSE;
 }
+
+/*!
+ *  @brief Validates the page size for FLA memory
+ *
+ *  @returns NvBool
+ */
+NvBool
+memmgrIsValidFlaPageSize_GA100
+(
+    OBJGPU *pGpu,
+    MemoryManager *pMemoryManager,
+    NvU64 pageSize,
+    NvBool bIsMulticast
+)
+{
+    NvBool bIsSupported;
+
+    switch(pageSize)
+    {
+        case RM_PAGE_SIZE_2M:
+            bIsSupported = !bIsMulticast;
+            break;
+        case RM_PAGE_SIZE_512M:
+            bIsSupported = NV_TRUE;
+            break;
+        default:
+            bIsSupported = NV_FALSE;
+            break;
+    }
+
+    return bIsSupported;
+}
+

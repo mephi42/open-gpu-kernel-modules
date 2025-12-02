@@ -45,10 +45,8 @@
  */
 #if NV_PRINTF_STRINGS_ALLOWED
 const char *g_gmmuFillStateStrings[]           = { "INVALID", "SPARSE", "NV4K" };
-const char *g_gmmuUVMMirroringDirStrings[]     = { "[User Root] ", "[Mirrored Root] " };
 #else // NV_PRINTF_STRINGS_ALLOWED
 static const char _gmmuFillStateString[]       = "XS4";
-static const char _gmmuUVMMirroringDirString[] = "UM";
 #endif // NV_PRINTF_STRINGS_ALLOWED
 
 static PMEMORY_DESCRIPTOR
@@ -60,28 +58,13 @@ static PMEMORY_DESCRIPTOR
 _gmmuMemDescCacheAlloc(MMU_WALK_USER_CTX *pUserCtx);
 
 /*!
- * Utility function to decide if a level should be mirrored.
- * Used by MMU callbacks.
- */
-static NvBool NV_FORCEINLINE
-_mirrorLevel
-(
-    MMU_WALK_USER_CTX   *pUserCtx,
-    const MMU_FMT_LEVEL *pLevelFmt
-)
-{
-    return (pLevelFmt == pUserCtx->pGpuState->pFmt->pRoot) && pUserCtx->pGVAS->bIsMirrored;
-}
-
-/*!
  * Utility function to get the number of Page Dirs to loop over.
  * Used by MMU callbacks.
  */
 static NvU8 NV_FORCEINLINE
-_getMaxPageDirs(NvBool bMirror)
+_getMaxPageDirs(void)
 {
-    return bMirror ? GMMU_MAX_PAGE_DIR_INDEX_COUNT :
-                     GMMU_MAX_PAGE_DIR_INDEX_COUNT - 1;
+    return GMMU_MAX_PAGE_DIR_INDEX_COUNT - 1;
 }
 
 static NV_STATUS
@@ -136,8 +119,7 @@ _gmmuWalkCBLevelAlloc
     NvBool               bPacked     = NV_FALSE;
     NvBool               bPartialTbl = NV_FALSE;
     NvBool               bPmaManaged = !!(pGVAS->flags & VASPACE_FLAGS_PTETABLE_PMA_MANAGED);
-    NvBool               bMirror     = _mirrorLevel(pUserCtx, pLevelFmt);
-    NvU8                 maxPgDirs   = _getMaxPageDirs(bMirror);
+    NvU8                 maxPgDirs   = _getMaxPageDirs();
     NvU8                 i = 0, j = 0;
 
     // Abort early if level is not targeted or already sufficiently sized.
@@ -290,8 +272,7 @@ _gmmuWalkCBLevelAlloc
     NV_ASSERT(memPoolListCount <= NV_ARRAY_ELEMENTS(memPoolList));
 
     // MEMDESC flags
-    memDescFlags = MEMDESC_FLAGS_LOCKLESS_SYSMEM_ALLOC  |
-                   MEMDESC_FLAGS_PAGE_SIZE_ALIGN_IGNORE;
+    memDescFlags = MEMDESC_FLAGS_LOCKLESS_SYSMEM_ALLOC;
 
     if (pGVAS->flags & VASPACE_FLAGS_ALLOW_PAGES_IN_PHYS_MEM_SUBALLOCATOR)
     {
@@ -406,10 +387,9 @@ _gmmuWalkCBLevelAlloc
 
 #if NV_PRINTF_STRINGS_ALLOWED
         NV_PRINTF(LEVEL_INFO,
-                  "[GPU%u]: [%s] %sPA 0x%llX (0x%X bytes) for VA 0x%llX-0x%llX\n",
+                  "[GPU%u]: [%s] PA 0x%llX (0x%X bytes) for VA 0x%llX-0x%llX\n",
                   pUserCtx->pGpu->gpuInstance,
                   bPacked ? "Packed" : "Unpacked",
-                  bMirror ? g_gmmuUVMMirroringDirStrings[i] : "",
                   memdescGetPtePhysAddr(pMemDesc[i], AT_GPU, 0), newMemSize,
                   mmuFmtLevelVirtAddrLo(pLevelFmt, vaBase),
                   mmuFmtLevelVirtAddrHi(pLevelFmt, vaLimit));
@@ -430,16 +410,7 @@ _gmmuWalkCBLevelAlloc
     *pBChanged = NV_TRUE;
 
 done:
-    if (NV_OK == status)
-    {
-        // Commit mirrored root desc.
-        if (bMirror)
-        {
-            pUserCtx->pGpuState->pMirroredRoot =
-                (MMU_WALK_MEMDESC*)pMemDesc[GMMU_KERNEL_PAGE_DIR_INDEX];
-        }
-    }
-    else
+    if (NV_OK != status)
     {
         for (i = 0; i < maxPgDirs; i++)
         {
@@ -560,17 +531,10 @@ _gmmuWalkCBLevelFree
 )
 {
     NvU8               i;
-    NvBool             bMirror   = _mirrorLevel(pUserCtx, pLevelFmt);
-    NvU8               maxPgDirs = _getMaxPageDirs(bMirror);
+    NvU8               maxPgDirs = _getMaxPageDirs();
     MEMORY_DESCRIPTOR *pMemDesc[GMMU_MAX_PAGE_DIR_INDEX_COUNT] = {NULL};
 
     pMemDesc[GMMU_USER_PAGE_DIR_INDEX] = (MEMORY_DESCRIPTOR*)pOldMem;
-    if (bMirror)
-    {
-        pMemDesc[GMMU_KERNEL_PAGE_DIR_INDEX] =
-                (MEMORY_DESCRIPTOR*)pUserCtx->pGpuState->pMirroredRoot;
-        pUserCtx->pGpuState->pMirroredRoot = NULL;
-    }
 
     for (i = 0; i < maxPgDirs; i++)
     {
@@ -581,17 +545,15 @@ _gmmuWalkCBLevelFree
 
 #if NV_PRINTF_STRINGS_ALLOWED
         NV_PRINTF(LEVEL_INFO,
-                  "[GPU%u]: %sPA 0x%llX for VA 0x%llX-0x%llX\n",
+                  "[GPU%u]: PA 0x%llX for VA 0x%llX-0x%llX\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? g_gmmuUVMMirroringDirStrings[i] : "",
                   memdescGetPtePhysAddr(pMemDesc[i], AT_GPU, 0),
                   mmuFmtLevelVirtAddrLo(pLevelFmt, vaBase),
                   mmuFmtLevelVirtAddrHi(pLevelFmt, vaBase));
 #else // NV_PRINTF_STRINGS_ALLOWED
         NV_PRINTF(LEVEL_INFO,
-                  "[GPU%u]: %cPA 0x%llX for VA 0x%llX-0x%llX\n",
+                  "[GPU%u]: PA 0x%llX for VA 0x%llX-0x%llX\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? _gmmuUVMMirroringDirString[i] : ' ',
                   memdescGetPtePhysAddr(pMemDesc[i], AT_GPU, 0),
                   mmuFmtLevelVirtAddrLo(pLevelFmt, vaBase),
                   mmuFmtLevelVirtAddrHi(pLevelFmt, vaBase));
@@ -682,8 +644,7 @@ _gmmuWalkCBUpdatePde
 {
     NvU32              i;
     GMMU_ENTRY_VALUE   entry;
-    NvBool             bMirror     = _mirrorLevel(pUserCtx, pLevelFmt);
-    NvU8               maxPgDirs   = _getMaxPageDirs(bMirror);
+    NvU8               maxPgDirs   = _getMaxPageDirs();
     OBJGPU            *pGpu        = pUserCtx->pGpu;
     OBJGVASPACE       *pGVAS       = pUserCtx->pGVAS;
     KernelGmmu        *pKernelGmmu = GPU_GET_KERNEL_GMMU(pGpu);
@@ -708,23 +669,16 @@ _gmmuWalkCBUpdatePde
     }
 
     pMemDesc[GMMU_USER_PAGE_DIR_INDEX] = (MEMORY_DESCRIPTOR*)pLevelMem;
-    if (bMirror)
-    {
-        pMemDesc[GMMU_KERNEL_PAGE_DIR_INDEX] =
-            (MEMORY_DESCRIPTOR*)pUserCtx->pGpuState->pMirroredRoot;
-    }
 
     for (i = 0; i < maxPgDirs; i++)
     {
 #if NV_PRINTF_STRINGS_ALLOWED
-        NV_PRINTF(LEVEL_INFO, "[GPU%u]: %sPA 0x%llX, Entry 0x%X\n",
+        NV_PRINTF(LEVEL_INFO, "[GPU%u]: PA 0x%llX, Entry 0x%X\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? g_gmmuUVMMirroringDirStrings[i] : "",
                   memdescGetPtePhysAddr(pMemDesc[i], AT_GPU, 0), entryIndex);
 #else // NV_PRINTF_STRINGS_ALLOWED
-        NV_PRINTF(LEVEL_INFO, "[GPU%u]: %cPA 0x%llX, Entry 0x%X\n",
+        NV_PRINTF(LEVEL_INFO, "[GPU%u]: PA 0x%llX, Entry 0x%X\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? _gmmuUVMMirroringDirString[i] : ' ',
                   memdescGetPtePhysAddr(pMemDesc[i], AT_GPU, 0), entryIndex);
 #endif // NV_PRINTF_STRINGS_ALLOWED
     }
@@ -835,10 +789,8 @@ _gmmuWalkCBFillEntries
     OBJGPU            *pGpu           = pUserCtx->pGpu;
     KernelGmmu        *pKernelGmmu    = GPU_GET_KERNEL_GMMU(pGpu);
     MemoryManager     *pMemoryManager = GPU_GET_MEMORY_MANAGER(pGpu);
-    KernelBus         *pKernelBus     = GPU_GET_KERNEL_BUS(pGpu);
     const GMMU_FMT    *pFmt      = pUserCtx->pGpuState->pFmt;
-    NvBool             bMirror   = _mirrorLevel(pUserCtx, pLevelFmt);
-    NvU8               maxPgDirs = _getMaxPageDirs(bMirror);
+    NvU8               maxPgDirs = _getMaxPageDirs();
     MEMORY_DESCRIPTOR *pMemDesc[GMMU_MAX_PAGE_DIR_INDEX_COUNT] = {NULL};
     NvU32              sizeOfEntries = (entryIndexHi - entryIndexLo + 1) *
                                         pLevelFmt->entrySize;
@@ -846,11 +798,6 @@ _gmmuWalkCBFillEntries
     NvU32              transferFlags = TRANSFER_FLAGS_SHADOW_ALLOC;
 
     pMemDesc[GMMU_USER_PAGE_DIR_INDEX] = (MEMORY_DESCRIPTOR*)pLevelMem;
-    if (bMirror)
-    {
-        pMemDesc[GMMU_KERNEL_PAGE_DIR_INDEX] =
-            (MEMORY_DESCRIPTOR*)pUserCtx->pGpuState->pMirroredRoot;
-    }
 
     // FABRIC_VASPACE object of pGpu.
     FABRIC_VASPACE *pFabricVAS = (pGpu->pFabricVAS != NULL) ? (dynamicCast(pGpu->pFabricVAS, FABRIC_VASPACE)) : NULL;
@@ -882,17 +829,15 @@ _gmmuWalkCBFillEntries
 
 #if NV_PRINTF_STRINGS_ALLOWED
         NV_PRINTF(LEVEL_INFO,
-                  "[GPU%u]: %sPA 0x%llX, Entries 0x%X-0x%X = %s\n",
+                  "[GPU%u]: PA 0x%llX, Entries 0x%X-0x%X = %s\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? g_gmmuUVMMirroringDirStrings[j] : "",
                   memdescGetPtePhysAddr(pMemDesc[j], AT_GPU, 0),
                   entryIndexLo, entryIndexHi,
                   g_gmmuFillStateStrings[fillState]);
 #else // NV_PRINTF_STRINGS_ALLOWED
         NV_PRINTF(LEVEL_INFO,
-                  "[GPU%u] %cPA 0x%llX, Entries 0x%X-0x%X = %c\n",
+                  "[GPU%u] PA 0x%llX, Entries 0x%X-0x%X = %c\n",
                   pUserCtx->pGpu->gpuInstance,
-                  bMirror ? _gmmuUVMMirroringDirString[j] : ' ',
                   memdescGetPtePhysAddr(pMemDesc[j], AT_GPU, 0),
                   entryIndexLo, entryIndexHi,
                   _gmmuFillStateString[fillState]);
@@ -927,11 +872,7 @@ _gmmuWalkCBFillEntries
                     }
                     else
                     {
-                        if (kbusIsFlaDummyPageEnabled(pKernelBus) &&
-                            (pUserCtx->pGVAS->flags & VASPACE_FLAGS_FLA))
-                            pSparseEntry = &pUserCtx->pGpuState->flaDummyPage.pte;
-                        else
-                            pSparseEntry = &pFam->sparsePte;
+                        pSparseEntry = &pFam->sparsePte;
                     }
                 }
 
@@ -958,17 +899,15 @@ _gmmuWalkCBFillEntries
                 {
 #if NV_PRINTF_STRINGS_ALLOWED
                     NV_PRINTF(LEVEL_ERROR,
-                              "[GPU%u]: %sPA 0x%llX, Entries 0x%X-0x%X = %s FAIL\n",
+                              "[GPU%u]: PA 0x%llX, Entries 0x%X-0x%X = %s FAIL\n",
                               pUserCtx->pGpu->gpuInstance,
-                              bMirror ? g_gmmuUVMMirroringDirStrings[j] : "",
                               memdescGetPtePhysAddr(pMemDesc[j], AT_GPU, 0),
                               entryIndexLo, entryIndexHi,
                               g_gmmuFillStateStrings[fillState]);
 #else // NV_PRINTF_STRINGS_ALLOWED
                     NV_PRINTF(LEVEL_ERROR,
-                              "[GPU%u]: %cPA 0x%llX, Entries 0x%X-0x%X = %c FAIL\n",
+                              "[GPU%u]: PA 0x%llX, Entries 0x%X-0x%X = %c FAIL\n",
                               pUserCtx->pGpu->gpuInstance,
-                              bMirror ? _gmmuUVMMirroringDirString[j] : ' ',
                               memdescGetPtePhysAddr(pMemDesc[j], AT_GPU, 0),
                               entryIndexLo, entryIndexHi,
                               _gmmuFillStateString[fillState]);

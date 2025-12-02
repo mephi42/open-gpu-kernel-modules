@@ -192,11 +192,6 @@ static void RmCreateOsDescriptor(NVOS32_PARAMETERS *pApi, API_SECURITY_INFO secI
     }
 
 done:
-    if (pPteArray != NULL)
-    {
-        os_free_mem(pPteArray);
-    }
-
     if (rmStatus != NV_OK)
         pApi->status = rmStatus;
 }

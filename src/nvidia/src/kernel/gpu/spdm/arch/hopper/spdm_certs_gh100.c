@@ -34,6 +34,8 @@
 
 /* ------------------------ Macros ----------------------------------------- */
 #define NV_GH100_SPDM_REQUESTER_CERT_COUNT  (3)
+#define PEM_CERT_HEADER_SIZE                (28)
+#define PEM_CERT_FOOTER_SIZE                (26)
 
 //
 //TODO : Need to generate individual encapsulated certification chain.
@@ -109,6 +111,13 @@ NV_STATUS spdmConvertCertificateToDer_GH100
     NV_STATUS status = NV_OK;
 
     pemCertSize = bindataGetBufferSize(pBinStorage);
+    // check if the PEM cert is larger than the header and footer, 28 and 26 bytes respectively
+    if (pemCertSize < PEM_CERT_HEADER_SIZE + PEM_CERT_FOOTER_SIZE)
+    {
+        *pCertSize = 0;
+        status = NV_ERR_INVALID_DATA;
+        goto Exit;
+    }
 
     pemCert = portMemAllocNonPaged(pemCertSize);
     if (pemCert == NULL)
@@ -127,18 +136,19 @@ NV_STATUS spdmConvertCertificateToDer_GH100
 
     // calculate the size we need to allocate
     // remove the PEM cert header and footer, which are 28 and 26 bytes respectively
-    derCertSize = pemCertSize - 28 - 26;
+    derCertSize = pemCertSize - (PEM_CERT_HEADER_SIZE + PEM_CERT_FOOTER_SIZE);
     // remove a linebreak after every 64 encoded characters
     derCertSize -= (derCertSize + 64) / 65;
     // 4 bytes of b64 characters are decoded into 3 bytes
     derCertSize = (derCertSize / 4) * 3;
 
     // footer size (26) + trailing linebreak (1) + 0-indexed array adjustment (1)
-    if (pemCert[pemCertSize - 28] == '=')
+    if (pemCert[pemCertSize - PEM_CERT_FOOTER_SIZE - 2] == '=')
     {
         derCertSize--;
     }
-    if (pemCert[pemCertSize - 29] == '=')
+    // and the byte before that
+    if (pemCert[pemCertSize - PEM_CERT_FOOTER_SIZE - 3] == '=')
     {
         derCertSize--;
     }

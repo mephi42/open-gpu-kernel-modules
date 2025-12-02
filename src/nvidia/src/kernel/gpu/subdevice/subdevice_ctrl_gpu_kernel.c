@@ -1974,45 +1974,6 @@ subdeviceCtrlCmdGpuGetPesInfo_IMPL
 }
 
 //
-// subdeviceCtrlCmdGpuQueryMode_IMPL
-//
-// Lock Requirements:
-//      Assert that API and GPUs lock held on entry
-//
-NV_STATUS
-subdeviceCtrlCmdGpuQueryMode_IMPL
-(
-    Subdevice *pSubdevice,
-    NV2080_CTRL_GPU_QUERY_MODE_PARAMS *pQueryMode
-)
-{
-    OBJGPU *pGpu = GPU_RES_GET_GPU(pSubdevice);
-
-    NV_ASSERT_OR_RETURN(rmapiLockIsOwner() && rmGpuLockIsOwner(), NV_ERR_INVALID_LOCK_STATE);
-
-    switch (gpuGetMode(pGpu))
-    {
-        case NV_GPU_MODE_GRAPHICS_MODE:
-        {
-            pQueryMode->mode = NV2080_CTRL_GPU_QUERY_MODE_GRAPHICS_MODE;
-            break;
-        }
-        case NV_GPU_MODE_COMPUTE_MODE:
-        {
-            pQueryMode->mode = NV2080_CTRL_GPU_QUERY_MODE_COMPUTE_MODE;
-            break;
-        }
-        default:
-        {
-            pQueryMode->mode = NV2080_CTRL_GPU_QUERY_MODE_UNKNOWN_MODE;
-            break;
-        }
-    }
-
-    return NV_OK;
-}
-
-//
 // subdeviceCtrlCmdGpuHandleGpuSR
 //
 // Lock Requirements:
@@ -3307,7 +3268,7 @@ subdeviceCtrlCmdGetGpuFabricProbeInfo_IMPL
                            rmDeviceGpuLockIsOwner(gpuGetInstance(pGpu)),
                            NV_ERR_INVALID_LOCK_STATE);
 
-    // Probe is not supported - Ex - Direct connected etc.
+    // Probe is not supported - Ex - Direct connected or SPT
     if (!gpuFabricProbeIsSupported(pGpu))
     {
         pParams->state = NV2080_CTRL_GPU_FABRIC_PROBE_STATE_UNSUPPORTED;
@@ -3605,11 +3566,23 @@ subdeviceCtrlCmdGpuGetGidInfo_IMPL
 {
     NV_STATUS rmStatus = NV_OK;
     OBJGPU   *pGpu = GPU_RES_GET_GPU(pSubdevice);
-    NvU8     *pGidString;
+    NvU8     *pGidString = NULL;
     NvU32     flags = pGidInfoParams->flags;
     NvU32     gidStrlen;
 
-    rmStatus = gpuGetGidInfo(pGpu, &pGidString, &gidStrlen, flags);
+    if (FLD_TEST_DRF(2080_GPU_CMD, _GPU_GET_GID_FLAGS, _MODE, _GPU, flags))
+    {
+        rmStatus = gpuGetGidInfo(pGpu, &pGidString, &gidStrlen, flags);
+    }
+    else if (FLD_TEST_DRF(2080_GPU_CMD, _GPU_GET_GID_FLAGS, _MODE, _UGPU, flags))
+    {
+        rmStatus = gpuGetUgidInfo(pGpu, &pGidString, &gidStrlen, flags, pGidInfoParams->index);
+    }
+    else
+    {
+        rmStatus = NV_ERR_INVALID_PARAMETER;
+    }
+
     if (rmStatus == NV_OK)
     {
         if (sizeof(pGidInfoParams->data) >= gidStrlen)
@@ -3795,7 +3768,8 @@ subdeviceCtrlCmdGpuRpcGspTest_IMPL
         CALL_CONTEXT *pCallContext  = resservGetTlsCallContext();
         RmCtrlParams *pRmCtrlParams = pCallContext->pControlParams;
         pParams->startTimestamp = osGetTimestamp();
-        if (pParams->test == NV2080_CTRL_GPU_RPC_GSP_TEST_SERIALIZED_INTEGRITY)
+        if ((pParams->test == NV2080_CTRL_GPU_RPC_GSP_TEST_SERIALIZED_INTEGRITY) ||
+            (pParams->test == NV2080_CTRL_GPU_RPC_GSP_TEST_SERIALIZED_NOP))
         {
             NV_RM_RPC_CONTROL(pGpu,
                         pRmCtrlParams->hClient,
@@ -3824,15 +3798,20 @@ subdeviceCtrlCmdGpuRpcGspTest_IMPL
         return status;
     }
 
-    for (NvU32 i = 0; i < pParams->dataSize; i++)
+    if (pParams->test == NV2080_CTRL_GPU_RPC_GSP_TEST_SERIALIZED_INTEGRITY)
     {
-        if (data[i] != i * 2) {
-            status = NV_ERR_INVALID_DATA;
-            NV_PRINTF(LEVEL_ERROR, "RPC TEST: mismatch in input data, expected %u, received %u\n", i * 2, data[i]);
+        for (NvU32 i = 0; i < pParams->dataSize; i++)
+        {
+            if (data[i] != i * 2) {
+                status = NV_ERR_INVALID_DATA;
+                NV_PRINTF(LEVEL_ERROR, "RPC TEST: mismatch in input data, expected %u, received %u\n", i * 2, data[i]);
+            }
+            data[i] = i * 3;
         }
-        data[i] = i * 3;
+        return status;
     }
-    return status;
+
+    return NV_OK;
 }
 
 /*

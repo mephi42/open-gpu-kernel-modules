@@ -302,6 +302,20 @@ typedef struct PCIEP2PCAPSINFO
 } PCIEP2PCAPSINFO;
 MAKE_INTRUSIVE_LIST(pcieP2PCapsInfoList, PCIEP2PCAPSINFO, node);
 
+typedef struct
+{
+    NvU64 tid;
+    NvU32 gpuInstance;
+} GPUMGR_CURRENT_GPU_INSTANCE;
+
+#define NVLINK_NVLE_MAX_REMAP_TABLE_ENTRIES  32
+
+typedef struct ALID_CLID_MAP
+{
+    NvU32 alid[NVLINK_NVLE_MAX_REMAP_TABLE_ENTRIES];
+    NvU32 alidCount;
+} ALID_CLID_MAP;
+
 
 // Private field names are wrapped in PRIVATE_FIELD, which does nothing for
 // the matching C source file, but causes diagnostics to be issued if another
@@ -362,8 +376,10 @@ struct OBJGPUMGR {
     CONF_COMPUTE_CAPS ccCaps;
     NvU64 ccAttackerAdvantage;
     NVLE_CAPS nvleCaps;
+    ALID_CLID_MAP alidClidMap;
     pcieP2PCapsInfoList pcieP2PCapsInfoCache;
     void *pcieP2PCapsInfoLock;
+    GPUMGR_CURRENT_GPU_INSTANCE currentGpuInstances[8];
 };
 
 
@@ -546,7 +562,7 @@ typedef struct GPUATTACHARG
     RmPhysAddr  instPhysAddr;
     RmPhysAddr  ioPhysAddr;
     NvU64       nvDomainBusDeviceFunc;
-    NvU32       regLength;
+    NvU64       regLength;
     NvU64       fbLength;
     NvU32       instLength;
     NvU32       intLine;
@@ -657,12 +673,15 @@ NvBool      gpumgrIsGpuPointerAttached(OBJGPU *pGpu);
 NvU32       gpumgrGetGrpMaskFromGpuInst(NvU32 gpuInst);
 void        gpumgrAddDeviceMaskToGpuInstTable(NvU32 gpuMask);
 void        gpumgrClearDeviceMaskFromGpuInstTable(NvU32 gpuMask);
-NvBool      gpumgrSetGpuAcquire(OBJGPU *pGpu);
-void        gpumgrSetGpuRelease(void);
+NvU32       gpumgrSetCurrentGpuInstance(NvU32 gpuId);
+NvU32       gpumgrGetCurrentGpuInstance(void);
 NvU8        gpumgrGetGpuBridgeType(void);
 NvBool      gpumgrAreAllGpusInOffloadMode(void);
 NvBool      gpumgrIsSafeToReadGpuInfo(void);
 NvBool      gpumgrIsDeviceMsixAllowed(RmPhysAddr bar0BaseAddr, NvU32 pmcBoot1, NvU32 pmcBoot42);
+NvBool      gpumgrWaitForBarFirewall(NvU32 domain, NvU8 bus, NvU8 device, NvU8 function, NvU16 devId, NvU16 subsystemId);
+NvBool      gpuMgrIsNvleAlidPresent(struct OBJGPUMGR *pGpuMgr, NvU32 alid, NvU32 *clid);
+NvBool      gpuMgrCacheNvleAlid(struct OBJGPUMGR *pGpuMgr, NvU32 alid, NvU32 *clid);
 
 //
 // gpumgrIsSubDeviceCountOne

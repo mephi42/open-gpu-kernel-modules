@@ -1315,6 +1315,13 @@ AuxRetry::status DPCDHALImpl::setMessagingEnable(bool _uprequestEnable, bool _up
     {
         bMultistream = false;
     }
+
+    if (isDpInTunnelingSupported())
+    {
+        if (!bMultistream)
+            return AuxRetry::ack;
+    }
+ 
     mstmCtrl = 0;
 
     if (bMultistream)

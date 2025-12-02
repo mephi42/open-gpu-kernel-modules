@@ -593,7 +593,7 @@ return_t deserialize_NV90F1_CTRL_VASPACE_COPY_SERVER_RESERVED_PDES_PARAMS_v1E_04
 
 #ifdef BUILD_COMMON_RPCS
 
-#ifndef UMED_BUILD
+#if (defined(GSP_PLUGIN_BUILD) || defined(RESMAN_BUILD)) && !defined(UMED_BUILD)
 static
 return_t deserialize_GET_BRAND_CAPS_v25_12(NV0080_CTRL_GPU_GET_BRAND_CAPS_PARAMS *pParams,
                                            NvU8 *buffer,
@@ -613,7 +613,7 @@ return_t deserialize_GET_BRAND_CAPS_v25_12(NV0080_CTRL_GPU_GET_BRAND_CAPS_PARAMS
 
     return SUCCESS_T;
 }
-#endif // UMED_BUILD
+#endif // (defined(GSP_PLUGIN_BUILD) || defined(RESMAN_BUILD)) && !defined(UMED_BUILD)
 
 static
 return_t deserialize_NV2080_CTRL_MC_SERVICE_INTERRUPTS_PARAMS_v15_01(NV2080_CTRL_MC_SERVICE_INTERRUPTS_PARAMS *pParams,
@@ -4290,7 +4290,7 @@ return_t serialize_NV90F1_CTRL_VASPACE_COPY_SERVER_RESERVED_PDES_PARAMS_v1E_04(N
 
 #ifdef BUILD_COMMON_RPCS
 
-#ifndef UMED_BUILD
+#if (defined(GSP_PLUGIN_BUILD) || defined(RESMAN_BUILD)) && !defined(UMED_BUILD)
 static
 return_t serialize_GET_BRAND_CAPS_v25_12(NV0080_CTRL_GPU_GET_BRAND_CAPS_PARAMS *pParams,
                                          NvU8 *buffer,
@@ -4310,7 +4310,7 @@ return_t serialize_GET_BRAND_CAPS_v25_12(NV0080_CTRL_GPU_GET_BRAND_CAPS_PARAMS *
 
     return SUCCESS_T;
 }
-#endif // UMED_BUILD
+#endif // (defined(GSP_PLUGIN_BUILD) || defined(RESMAN_BUILD)) && !defined(UMED_BUILD)
 
 static
 return_t serialize_NV2080_CTRL_MC_SERVICE_INTERRUPTS_PARAMS_v15_01(NV2080_CTRL_MC_SERVICE_INTERRUPTS_PARAMS *pParams,

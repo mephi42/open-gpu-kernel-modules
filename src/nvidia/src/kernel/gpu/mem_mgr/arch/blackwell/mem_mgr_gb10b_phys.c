@@ -482,3 +482,4 @@ memmgrAllocateConsoleRegion_GB10B
 
     return NV_OK;
 }
+

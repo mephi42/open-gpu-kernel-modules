@@ -158,15 +158,16 @@
 #define ISINK_DISENGAGED                                (163)
 #define ISINK_LOW_LIFETIME                              (164)
 #define ISINK_ZERO_LIFETIME                             (165)
-#define NVLINK_SECURE_INTERRUPT_ERROR                   (166)
+#define NVLINK_SECURE_NVLE_ERROR                        (166)
 #define PCIE_FATAL_TIMEOUT                              (167)
 #define REDUCED_GPU_MEMORY_CAPACITY                     (168)
 #define SEC2_HALT_ERROR                                 (169)
-#define ROBUST_CHANNEL_UNUSED_ERROR_170                 (170)
+#define NVLINK_SECURE_ERROR                             (170)
 #define UNCORRECTABLE_DRAM_ERROR                        (171)
 #define UNCORRECTABLE_SRAM_ERROR                        (172)
 #define C2C_FATAL_LINK_FAILURE                          (173)
-#define ROBUST_CHANNEL_LAST_ERROR                       (173)
+#define ROBUST_CHANNEL_RESETCHANNEL_KILL_PROCESS_SILENT (174)
+#define ROBUST_CHANNEL_LAST_ERROR                       (174)
 
 // Indexed CE reference
 #define ROBUST_CHANNEL_CE_ERROR(x)                                        \

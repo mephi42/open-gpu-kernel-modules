@@ -2817,7 +2817,7 @@ DSC_GeneratePPS
                  ((pWARData->dpData.dpMode == DSC_DP_MST) || 
                   pWARData->dpData.bIs128b132bChannelCoding)))
             {
-                eff_bpp = _calculateEffectiveBppForDSC(pDscInfo, pModesetInfo, pWARData, in->bits_per_pixel, in);
+                eff_bpp = _calculateEffectiveBppForDSC(pDscInfo, pModesetInfo, pWARData, in->bits_per_pixel, in);                
             }
         }
 
@@ -2888,7 +2888,7 @@ DSC_GeneratePPS
         ret = NVT_STATUS_INVALID_PARAMETER;
         goto done;
     }
-
+    
     if (in->native_422)
     {
         // bits_per_pixel in PPS is defined as 5 fractional bits in native422 mode

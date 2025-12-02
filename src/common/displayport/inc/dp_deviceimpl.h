@@ -538,6 +538,7 @@ namespace DisplayPort
             bool                     retryRemoteBKSVReadMessage;
             bool                     retryRemoteBCapsReadMessage;
             bool                     retryRemote22BCapsReadMessage;
+            bool                     tryRemote1XCaps;
             bool                     bBKSVReadMessagePending;
             bool                     bBCapsReadMessagePending;
 
@@ -563,6 +564,7 @@ namespace DisplayPort
 
             bool hdcpValidateKsv(const NvU8 *ksv, NvU32 Size);
             void handleRemoteDpcdReadDownReply(MessageManager::Message * from);
+            void readRemoteHdcp1xCaps(void);
             void messageFailed(MessageManager::Message * from, NakData * nakData);
             void messageCompleted(MessageManager::Message * from);
     };

@@ -122,6 +122,7 @@ kceMapAsyncLceDefault_GB202
     NvU32         supportedLceMask;
     NvU32         pcesPerHshub;
     NvU32         lceIndex, pceIndex, i, j;
+    NvBool        bPceAssigned;
 
     // Set PCIe capabilities
     ceCapsForLce[0] = NVBIT32(CE_CAPS_SYSMEM_READ);
@@ -147,29 +148,40 @@ kceMapAsyncLceDefault_GB202
     //
     for (i = 0; i < numLces; i++)
     {
+        bPceAssigned = NV_FALSE;
+
         lceIndex = CE_GET_LOWEST_AVAILABLE_IDX(lceMask);
 
         for(j = 0; j < numPcesPerLce; j++)
         {
             pceIndex = CE_GET_LOWEST_AVAILABLE_IDX(supportedPceMask);
-            pceAvailableMaskPerHshub[hshubId] &= (~(NVBIT32(pceIndex)));
 
-            pLocalPceLceMap[pceIndex] = lceIndex;
+            if (pceIndex < kceGetPce2lceConfigSize1_HAL(pKCe))
+            {
+                pceAvailableMaskPerHshub[hshubId] &= (~(NVBIT32(pceIndex)));
 
-            supportedPceMask &= ~NVBIT32(pceIndex);
+                pLocalPceLceMap[pceIndex] = lceIndex;
 
-            NV_PRINTF(LEVEL_INFO, "GPU%d <-> GPU%d PCE Index: %d LCE Index: %d\n",
-                      pGpu->gpuInstance, pGpu->gpuInstance, pceIndex, lceIndex);
+                supportedPceMask &= ~NVBIT32(pceIndex);
+
+                bPceAssigned = NV_TRUE;
+
+                NV_PRINTF(LEVEL_INFO, "GPU%d <-> GPU%d PCE Index: %d LCE Index: %d\n",
+                          pGpu->gpuInstance, pGpu->gpuInstance, pceIndex, lceIndex);
+            }
         }
 
-        lceMask &= ~NVBIT32(lceIndex);
-        *pLocalExposeCeMask |= NVBIT32(lceIndex);
-
-        // Set PCIe Caps
-        KernelCE *pKCeLce = GPU_GET_KCE(pGpu, lceIndex);
-        if (pKCeLce != NULL)
+        if (bPceAssigned)
         {
-            pKCeLce->ceCapsMask |= ceCapsForLce[i];
+            lceMask &= ~NVBIT32(lceIndex);
+            *pLocalExposeCeMask |= NVBIT32(lceIndex);
+
+            // Set PCIe Caps
+            KernelCE *pKCeLce = GPU_GET_KCE(pGpu, lceIndex);
+            if (pKCeLce != NULL)
+            {
+                pKCeLce->ceCapsMask |= ceCapsForLce[i];
+            }
         }
     }
 

@@ -30,6 +30,13 @@
 #define NV_PGSP_MAILBOX_DATA                                                         31:0 /* RWIVF */
 #define NV_PGSP_MAILBOX_DATA_INIT                                              0x00000000 /* RWI-V */
 
+#define NV_PGSP_FALCON_MAILBOX0                                                0x00110040 /* RW-4R */
+#define NV_PGSP_FALCON_MAILBOX0_DATA                                                 31:0 /* RWIVF */
+#define NV_PGSP_FALCON_MAILBOX0_DATA_INIT                                      0x00000000 /* RWI-V */
+#define NV_PGSP_FALCON_MAILBOX1                                                0x00110044 /* RW-4R */
+#define NV_PGSP_FALCON_MAILBOX1_DATA                                                 31:0 /* RWIVF */
+#define NV_PGSP_FALCON_MAILBOX1_DATA_INIT                                      0x00000000 /* RWI-V */
+
 #define NV_PGSP_QUEUE_HEAD(i)                                          (0x00110c00+(i)*8) /* RW-4A */
 #define NV_PGSP_QUEUE_HEAD__SIZE_1                                                      8 /*       */
 #define NV_PGSP_QUEUE_TAIL(i)                                          (0x00110c04+(i)*8) /* RW-4A */

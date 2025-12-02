@@ -792,6 +792,7 @@ NV_STATUS serverControl_ValidateCookie
         status = gpuValidateRmctrlCmd_HAL(pRmCtrlParams->pGpu, pRmCtrlParams->cmd);
         if (status != NV_OK)
         {
+            NV_PRINTF(LEVEL_WARNING, "Control command 0x%x is not in allowlist\n", pRmCtrlParams->cmd);
             return status;
         }
     }

@@ -337,32 +337,34 @@ NV_STATUS gpuGetRmEngineTypeCapMask_IMPL
  *  Use ENGDESC_FIELD(engDesc, _INST) to get the engine instance
  *
  *  @param[in]  engineType      RM_ENGINE_TYPE number
+ *  @param[in]  bNvPrintfStr    Make the returned string compatible with NV_PRINTF
  *
  *  @returns engine name as a string
  */
 const char* gpuRmEngineTypeToString_IMPL
 (
-    RM_ENGINE_TYPE engineType
+    RM_ENGINE_TYPE engineType,
+    NvBool         bNvPrintfStr
 )
 {
-    if (RM_ENGINE_TYPE_IS_GR(engineType))          return MAKE_NV_PRINTF_STR("GR");
-    else if (RM_ENGINE_TYPE_IS_COPY(engineType))   return MAKE_NV_PRINTF_STR("COPY");
-    else if (RM_ENGINE_TYPE_IS_NVDEC(engineType))  return MAKE_NV_PRINTF_STR("NVDEC");
-    else if (RM_ENGINE_TYPE_IS_NVENC(engineType))  return MAKE_NV_PRINTF_STR("NVENC");
-    else if (RM_ENGINE_TYPE_IS_NVJPEG(engineType)) return MAKE_NV_PRINTF_STR("NVJPEG");
-    else if (RM_ENGINE_TYPE_IS_OFA(engineType))    return MAKE_NV_PRINTF_STR("OFA");
-    else if (engineType == RM_ENGINE_TYPE_VP)      return MAKE_NV_PRINTF_STR("VP");
-    else if (engineType == RM_ENGINE_TYPE_ME)      return MAKE_NV_PRINTF_STR("ME");
-    else if (engineType == RM_ENGINE_TYPE_PPP)     return MAKE_NV_PRINTF_STR("PPP");
-    else if (engineType == RM_ENGINE_TYPE_MPEG)    return MAKE_NV_PRINTF_STR("MPEG");
-    else if (engineType == RM_ENGINE_TYPE_SW)      return MAKE_NV_PRINTF_STR("SW");
-    else if (engineType == RM_ENGINE_TYPE_TSEC)    return MAKE_NV_PRINTF_STR("TSEC");
-    else if (engineType == RM_ENGINE_TYPE_VIC)     return MAKE_NV_PRINTF_STR("VIC");
-    else if (engineType == RM_ENGINE_TYPE_MP)      return MAKE_NV_PRINTF_STR("MP");
-    else if (engineType == RM_ENGINE_TYPE_SEC2)    return MAKE_NV_PRINTF_STR("SEC2");
-    else if (engineType == RM_ENGINE_TYPE_HOST)    return MAKE_NV_PRINTF_STR("HOST");
-    else if (engineType == RM_ENGINE_TYPE_DPU)     return MAKE_NV_PRINTF_STR("DPU");
-    else if (engineType == RM_ENGINE_TYPE_PMU)     return MAKE_NV_PRINTF_STR("PMU");
-    else if (engineType == RM_ENGINE_TYPE_FBFLCN)  return MAKE_NV_PRINTF_STR("FBFLCN");
-    else                                           return MAKE_NV_PRINTF_STR("");
+    if      (RM_ENGINE_TYPE_IS_GR(engineType))     return bNvPrintfStr ? MAKE_NV_PRINTF_STR("GR")      : "GR";
+    else if (RM_ENGINE_TYPE_IS_COPY(engineType))   return bNvPrintfStr ? MAKE_NV_PRINTF_STR("COPY")    : "COPY";
+    else if (RM_ENGINE_TYPE_IS_NVDEC(engineType))  return bNvPrintfStr ? MAKE_NV_PRINTF_STR("NVDEC")   : "NVDEC";
+    else if (RM_ENGINE_TYPE_IS_NVENC(engineType))  return bNvPrintfStr ? MAKE_NV_PRINTF_STR("NVENC")   : "NVENC";
+    else if (RM_ENGINE_TYPE_IS_NVJPEG(engineType)) return bNvPrintfStr ? MAKE_NV_PRINTF_STR("NVJPEG")  : "NVJPEG";
+    else if (RM_ENGINE_TYPE_IS_OFA(engineType))    return bNvPrintfStr ? MAKE_NV_PRINTF_STR("OFA")     : "OFA";
+    else if (engineType == RM_ENGINE_TYPE_VP)      return bNvPrintfStr ? MAKE_NV_PRINTF_STR("VP")      : "VP";
+    else if (engineType == RM_ENGINE_TYPE_ME)      return bNvPrintfStr ? MAKE_NV_PRINTF_STR("ME")      : "ME";
+    else if (engineType == RM_ENGINE_TYPE_PPP)     return bNvPrintfStr ? MAKE_NV_PRINTF_STR("PPP")     : "PPP";
+    else if (engineType == RM_ENGINE_TYPE_MPEG)    return bNvPrintfStr ? MAKE_NV_PRINTF_STR("MPEG")    : "MPEG";
+    else if (engineType == RM_ENGINE_TYPE_SW)      return bNvPrintfStr ? MAKE_NV_PRINTF_STR("SW")      : "SW";
+    else if (engineType == RM_ENGINE_TYPE_TSEC)    return bNvPrintfStr ? MAKE_NV_PRINTF_STR("TSEC")    : "TSEC";
+    else if (engineType == RM_ENGINE_TYPE_VIC)     return bNvPrintfStr ? MAKE_NV_PRINTF_STR("VIC")     : "VIC";
+    else if (engineType == RM_ENGINE_TYPE_MP)      return bNvPrintfStr ? MAKE_NV_PRINTF_STR("MP")      : "MP";
+    else if (engineType == RM_ENGINE_TYPE_SEC2)    return bNvPrintfStr ? MAKE_NV_PRINTF_STR("SEC2")    : "SEC2";
+    else if (engineType == RM_ENGINE_TYPE_HOST)    return bNvPrintfStr ? MAKE_NV_PRINTF_STR("HOST")    : "HOST";
+    else if (engineType == RM_ENGINE_TYPE_DPU)     return bNvPrintfStr ? MAKE_NV_PRINTF_STR("DPU")     : "DPU";
+    else if (engineType == RM_ENGINE_TYPE_PMU)     return bNvPrintfStr ? MAKE_NV_PRINTF_STR("PMU")     : "PMU";
+    else if (engineType == RM_ENGINE_TYPE_FBFLCN)  return bNvPrintfStr ? MAKE_NV_PRINTF_STR("FBFLCN")  : "FBFLCN";
+    else                                           return bNvPrintfStr ? MAKE_NV_PRINTF_STR("Unknown") : "Unknown";
 }

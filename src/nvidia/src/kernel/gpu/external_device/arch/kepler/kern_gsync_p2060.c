@@ -915,8 +915,7 @@ extdevService_P2060
         if (osQueueWorkItem(pGpu,
                             _extdevService,
                             (void *)workerThreadData,
-                            OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE) !=
-            NV_OK)
+                            (OsQueueWorkItemFlags){.bLockGpuGroupSubdevice = NV_TRUE}) != NV_OK)
         {
             portMemFree((void *)workerThreadData);
         }

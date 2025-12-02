@@ -78,6 +78,7 @@ static void      _objClAdjustTcVcMap(OBJGPU *, OBJCL *, PORTDATA *);
 static void      _objClGetDownstreamAtomicsEnabledMask(void  *, NvU32, NvU32 *);
 static void      _objClGetUpstreamAtomicRoutingCap(void  *, NvU32, NvBool *);
 static void      _objClGetDownstreamAtomicRoutingCap(void  *, NvU32, NvBool *);
+static void      _objClIsPciePowerControlPresent(OBJGPU *, KernelBif *);
 
 extern void _Set_ASPM_L0S_L1(OBJCL *, NvBool, NvBool);
 
@@ -522,6 +523,37 @@ objClInitPcieChipset(OBJGPU *pGpu, OBJCL *pCl)
     kbifCacheChipsetL1SubstatesEnable(pGpu, pKernelBif);
 
     return NV_OK;
+}
+
+/*! @brief Check if we have PciePowerControl present and 
+ *         cache it for ASPM override
+ *
+ * @param[in]   pGpu       GPU object pointer
+ * @param[in]   pKernelBif KernelBif object pointer
+ */
+static void
+_objClIsPciePowerControlPresent
+(
+    OBJGPU    *pGpu,
+    KernelBif *pKernelBif
+)
+{
+    NvU32      pciePowerControlMask = 0;
+    NV_STATUS  status;
+
+    // Cache PCIe Power Control variable for ASPM override
+    status = kbifGetPciePowerControlValue(pGpu, pKernelBif, &pciePowerControlMask);
+    if (status != NV_OK)
+    {
+        pKernelBif->pciePowerControlInfo.bPciePowerControlPresent = NV_FALSE;
+        pKernelBif->pciePowerControlInfo.pciePowerControlValue    = 0;
+        NV_PRINTF(LEVEL_INFO, "None of the PCIe Power Control for ASPM override are available\n");
+    }
+    else
+    {
+        pKernelBif->pciePowerControlInfo.bPciePowerControlPresent = NV_TRUE;
+        pKernelBif->pciePowerControlInfo.pciePowerControlValue    = pciePowerControlMask;
+    }    
 }
 
 /*! @brief Check LTR capability throughout the hierarchy of
@@ -972,6 +1004,8 @@ clUpdatePcieConfig_IMPL(OBJGPU *pGpu, OBJCL *pCl)
     objClBuildPcieAtomicsAllowList(pGpu, pCl);
 
     objClInitPcieChipset(pGpu, pCl);
+
+    _objClIsPciePowerControlPresent(pGpu, pKernelBif);
 
     //
     // Now that chipset capabilities have been initialized, configure the
@@ -3501,6 +3535,15 @@ NV_STATUS AMD_RP1630_setupFunc(OBJGPU *pGpu, OBJCL *pCl)
     return NV_OK;
 }
 
+
+//
+// Setup function for Qualcomm root port 010E
+// Qualcomm Snapdragon Makena
+//
+NV_STATUS Qualcomm_Snapdragon8cx_RP_setupFunc(OBJGPU *pGpu, OBJCL *pCl)
+{
+    return NV_OK;
+}
 
 static NV_STATUS
 objClGpuIs3DController(OBJGPU *pGpu)

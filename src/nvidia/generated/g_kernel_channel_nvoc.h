@@ -290,6 +290,7 @@ struct KernelChannel {
     NvU32 runlistId;
     NvU32 ChID;
     struct KernelChannelGroupApi *pKernelChannelGroupApi;
+    struct KernelChannelGroup *pKernelChannelGroup;
     struct KernelCtxShareApi *pKernelCtxShareApi;
     NvU32 refCount;
     NvBool bGspOwned;
@@ -300,6 +301,7 @@ struct KernelChannel {
     MEMORY_DESCRIPTOR *pUserdSubDeviceMemDesc[8];
     NvBool bClientAllocatedUserD;
     NvU32 swState[8];
+    NvU32 hwState[8];
     NvBool bIsRcPending[8];
     NvU32 ProcessID;
     NvU32 SubProcessID;
@@ -314,6 +316,7 @@ struct KernelChannel {
     NvU32 runqueue;
     RM_ENGINE_TYPE engineType;
     NvU32 goldenCtxUpdateFlags;
+    NvU32 disableRefCount[8];
     CC_KMB clientKmb;
     NvHandle hEncryptStatsBuf;
     MEMORY_DESCRIPTOR *pEncStatsBufMemDesc;
@@ -1608,6 +1611,14 @@ NV_STATUS kchannelFindChildByHandle(struct KernelChannel *pKernelChannel, NvHand
 #define KERNEL_CHANNEL_SW_STATE_RUNLIST_SET                NVBIT(1) // RunlistId is set
 #define KERNEL_CHANNEL_SW_STATE_DISABLED_FOR_KEY_ROTATION  NVBIT(2) // disabled for key rotation
 #define KERNEL_CHANNEL_SW_STATE_ENABLE_AFTER_KEY_ROTATION  NVBIT(3) // RM should enable after key rotation
+
+// Bitmap for KernelChannel->hwState
+#define KERNEL_CHANNEL_HW_STATE_BOUND                      NVBIT(0)
+#define KERNEL_CHANNEL_HW_STATE_ENABLE                     NVBIT(1)
+#define KERNEL_CHANNEL_HW_STATE_SCHED                      NVBIT(2) // Set if channel is currently on a runlist which will soon be or is submitted to an engine
+#define KERNEL_CHANNEL_HW_STATE_DEFER_RC                   NVBIT(3) // Set if RC recovery is to be deferred till channel teardown
+#define KERNEL_CHANNEL_HW_STATE_PREV_ACTIVE                NVBIT(4) // Set if channel was previously active during suspend
+#define KERNEL_CHANNEL_HW_STATE_SUSPENDED                  NVBIT(5) // Set if channel was disabled before suspend, and must not be reenabled implicitly during resume
 
 NvBool kchannelIsCpuMapped(struct OBJGPU *pGpu, struct KernelChannel *pKernelChannel);
 void kchannelSetCpuMapped(struct OBJGPU *pGpu, struct KernelChannel *pKernelChannel, NvBool bCpuMapped);

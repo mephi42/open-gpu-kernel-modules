@@ -21,13 +21,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "core/locks.h"
+#include "diagnostics/tracer.h"
+#include "gpu_mgr/gpu_mgr.h"
 #include "nvlimits.h"
 #include "nvlog/nvlog.h"
 #include "nvrm_registry.h"
 #include "os/os.h"
-#include "diagnostics/tracer.h"
 #include "tls/tls.h"
-#include "core/locks.h"
 
 //
 // Buffer push method declarations

@@ -213,30 +213,6 @@ _memmgrInitRegistryOverrides(OBJGPU *pGpu, MemoryManager *pMemoryManager)
         pMemoryManager->bFastScrubberEnabled = NV_FALSE;
     }
 
-    if (NV_OK == osReadRegistryDword(pGpu, NV_REG_STR_RM_SYSMEM_PAGE_SIZE, &data32))
-    {
-        switch (data32)
-        {
-            case RM_PAGE_SIZE:
-            case RM_PAGE_SIZE_64K:
-            case RM_PAGE_SIZE_HUGE:
-            case RM_PAGE_SIZE_512M:
-                break;
-            default:
-                NV_ASSERT(0);
-                NV_PRINTF(LEVEL_ERROR,
-                          "Sysmem page size 0x%x not supported! Defaulting to 4KB\n",
-                          data32);
-                data32 = RM_PAGE_SIZE;
-        }
-        pMemoryManager->sysmemPageSize = data32;
-    }
-    else
-    {
-        pMemoryManager->sysmemPageSize = osGetPageSize();
-
-    }
-
     if (osReadRegistryDword(pGpu, NV_REG_STR_RM_ALLOW_SYSMEM_LARGE_PAGES, &data32) == NV_OK)
     {
         pMemoryManager->bAllowSysmemHugePages = data32 ? NV_TRUE : NV_FALSE;
@@ -253,6 +229,20 @@ _memmgrInitRegistryOverrides(OBJGPU *pGpu, MemoryManager *pMemoryManager)
         pMemoryManager->rsvdMemorySizeIncrement = (NvU64)data32 << 20;
         NV_PRINTF(LEVEL_ERROR,
                   "User specified increase in reserved size = %d MBs\n", data32);
+    }
+    
+    pMemoryManager->overrideMaxContextSizeRsvdMemory = NV_REG_STR_RM_OVERRIDE_MAX_CONTEXT_SIZE_RSVD_MEMORY_MB_DEFAULT;
+    if (osReadRegistryDword(pGpu, NV_REG_STR_RM_OVERRIDE_MAX_CONTEXT_SIZE_RSVD_MEMORY_MB, &data32) == NV_OK)
+    {
+        if (data32 > 0)
+        {
+            pMemoryManager->overrideMaxContextSizeRsvdMemory = (NvU64)data32 << 20;
+            NV_PRINTF(LEVEL_ERROR, "User specified max context size = %d MBs\n", data32);
+        }
+        else
+        {
+            NV_PRINTF(LEVEL_ERROR, "Invalid value for RMOverrideMaxContextSizeRsvdMemoryMB: %d\n", data32);
+        }
     }
 
     if (osReadRegistryDword(pGpu,
@@ -353,23 +343,6 @@ _memmgrInitRegistryOverrides(OBJGPU *pGpu, MemoryManager *pMemoryManager)
         }
     }
 
-    if (osReadRegistryDword(pGpu, NV_REG_STR_RM_64K_BUG_5123775_WAR, &data32) == NV_OK)
-    {
-        NV_PRINTF(LEVEL_ERROR, "BUG 5123775 WAR: isEnabled %d\n", data32);
-        if (data32)
-        {
-            pMemoryManager->bug64kPage5123775War = NV_TRUE;
-        }
-        else
-        {
-            pMemoryManager->bug64kPage5123775War = NV_FALSE;
-        }
-    }
-    else
-    {
-        pMemoryManager->bug64kPage5123775War = NV_FALSE;
-    }
-
     pMemoryManager->bCePhysicalVidmemAccessNotSupported = gpuIsSelfHosted(pGpu);
 }
 
@@ -440,7 +413,7 @@ memmgrTestCeUtils
 
     NV_ASSERT_OK_OR_GOTO(status,
         memdescCreate(&pVidMemDesc, pGpu, sizeof vidmemData, RM_PAGE_SIZE, NV_TRUE,
-                      pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) ? ADDR_SYSMEM : ADDR_FBMEM,
+                      pGpu->pGpuArch->bGpuArchIsZeroFb ? ADDR_SYSMEM : ADDR_FBMEM,
                       NV_MEMORY_UNCACHED, MEMDESC_FLAGS_NONE),
         failed);
     memdescTagAlloc(status,
@@ -450,7 +423,7 @@ memmgrTestCeUtils
 
     NV_ASSERT_OK_OR_GOTO(status,
         memdescCreate(&pSysMemDesc, pGpu, sizeof sysmemData, 0, NV_TRUE,
-                      (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB)) ?
+                      (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->pGpuArch->bGpuArchIsZeroFb) ?
                            ADDR_FBMEM : ADDR_SYSMEM,
                       NV_MEMORY_UNCACHED, MEMDESC_FLAGS_NONE),
         failed);
@@ -487,7 +460,7 @@ memmgrInitInternalChannels_IMPL
     NV_ASSERT_OK_OR_RETURN(memmgrScrubHandlePostSchedulingEnable_HAL(pGpu, pMemoryManager));
 
     if (!RMCFG_FEATURE_PLATFORM_GSP &&
-        (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB) ||
+        (pGpu->pGpuArch->bGpuArchIsZeroFb ||
          pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB) ||
          pGpu->getProperty(pGpu, PDB_PROP_GPU_IS_ALL_INST_IN_SYSMEM)))
     {
@@ -863,6 +836,25 @@ failed:
     return status;
 }
 
+/*!
+ * @brief Check if any ZBC surface is referenced
+ */
+static NvBool
+_memmgrIsZbcSurfaceReferenced
+(
+    OBJGPU *pGpu,
+    MemoryManager *pMemoryManager
+)
+{
+    NvU32 i;
+    for (i = 0; i < NV_ARRAY_ELEMENTS(pMemoryManager->zbcSurfaces); i++)
+    {
+        if (pMemoryManager->zbcSurfaces[i] != 0)
+            return NV_TRUE;
+    }
+    return NV_FALSE;
+}
+
 NV_STATUS
 memmgrStateLoad_IMPL
 (
@@ -899,7 +891,7 @@ memmgrStatePreUnload_IMPL
 )
 {
     KernelMemorySystem *pKernelMemorySystem = GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu);
-    NV_ASSERT((flags & GPU_STATE_FLAGS_PRESERVING) || pMemoryManager->zbcSurfaces == 0);
+    NV_ASSERT((flags & GPU_STATE_FLAGS_PRESERVING) || !_memmgrIsZbcSurfaceReferenced(pGpu, pMemoryManager));
 
     if ((flags & GPU_STATE_FLAGS_PRESERVING))
     {
@@ -979,21 +971,12 @@ memmgrStateDestroy_IMPL
     // RMCONFIG: only if FBSR engine is enabled
     if (RMCFG_MODULE_FBSR)
     {
-        //
-        // Cleanup fbsrReservedRanges
-        // GSP_HEAP range is allocated, every other range is described
-        //
+        // Cleanup described fbsrReservedRanges
         if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_BEFORE_BAR2PTE] != NULL)
             memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_BEFORE_BAR2PTE]);
 
         if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE] != NULL)
             memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE]);
-
-        if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP] != NULL)
-        {
-            memdescFree(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]);
-            memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]);
-        }
 
         if (pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_NON_WPR] != NULL)
             memdescDestroy(pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_NON_WPR]);
@@ -1003,7 +986,6 @@ memmgrStateDestroy_IMPL
 
         pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_BEFORE_BAR2PTE] = NULL;
         pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_AFTER_BAR2PTE]  = NULL;
-        pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_HEAP]       = NULL;
         pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_GSP_NON_WPR]    = NULL;
         pMemoryManager->fbsrReservedRanges[FBSR_RESERVED_INST_MEMORY_VGA_WORKSPACE]  = NULL;
 
@@ -1256,6 +1238,9 @@ _memmgrAllocInternalClientObjects
         goto failed;
     }
 
+    pMemoryManager->hThirdPartyP2P = 0;
+
+    if (gpuIsClassSupported(pGpu, NV50_THIRD_PARTY_P2P))
     {
         NV503C_ALLOC_PARAMETERS params;
         NvHandle hThirdPartyP2P = 0;
@@ -1284,7 +1269,6 @@ _memmgrAllocInternalClientObjects
         {
             NV_PRINTF(LEVEL_WARNING, "Error creating internal ThirdPartyP2P object: %x\n",
                       status);
-            pMemoryManager->hThirdPartyP2P = 0;
         }
         else
         {
@@ -1531,7 +1515,7 @@ memmgrLargePageSupported_IMPL
         }
         else
         {
-            isSupported = (pMemoryManager->sysmemPageSize != RM_PAGE_SIZE);
+            isSupported = (osGetPageSize() != RM_PAGE_SIZE);
         }
     }
     else
@@ -1618,9 +1602,6 @@ memmgrGetMappableRamSizeMb_IMPL(MemoryManager *pMemoryManager)
 {
     return pMemoryManager->Ram.mapRamSizeMb;
 }
-//
-// ZBC clear create/destroy routines.
-//
 
 NV_STATUS
 memmgrFillMemdescForPhysAttr_IMPL
@@ -1732,7 +1713,13 @@ _memmgrPickDefaultSysmemPageSize
     }
 
     // Choose largest page size that fits the allocation
-    if (((memSize >= kgmmuGetMinBigPageSize(pKernelGmmu))  &&
+    if (kgmmuIsHugePageSupported(pKernelGmmu) &&
+        (memSize >= RM_PAGE_SIZE_HUGE) &&
+        (supportedPageMask & RM_PAGE_SIZE_HUGE))
+    {
+        pageSize = RM_PAGE_SIZE_HUGE;
+    }
+    else if (((memSize >= kgmmuGetMinBigPageSize(pKernelGmmu))  &&
               (supportedPageMask & kgmmuGetMaxBigPageSize_HAL(pKernelGmmu))) ||
               FLD_TEST_DRF(OS32, _ATTR2, _SMMU_ON_GPU, _ENABLE, attr2))
     {
@@ -1847,10 +1834,10 @@ memmgrDeterminePageSize_IMPL
         }
         else if (!bIsBigPageSupported)
         {
-            if (RM_ATTR_PAGE_SIZE_BIG   == pageSizeAttr ||
-                RM_ATTR_PAGE_SIZE_HUGE  == pageSizeAttr ||
-                RM_ATTR_PAGE_SIZE_256GB == pageSizeAttr ||
-                RM_ATTR_PAGE_SIZE_512MB == pageSizeAttr)
+            if (RM_ATTR_PAGE_SIZE_BIG == pageSizeAttr ||
+                RM_ATTR_PAGE_SIZE_HUGE == pageSizeAttr ||
+                RM_ATTR_PAGE_SIZE_512MB == pageSizeAttr ||
+                RM_ATTR_PAGE_SIZE_256GB == pageSizeAttr)
             {
                 NV_PRINTF(LEVEL_ERROR,
                           "Big/Huge/512MB/256GB page size not supported in sysmem.\n");
@@ -1957,6 +1944,7 @@ memmgrDeterminePageSize_IMPL
             *pRetAttr = FLD_SET_DRF(OS32, _ATTR, _PAGE_SIZE, _HUGE, *pRetAttr);
             *pRetAttr2 = FLD_SET_DRF(OS32, _ATTR2, _PAGE_SIZE_HUGE, _256GB,  *pRetAttr2);
             break;
+
         default:
             return 0;
     }
@@ -2675,7 +2663,7 @@ memmgrSetMIGPartitionableBAR1Range_IMPL
     NvU64 partitionableBar1Start;
     NvU64 partitionableBar1End;
 
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (pGpu->pGpuArch->bGpuArchIsZeroFb)
         return NV_OK;
 
     NV_ASSERT_OR_RETURN(pBar1VAS != NULL, NV_ERR_INVALID_STATE);
@@ -3970,6 +3958,7 @@ memmgrReserveMemoryForFsp_IMPL
         }
 
     }
+
     return NV_OK;
 }
 

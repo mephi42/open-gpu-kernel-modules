@@ -106,6 +106,9 @@ typedef struct NV00F1_CTRL_FABRIC_MEM_UNIMPORT_EVENT_DATA {
  *  bwModeEpoch
  *    Currently active bwModeEpoch of the remote GPU being attached.
  *
+ *  pageSize
+ *    Client selected page size of the remote GPU being attached.
+ *
  *  cliqueId
  *    Clique ID of the remote GPU being attached.
  *
@@ -126,6 +129,7 @@ typedef struct NV00F1_CTRL_ATTACH_REMOTE_GPU_EVENT_DATA {
     NV_DECLARE_ALIGNED(NvU64 gpuFabricProbeHandle, 8);
     NV_DECLARE_ALIGNED(NvU64 key, 8);
     NV_DECLARE_ALIGNED(NvU64 bwModeEpoch, 8);
+    NV_DECLARE_ALIGNED(NvU64 pageSize, 8);
     NvU32 cliqueId;
     NvU16 index;
     NvU16 exportNodeId;

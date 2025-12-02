@@ -33,6 +33,9 @@ NV_STATUS kcrashcatEngineConfigure_IMPL
     KernelCrashCatEngineConfig *pEngConfig
 )
 {
+    // dynamicCast is needed because Object isn't a superclass of KernelCrashCatEngine 
+    Object* pObject = dynamicCast(pKernelCrashCatEng, Object);
+
     if (!pEngConfig->bEnable)
         return NV_OK;
 
@@ -42,7 +45,7 @@ NV_STATUS kcrashcatEngineConfigure_IMPL
     pKernelCrashCatEng->bConfigured = NV_TRUE;
     pKernelCrashCatEng->pName = pEngConfig->pName;
     pKernelCrashCatEng->errorId = pEngConfig->errorId;
-    pKernelCrashCatEng->pGpu = ENG_GET_GPU(pKernelCrashCatEng);
+    pKernelCrashCatEng->pGpu = ENG_GET_GPU(pObject);
     pKernelCrashCatEng->dmemPort = pEngConfig->dmemPort;
 
     if (pEngConfig->allocQueueSize > 0)

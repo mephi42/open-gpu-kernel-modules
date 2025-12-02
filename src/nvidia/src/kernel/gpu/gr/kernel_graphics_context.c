@@ -1173,6 +1173,9 @@ kgrctxAllocMainCtxBuffer_IMPL
 
     NV_ASSERT_OK_OR_RETURN(memdescSetCtxBufPool(pGrCtxBufferMemDesc, pCtxBufPool));
 
+    // Overwrite the ptekind of the main grctx buffer if the required regkey is specified
+    kgraphicsSetContextBufferPteKind(pGpu, pKernelGraphics, &pGrCtxBufferMemDesc, GR_CTX_BUFFER_MAIN, NV_FALSE, memmgrGetPteKindGenericMemoryCompressible_HAL(pGpu, pMemoryManager));
+
     NV_STATUS status;
     memdescTagAllocList(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_CONTEXT_BUFFER, pGrCtxBufferMemDesc, pAttr->pAllocList);
     NV_ASSERT_OK_OR_RETURN(status);
@@ -2858,12 +2861,9 @@ kgrctxFreeCtxPreemptionBuffers_IMPL
     memdescDestroy(pKernelGraphicsContextUnicast->rtvCbCtxswBuffer.pMemDesc);
     pKernelGraphicsContextUnicast->rtvCbCtxswBuffer.pMemDesc = NULL;
 
-    if (pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc != NULL)
-    {
-        memdescFree(pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc);
-        memdescDestroy(pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc);
-        pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc = NULL;
-    }
+    memdescFree(pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc);
+    memdescDestroy(pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc);
+    pKernelGraphicsContextUnicast->setupCtxswBuffer.pMemDesc = NULL;
 }
 
 /*!
@@ -3289,7 +3289,8 @@ kgrctxGetRegisterAccessMapId_IMPL
 {
     // Using cached privilege because this function is called at a raised IRQL.
     if (kchannelCheckIsAdmin(pKernelChannel)
-        && !hypervisorIsVgxHyper() && IS_GFID_PF(kchannelGetGfid(pKernelChannel)))
+        && !(hypervisorIsVgxHyper() || (RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu))) &&
+        IS_GFID_PF(kchannelGetGfid(pKernelChannel)))
     {
         return GR_GLOBALCTX_BUFFER_UNRESTRICTED_PRIV_ACCESS_MAP;
     }

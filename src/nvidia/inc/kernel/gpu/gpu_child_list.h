@@ -294,13 +294,12 @@
 #if GPU_CHILD_MODULE(NVJPG)
     GPU_CHILD_MULTI_INST( OBJNVJPG,              GPU_GET_NVJPG,                       GPU_MAX_NVJPGS,   NV_FALSE,        pNvjpg           )
 #endif
-#if RMCFG_MODULE_KERNEL_FSP && GPU_CHILD_MODULE(KERNEL_FSP)
+#if GPU_CHILD_MODULE(KERNEL_FSP)
     GPU_CHILD_SINGLE_INST( KernelFsp,            GPU_GET_KERNEL_FSP,                  1,                NV_TRUE,        pKernelFsp       )
 #endif
 #if RMCFG_MODULE_SPDM && GPU_CHILD_MODULE(SPDM)
     GPU_CHILD_SINGLE_INST( Spdm,                 GPU_GET_SPDM,                        1,                NV_TRUE,         pSpdm            )
 #endif
-
 #if RMCFG_MODULE_CONF_COMPUTE && GPU_CHILD_MODULE(CONF_COMPUTE)
     GPU_CHILD_SINGLE_INST( ConfidentialCompute,  GPU_GET_CONF_COMPUTE,                1,                NV_TRUE,         pConfCompute     )
 #endif

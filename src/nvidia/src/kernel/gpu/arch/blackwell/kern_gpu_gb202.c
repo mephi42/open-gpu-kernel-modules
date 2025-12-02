@@ -35,7 +35,7 @@
 #include "nverror.h"
 #include "os/os.h"
 
-#include "published/blackwell/gb202/dev_boot.h"
+#include "published/blackwell/gb202/dev_boot_zb.h"
 #include "published/blackwell/gb202/dev_xtl_ep_pcfg_gpu.h"
 
 #include "published/blackwell/gb202/dev_therm.h"

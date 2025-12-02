@@ -61,6 +61,7 @@
 #include "nvswitch/ls10/dev_nxbar_tileout_ip.h"
 
 #include "nvswitch/ls10/dev_ctrl_ip_addendum.h"
+#include "ls10/minion_nvlink_defines_public_ls10.h"
 
 static void _nvswitch_create_deferred_link_errors_task_ls10(nvswitch_device *device, NvU32 nvlipt_instance, NvU32 link);
 
@@ -6512,7 +6513,7 @@ _nvswitch_emit_link_errors_minion_nonfatal_ls10
         return;
     }
 
-    // read in the enaled minion interrupts on this minion
+    // read in the enabled minion interrupts on this minion
     regData = NVSWITCH_MINION_RD32_LS10(device, nvlipt_instance, _MINION, _MINION_INTR_STALL_EN);
 
     // Grab the cached interrupt data
@@ -9059,7 +9060,7 @@ nvswitch_service_minion_link_ls10
     // get all possible interrupting links associated with this minion
     report.raw_pending = DRF_VAL(_MINION, _MINION_INTR, _LINK, minionIntr);
 
-    // read in the enaled minion interrupts on this minion
+    // read in the enabled minion interrupts on this minion
     reg = NVSWITCH_MINION_RD32_LS10(device, instance, _MINION, _MINION_INTR_STALL_EN);
 
     // get the links with enabled interrupts on this minion
@@ -9127,6 +9128,12 @@ nvswitch_service_minion_link_ls10
                       __FUNCTION__, instance, link);
                 break;
             case NV_MINION_NVLINK_LINK_INTR_CODE_DLREQ:
+                if (DRF_VAL(_MINION, _NVLINK_LINK_INTR, _SUBCODE, linkIntr) == MINION_INBAND_BUFFER_BUSY)
+                {
+                    // Skip deferred processing for intermediate status that are non-errors
+                    break;
+                }
+                // Deliberate fallthrough
             case NV_MINION_NVLINK_LINK_INTR_CODE_PMDISABLED:
             case NV_MINION_NVLINK_LINK_INTR_CODE_TLREQ:
                 chip_device->deferredLinkErrors[link].data.nonFatalIntrMask.minionLinkIntr =

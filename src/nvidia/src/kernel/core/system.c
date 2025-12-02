@@ -59,7 +59,7 @@
 #include "core/bin_data.h"
 
 #if RMCFG_FEATURE_GSPRM_BULLSEYE || defined(GSPRM_BULLSEYE_ENABLE)
-#include "diagnostics/code_coverage_mgr.h"
+#include "diagnostics/instrumentation_manager.h"
 #endif
 
 // local static functions
@@ -97,7 +97,7 @@ static sysChildObject sysChildObjects[] =
     { NV_OFFSETOF(OBJSYS, pFabric),         classInfo(Fabric),          NV_TRUE },
     { NV_OFFSETOF(OBJSYS, pGpuDb),          classInfo(GpuDb),           NV_TRUE },
 #if RMCFG_FEATURE_GSPRM_BULLSEYE || defined(GSPRM_BULLSEYE_ENABLE)
-    { NV_OFFSETOF(OBJSYS, pCodeCovMgr),     classInfo(CodeCoverageManager),  NV_TRUE },
+    { NV_OFFSETOF(OBJSYS, pInstrumentationManager),     classInfo(InstrumentationManager),  NV_TRUE },
 #endif
 };
 

@@ -103,7 +103,6 @@ kgmmuConstructEngine_IMPL(OBJGPU *pGpu, KernelGmmu *pKernelGmmu, ENGDESCRIPTOR e
             pKernelGmmu->pFmtFamilies[v] = NULL;
         }
     }
-
     NV_ASSERT_OK_OR_RETURN(kgmmuFmtInit(pKernelGmmu));
 
     //
@@ -390,6 +389,7 @@ kgmmuDestruct_IMPL(KernelGmmu *pKernelGmmu)
             portMemFree(pKernelGmmu->pFmtFamilies[v]);
         }
     }
+
 }
 
 void
@@ -1148,7 +1148,7 @@ kgmmuFaultBufferAlloc_IMPL
         return status;
     }
 
-    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_31, 
+    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_31,
                     pMemDesc);
     if (status != NV_OK)
     {
@@ -1500,7 +1500,7 @@ _kgmmuClientShadowFaultBufferQueueAllocate
         return status;
     }
 
-    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_32, 
+    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_32,
                     pQueueMemDesc);
     if (status != NV_OK)
     {
@@ -1599,7 +1599,7 @@ _kgmmuClientShadowFaultBufferPagesAllocate
     }
 
     memdescSetPageSize(pMemDesc, AT_GPU, RM_PAGE_SIZE_HUGE);
-    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_33, 
+    memdescTagAlloc(status, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_33,
                     pMemDesc);
 
     // TODO: Bug 5042223

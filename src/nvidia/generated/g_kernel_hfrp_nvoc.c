@@ -25,10 +25,10 @@ extern const struct NVOC_CLASS_DEF __nvoc_class_def_OBJENGSTATE;
 
 // Forward declarations for KernelHFRP
 void __nvoc_init__OBJENGSTATE(OBJENGSTATE*);
-void __nvoc_init__KernelHFRP(KernelHFRP*);
-void __nvoc_init_funcTable_KernelHFRP(KernelHFRP*);
-NV_STATUS __nvoc_ctor_KernelHFRP(KernelHFRP*);
-void __nvoc_init_dataField_KernelHFRP(KernelHFRP*);
+void __nvoc_init__KernelHFRP(KernelHFRP*, GpuHalspecOwner *pGpuhalspecowner);
+void __nvoc_init_funcTable_KernelHFRP(KernelHFRP*, GpuHalspecOwner *pGpuhalspecowner);
+NV_STATUS __nvoc_ctor_KernelHFRP(KernelHFRP*, GpuHalspecOwner *pGpuhalspecowner);
+void __nvoc_init_dataField_KernelHFRP(KernelHFRP*, GpuHalspecOwner *pGpuhalspecowner);
 void __nvoc_dtor_KernelHFRP(KernelHFRP*);
 
 // Structures used within RTTI (run-time type information)
@@ -212,16 +212,43 @@ void __nvoc_dtor_KernelHFRP(KernelHFRP *pThis) {
     PORT_UNREFERENCED_VARIABLE(pThis);
 }
 
-void __nvoc_init_dataField_KernelHFRP(KernelHFRP *pThis) {
+void __nvoc_init_dataField_KernelHFRP(KernelHFRP *pThis, GpuHalspecOwner *pGpuhalspecowner) {
+    ChipHal *chipHal = &pGpuhalspecowner->chipHal;
+    const unsigned long chipHal_HalVarIdx = (unsigned long)chipHal->__nvoc_HalVarIdx;
     PORT_UNREFERENCED_VARIABLE(pThis);
+    PORT_UNREFERENCED_VARIABLE(pGpuhalspecowner);
+    PORT_UNREFERENCED_VARIABLE(chipHal);
+    PORT_UNREFERENCED_VARIABLE(chipHal_HalVarIdx);
+
+    // NVOC Property Hal field -- PDB_PROP_KHFRP_IS_ENABLED
+    if (( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) )) /* ChipHal: GB20B | GB20C */ 
+    {
+        pThis->setProperty(pThis, PDB_PROP_KHFRP_IS_ENABLED, NV_TRUE);
+    }
+    // default
+    else
+    {
+        pThis->setProperty(pThis, PDB_PROP_KHFRP_IS_ENABLED, NV_FALSE);
+    }
+
+    // NVOC Property Hal field -- PDB_PROP_KHFRP_HDA_IS_ENABLED
+    if (( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) )) /* ChipHal: GB20B | GB20C */ 
+    {
+        pThis->setProperty(pThis, PDB_PROP_KHFRP_HDA_IS_ENABLED, NV_TRUE);
+    }
+    // default
+    else
+    {
+        pThis->setProperty(pThis, PDB_PROP_KHFRP_HDA_IS_ENABLED, NV_FALSE);
+    }
 }
 
 NV_STATUS __nvoc_ctor_OBJENGSTATE(OBJENGSTATE* );
-NV_STATUS __nvoc_ctor_KernelHFRP(KernelHFRP *pThis) {
+NV_STATUS __nvoc_ctor_KernelHFRP(KernelHFRP *pThis, GpuHalspecOwner *pGpuhalspecowner) {
     NV_STATUS status = NV_OK;
     status = __nvoc_ctor_OBJENGSTATE(&pThis->__nvoc_base_OBJENGSTATE);
     if (status != NV_OK) goto __nvoc_ctor_KernelHFRP_fail_OBJENGSTATE;
-    __nvoc_init_dataField_KernelHFRP(pThis);
+    __nvoc_init_dataField_KernelHFRP(pThis, pGpuhalspecowner);
     goto __nvoc_ctor_KernelHFRP_exit; // Success
 
 __nvoc_ctor_KernelHFRP_fail_OBJENGSTATE:
@@ -231,18 +258,23 @@ __nvoc_ctor_KernelHFRP_exit:
 }
 
 // Vtable initialization
-static void __nvoc_init_funcTable_KernelHFRP_1(KernelHFRP *pThis) {
+static void __nvoc_init_funcTable_KernelHFRP_1(KernelHFRP *pThis, GpuHalspecOwner *pGpuhalspecowner) {
+    ChipHal *chipHal = &pGpuhalspecowner->chipHal;
+    const unsigned long chipHal_HalVarIdx = (unsigned long)chipHal->__nvoc_HalVarIdx;
     PORT_UNREFERENCED_VARIABLE(pThis);
+    PORT_UNREFERENCED_VARIABLE(pGpuhalspecowner);
+    PORT_UNREFERENCED_VARIABLE(chipHal);
+    PORT_UNREFERENCED_VARIABLE(chipHal_HalVarIdx);
 } // End __nvoc_init_funcTable_KernelHFRP_1
 
 
 // Initialize vtable(s) for 14 virtual method(s).
-void __nvoc_init_funcTable_KernelHFRP(KernelHFRP *pThis) {
-    __nvoc_init_funcTable_KernelHFRP_1(pThis);
+void __nvoc_init_funcTable_KernelHFRP(KernelHFRP *pThis, GpuHalspecOwner *pGpuhalspecowner) {
+    __nvoc_init_funcTable_KernelHFRP_1(pThis, pGpuhalspecowner);
 }
 
 // Initialize newly constructed object.
-void __nvoc_init__KernelHFRP(KernelHFRP *pThis) {
+void __nvoc_init__KernelHFRP(KernelHFRP *pThis, GpuHalspecOwner *pGpuhalspecowner) {
 
     // Initialize pointers to inherited data.
     pThis->__nvoc_pbase_Object = &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object;    // (obj) super^2
@@ -258,7 +290,7 @@ void __nvoc_init__KernelHFRP(KernelHFRP *pThis) {
     pThis->__nvoc_metadata_ptr = &__nvoc_metadata__KernelHFRP;    // (khfrp) this
 
     // Initialize per-object vtables.
-    __nvoc_init_funcTable_KernelHFRP(pThis);
+    __nvoc_init_funcTable_KernelHFRP(pThis, pGpuhalspecowner);
 }
 
 NV_STATUS __nvoc_objCreate_KernelHFRP(KernelHFRP **ppThis, Dynamic *pParent, NvU32 createFlags)
@@ -266,19 +298,32 @@ NV_STATUS __nvoc_objCreate_KernelHFRP(KernelHFRP **ppThis, Dynamic *pParent, NvU
     NV_STATUS status;
     Object *pParentObj = NULL;
     KernelHFRP *pThis;
+    GpuHalspecOwner *pGpuhalspecowner;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(KernelHFRP), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(KernelHFRP));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(KernelHFRP));
 
     pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.createFlags = createFlags;
 
-    // Link the child into the parent if there is one unless flagged not to do so.
-    if (pParent != NULL && !(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
+    // pParent must be a valid object that derives from a halspec owner class.
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pParent != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelHFRP_cleanup);
+
+    // Link the child into the parent unless flagged not to do so.
+    if (!(createFlags & NVOC_OBJ_CREATE_FLAGS_PARENT_HALSPEC_ONLY))
     {
         pParentObj = dynamicCast(pParent, Object);
         objAddChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
@@ -288,31 +333,41 @@ NV_STATUS __nvoc_objCreate_KernelHFRP(KernelHFRP **ppThis, Dynamic *pParent, NvU
         pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object.pParent = NULL;
     }
 
-    __nvoc_init__KernelHFRP(pThis);
-    status = __nvoc_ctor_KernelHFRP(pThis);
+    // HALs are defined by the parent or the first super class.
+    if ((pGpuhalspecowner = dynamicCast(pParent, GpuHalspecOwner)) == NULL)
+        pGpuhalspecowner = objFindAncestorOfType(GpuHalspecOwner, pParent);
+    NV_CHECK_TRUE_OR_GOTO(status, LEVEL_ERROR, pGpuhalspecowner != NULL, NV_ERR_INVALID_ARGUMENT, __nvoc_objCreate_KernelHFRP_cleanup);
+
+    // Initialize vtable, RTTI, etc., then call constructor.
+    __nvoc_init__KernelHFRP(pThis, pGpuhalspecowner);
+    status = __nvoc_ctor_KernelHFRP(pThis, pGpuhalspecowner);
     if (status != NV_OK) goto __nvoc_objCreate_KernelHFRP_cleanup;
 
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_KernelHFRP_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_OBJENGSTATE.__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(KernelHFRP));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

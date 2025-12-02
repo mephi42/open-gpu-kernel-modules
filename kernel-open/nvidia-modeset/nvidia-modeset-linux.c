@@ -130,6 +130,15 @@ module_param_named(config_file, nvkms_conf, charp, 0400);
 
 static atomic_t nvkms_alloc_called_count;
 
+#define NV_SUPPORTS_PLATFORM_DEVICE_PUT NV_IS_EXPORT_SYMBOL_GPL_platform_device_put
+
+#if defined(NV_LINUX_NVHOST_H_PRESENT) && NV_SUPPORTS_PLATFORM_DEVICE_PUT
+#if defined(NV_LINUX_HOST1X_NEXT_H_PRESENT) || defined(CONFIG_TEGRA_GRHOST)
+#define NVKMS_NVHOST_SYNCPT_SUPPORTED
+struct platform_device *nvhost_platform_device = NULL;
+#endif
+#endif
+
 NvBool nvkms_test_fail_alloc_core_channel(
     enum FailAllocCoreChannelMethod method
 )
@@ -206,21 +215,18 @@ NvBool nvkms_kernel_supports_syncpts(void)
  * support for syncpts; callers must also check that the hardware
  * supports syncpts.
  */
-#if (defined(CONFIG_TEGRA_GRHOST) || defined(NV_LINUX_HOST1X_NEXT_H_PRESENT))
+#if defined(NVKMS_NVHOST_SYNCPT_SUPPORTED)
     return NV_TRUE;
 #else
     return NV_FALSE;
 #endif
 }
 
-#define NVKMS_SYNCPT_STUBS_NEEDED
-
 /*************************************************************************
  * NVKMS interface for nvhost unit for sync point APIs.
  *************************************************************************/
-#if defined(NV_LINUX_NVHOST_H_PRESENT) && defined(CONFIG_TEGRA_GRHOST)
 
-#undef NVKMS_SYNCPT_STUBS_NEEDED
+#if defined(NVKMS_NVHOST_SYNCPT_SUPPORTED) && defined(CONFIG_TEGRA_GRHOST)
 
 #include <linux/nvhost.h>
 
@@ -228,17 +234,21 @@ NvBool nvkms_syncpt_op(
     enum NvKmsSyncPtOp op,
     NvKmsSyncPtOpParams *params)
 {
-    struct platform_device *pdev = nvhost_get_default_device();
+    if (nvhost_platform_device == NULL) {
+        nvkms_log(NVKMS_LOG_LEVEL_ERROR, NVKMS_LOG_PREFIX,
+                  "Failed to get default nvhost device");
+        return NV_FALSE;
+    }
 
     switch (op) {
 
     case NVKMS_SYNCPT_OP_ALLOC:
         params->alloc.id = nvhost_get_syncpt_client_managed(
-                                pdev, params->alloc.syncpt_name);
+                                nvhost_platform_device, params->alloc.syncpt_name);
         break;
 
     case NVKMS_SYNCPT_OP_PUT:
-        nvhost_syncpt_put_ref_ext(pdev, params->put.id);
+        nvhost_syncpt_put_ref_ext(nvhost_platform_device, params->put.id);
         break;
 
     case NVKMS_SYNCPT_OP_FD_TO_ID_AND_THRESH: {
@@ -272,7 +282,7 @@ NvBool nvkms_syncpt_op(
 
     case NVKMS_SYNCPT_OP_ID_AND_THRESH_TO_FD:
         nvhost_syncpt_create_fence_single_ext(
-                pdev,
+                nvhost_platform_device,
                 params->id_and_thresh_to_fd.id,
                 params->id_and_thresh_to_fd.thresh,
                 "nvkms-fence",
@@ -281,7 +291,7 @@ NvBool nvkms_syncpt_op(
 
     case NVKMS_SYNCPT_OP_READ_MINVAL:
         params->read_minval.minval =
-                nvhost_syncpt_read_minval(pdev, params->read_minval.id);
+                nvhost_syncpt_read_minval(nvhost_platform_device, params->read_minval.id);
         break;
 
     }
@@ -289,7 +299,7 @@ NvBool nvkms_syncpt_op(
     return NV_TRUE;
 }
 
-#elif defined(NV_LINUX_HOST1X_NEXT_H_PRESENT) && defined(NV_LINUX_NVHOST_H_PRESENT)
+#elif defined(NVKMS_NVHOST_SYNCPT_SUPPORTED) && defined(NV_LINUX_HOST1X_NEXT_H_PRESENT)
 
 #include <linux/dma-fence.h>
 #include <linux/file.h>
@@ -305,24 +315,20 @@ NvBool nvkms_syncpt_op(
 
 #include <linux/nvhost.h>
 
-#undef NVKMS_SYNCPT_STUBS_NEEDED
-
 NvBool nvkms_syncpt_op(
     enum NvKmsSyncPtOp op,
     NvKmsSyncPtOpParams *params)
 {
     struct host1x_syncpt *host1x_sp;
-    struct platform_device *pdev;
     struct host1x *host1x;
 
-    pdev = nvhost_get_default_device();
-    if (pdev == NULL) {
+    if (nvhost_platform_device == NULL) {
         nvkms_log(NVKMS_LOG_LEVEL_ERROR, NVKMS_LOG_PREFIX,
-                  "Failed to get nvhost default pdev");
-         return NV_FALSE;
+                  "Failed to get default nvhost device");
+        return NV_FALSE;
     }
 
-    host1x = nvhost_get_host1x(pdev);
+    host1x = nvhost_get_host1x(nvhost_platform_device);
     if (host1x == NULL) {
         nvkms_log(NVKMS_LOG_LEVEL_ERROR, NVKMS_LOG_PREFIX,
                   "Failed to get host1x");
@@ -436,9 +442,7 @@ NvBool nvkms_syncpt_op(
 
     return NV_TRUE;
 }
-#endif
-
-#ifdef NVKMS_SYNCPT_STUBS_NEEDED
+#else
 /* Unsupported STUB for nvkms_syncpt APIs */
 NvBool nvkms_syncpt_op(
     enum NvKmsSyncPtOp op,
@@ -2091,6 +2095,14 @@ static int __init nvkms_init(void)
 
     atomic_set(&nvkms_alloc_called_count, 0);
 
+#if defined(NVKMS_NVHOST_SYNCPT_SUPPORTED)
+    /*
+     * nvhost_get_default_device() might return NULL; don't check it
+     * until we use it.
+     */
+    nvhost_platform_device = nvhost_get_default_device();
+#endif
+
     ret = nvkms_alloc_rm();
 
     if (ret != 0) {
@@ -2151,6 +2163,10 @@ static void __exit nvkms_exit(void)
 {
     struct nvkms_timer_t *timer, *tmp_timer;
     unsigned long flags = 0;
+
+#if defined(NVKMS_NVHOST_SYNCPT_SUPPORTED)
+    platform_device_put(nvhost_platform_device);
+#endif
 
     nvkms_proc_exit();
 

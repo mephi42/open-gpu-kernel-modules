@@ -40,13 +40,6 @@
     UVM stream types
 *******************************************************************************/
 
-typedef enum
-{
-    UvmStreamTypeRegular = 0,
-    UvmStreamTypeAll = 1,
-    UvmStreamTypeNone = 2
-} UvmStreamType;
-
 #define UVM_STREAM_INVALID  ((UvmStream)0ULL)
 #define UVM_STREAM_ALL      ((UvmStream)2ULL)
 #define UVM_STREAM_NONE     ((UvmStream)3ULL)
@@ -171,8 +164,6 @@ typedef union
 //    Tools API types
 //------------------------------------------------------------------------------
 
-#define UVM_DEBUG_V1    0x00000001
-
 typedef NvUPtr UvmDebugSession;
 
 //------------------------------------------------------------------------------
@@ -258,10 +249,10 @@ typedef enum
 //------------------------------------------------------------------------------
 typedef struct
 {
-    NvU32           scope; //UVM_DEBUG_V1 (UvmCounterScope)
-    NvU32           name;  //UVM_DEBUG_V1 (UvmCounterName)
-    NvProcessorUuid gpuid; //UVM_DEBUG_V1
-    NvU32           state; //UVM_DEBUG_V1
+    NvU32           scope; // UvmCounterScope
+    NvU32           name;  // UvmCounterName
+    NvProcessorUuid gpuid;
+    NvU32           state;
 } UvmCounterConfig;
 
 #define UVM_COUNTER_CONFIG_STATE_DISABLE_REQUESTED  0
@@ -1391,12 +1382,6 @@ typedef enum
 // An opaque queue handle is returned to the user when a queue is created.
 //------------------------------------------------------------------------------
 typedef NvUPtr UvmEventQueueHandle;
-
-typedef enum
-{
-    UvmDebugAccessTypeRead = 0,
-    UvmDebugAccessTypeWrite = 1,
-} UvmDebugAccessType;
 
 typedef struct UvmEventControlData_tag {
     // entries between get_ahead and get_behind are currently being read

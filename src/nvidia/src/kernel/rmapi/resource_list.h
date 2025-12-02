@@ -414,6 +414,16 @@ RS_ENTRY(
     /* Required Access Rights */ RS_ACCESS_NONE
 )
 RS_ENTRY(
+    /* External Class         */ KERNEL_WATCHDOG,
+    /* Internal Class         */ KernelWatchdog,
+    /* Multi-Instance         */ NV_TRUE,
+    /* Parents                */ RS_LIST(classId(Subdevice)),
+    /* Alloc Param Info       */ RS_NONE,
+    /* Resource Free Priority */ RS_FREE_PRIORITY_DEFAULT,
+    /* Flags                  */ RS_FLAGS_ALLOC_NON_PRIVILEGED | RS_FLAGS_ACQUIRE_RO_API_LOCK_ON_ALLOC | RS_FLAGS_INTERNAL_ONLY,
+    /* Required Access Rights */ RS_ACCESS_NONE
+)
+RS_ENTRY(
     /* External Class         */ KERNEL_GRAPHICS_CONTEXT,
     /* Internal Class         */ KernelGraphicsContext,
     /* Multi-Instance         */ NV_TRUE,
@@ -636,17 +646,6 @@ RS_ENTRY(
     /* Alloc Param Info       */ RS_REQUIRED(NV_MEMORY_LIST_ALLOCATION_PARAMS),
     /* Resource Free Priority */ RS_FREE_PRIORITY_DEFAULT,
     /* Flags                  */ RS_FLAGS_ALLOC_PRIVILEGED | RS_FLAGS_ALLOC_CPU_PLUGIN_FOR_SRIOV | RS_FLAGS_ACQUIRE_GPUS_LOCK,
-    /* Required Access Rights */ RS_ACCESS_NONE
-)
-RS_ENTRY(
-    /* External Class         */ NV01_MEMORY_FLA,
-    /* Internal Class         */ FlaMemory,
-    /* Multi-Instance         */ NV_TRUE,
-    /* Parents                */ RS_LIST(classId(Device)),
-    /* Alloc Param Info       */ RS_REQUIRED(NV_FLA_MEMORY_ALLOCATION_PARAMS),
-    /* Resource Free Priority */ RS_FREE_PRIORITY_DEFAULT,
-    /* Flags                  */ RS_FLAGS_ALLOC_NON_PRIVILEGED | RS_FLAGS_ACQUIRE_GPUS_LOCK |
-                                 RS_FLAGS_ALLOC_GSP_PLUGIN_FOR_VGPU_GSP,
     /* Required Access Rights */ RS_ACCESS_NONE
 )
 RS_ENTRY(
@@ -1642,6 +1641,7 @@ RS_ENTRY(
                                  RS_FLAGS_ACQUIRE_RO_API_LOCK_ON_ALLOC | RS_FLAGS_ALLOC_GSP_PLUGIN_FOR_VGPU_GSP,
     /* Required Access Rights */ RS_ACCESS_NONE
 )
+
 RS_ENTRY(
     /* External Class         */ NVB8B0_VIDEO_DECODER,
     /* Internal Class         */ NvdecContext,

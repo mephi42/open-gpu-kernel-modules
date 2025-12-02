@@ -698,6 +698,7 @@ kmemsysMcFlaOffsetTableAlloc_GH100
     KernelMemorySystem            *pKernelMemorySystem,
     NV00FD_CTRL_ATTACH_MEM_PARAMS *pParams,
     MEMORY_DESCRIPTOR             *pFabricMemDesc,
+    MEMORY_DESCRIPTOR             *pPhysMemDesc,
     NvU8                          *pOffsetTableIndex
 )
 {

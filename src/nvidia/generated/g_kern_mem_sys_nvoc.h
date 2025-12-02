@@ -247,7 +247,7 @@ struct KernelMemorySystem {
     struct OBJENGSTATE *__nvoc_pbase_OBJENGSTATE;    // engstate super
     struct KernelMemorySystem *__nvoc_pbase_KernelMemorySystem;    // kmemsys
 
-    // Vtable with 36 per-object function pointers
+    // Vtable with 37 per-object function pointers
     NV_STATUS (*__kmemsysGetFbNumaInfo__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU64 *, NvU64 *, NvS32 *);  // halified (2 hals) body
     NV_STATUS (*__kmemsysReadUsableFbSize__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU64 *);  // halified (3 hals) body
     NV_STATUS (*__kmemsysGetUsableFbSize__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU64 *);  // halified (2 hals) body
@@ -279,10 +279,11 @@ struct KernelMemorySystem {
     NvU32 (*__kmemsysGetEccDedCountSize__)(OBJGPU *, struct KernelMemorySystem * /*this*/);  // halified (3 hals) body
     NvU32 (*__kmemsysGetEccDedCountRegAddr__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU32, NvU32);  // halified (3 hals) body
     void (*__kmemsysGetEccCounts__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU32 *, NvU32 *);  // halified (2 hals) body
+    NvU32 (*__kmemsysGetL2EccDedCountRegAddr__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU32, NvU32);  // halified (2 hals) body
     NvU16 (*__kmemsysGetMaximumBlacklistPages__)(OBJGPU *, struct KernelMemorySystem * /*this*/);  // halified (3 hals) body
     NvBool (*__kmemsysIsSwizzIdRejectedByHW__)(OBJGPU *, struct KernelMemorySystem * /*this*/, NvU32);  // halified (2 hals)
     NV_STATUS (*__kmemsysGetFbInfos__)(OBJGPU *, struct KernelMemorySystem * /*this*/, struct RsClient *, Device *, NvHandle, NV2080_CTRL_FB_GET_INFO_V2_PARAMS *, NvU64 *);  // halified (2 hals)
-    NvBool (*__kmemsysCheckReadoutEccEnablement__)(OBJGPU *, struct KernelMemorySystem * /*this*/);  // halified (3 hals) body
+    NvBool (*__kmemsysCheckReadoutEccEnablement__)(OBJGPU *, struct KernelMemorySystem * /*this*/);  // halified (4 hals) body
     NvBool (*__kmemsysIsNonPasidAtsSupported__)(OBJGPU *, struct KernelMemorySystem * /*this*/);  // halified (2 hals) body
 
     // 1 PDB property
@@ -560,15 +561,6 @@ static inline NvBool kmemsysCbcIsSafe(OBJGPU *pGpu, struct KernelMemorySystem *p
 #endif // __nvoc_kern_mem_sys_h_disabled
 
 #ifdef __nvoc_kern_mem_sys_h_disabled
-static inline NvU32 kmemsysGetL2EccDedCountRegAddr(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem, NvU32 fbpa, NvU32 subp) {
-    NV_ASSERT_FAILED_PRECOMP("KernelMemorySystem was disabled!");
-    return 0;
-}
-#else // __nvoc_kern_mem_sys_h_disabled
-#define kmemsysGetL2EccDedCountRegAddr(pGpu, pKernelMemorySystem, fbpa, subp) kmemsysGetL2EccDedCountRegAddr_TU102(pGpu, pKernelMemorySystem, fbpa, subp)
-#endif // __nvoc_kern_mem_sys_h_disabled
-
-#ifdef __nvoc_kern_mem_sys_h_disabled
 static inline NV_STATUS kmemsysPrepareForXVEReset(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem) {
     NV_ASSERT_FAILED_PRECOMP("KernelMemorySystem was disabled!");
     return NV_ERR_NOT_SUPPORTED;
@@ -719,7 +711,9 @@ static inline NV_STATUS kmemsysInitMIGGPUInstanceMemConfigForSwizzId(OBJGPU *arg
 #define kmemsysGetEccCounts_FNPTR(pKernelMemorySystem) pKernelMemorySystem->__kmemsysGetEccCounts__
 #define kmemsysGetEccCounts(pGpu, pKernelMemorySystem, arg3, arg4) kmemsysGetEccCounts_DISPATCH(pGpu, pKernelMemorySystem, arg3, arg4)
 #define kmemsysGetEccCounts_HAL(pGpu, pKernelMemorySystem, arg3, arg4) kmemsysGetEccCounts_DISPATCH(pGpu, pKernelMemorySystem, arg3, arg4)
-#define kmemsysGetL2EccDedCountRegAddr_HAL(pGpu, pKernelMemorySystem, fbpa, subp) kmemsysGetL2EccDedCountRegAddr(pGpu, pKernelMemorySystem, fbpa, subp)
+#define kmemsysGetL2EccDedCountRegAddr_FNPTR(pKernelMemorySystem) pKernelMemorySystem->__kmemsysGetL2EccDedCountRegAddr__
+#define kmemsysGetL2EccDedCountRegAddr(pGpu, pKernelMemorySystem, fbpa, subp) kmemsysGetL2EccDedCountRegAddr_DISPATCH(pGpu, pKernelMemorySystem, fbpa, subp)
+#define kmemsysGetL2EccDedCountRegAddr_HAL(pGpu, pKernelMemorySystem, fbpa, subp) kmemsysGetL2EccDedCountRegAddr_DISPATCH(pGpu, pKernelMemorySystem, fbpa, subp)
 #define kmemsysGetMaximumBlacklistPages_FNPTR(pKernelMemorySystem) pKernelMemorySystem->__kmemsysGetMaximumBlacklistPages__
 #define kmemsysGetMaximumBlacklistPages(pGpu, pKernelMemorySystem) kmemsysGetMaximumBlacklistPages_DISPATCH(pGpu, pKernelMemorySystem)
 #define kmemsysGetMaximumBlacklistPages_HAL(pGpu, pKernelMemorySystem) kmemsysGetMaximumBlacklistPages_DISPATCH(pGpu, pKernelMemorySystem)
@@ -908,6 +902,10 @@ static inline void kmemsysGetEccCounts_DISPATCH(OBJGPU *pGpu, struct KernelMemor
     pKernelMemorySystem->__kmemsysGetEccCounts__(pGpu, pKernelMemorySystem, arg3, arg4);
 }
 
+static inline NvU32 kmemsysGetL2EccDedCountRegAddr_DISPATCH(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem, NvU32 fbpa, NvU32 subp) {
+    return pKernelMemorySystem->__kmemsysGetL2EccDedCountRegAddr__(pGpu, pKernelMemorySystem, fbpa, subp);
+}
+
 static inline NvU16 kmemsysGetMaximumBlacklistPages_DISPATCH(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem) {
     return pKernelMemorySystem->__kmemsysGetMaximumBlacklistPages__(pGpu, pKernelMemorySystem);
 }
@@ -997,9 +995,6 @@ static inline void kmemsysFreeComprResources_b3696a(OBJGPU *pGpu, struct KernelM
 static inline NvBool kmemsysCbcIsSafe_88bc07(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem) {
     return NV_TRUE;
 }
-
-
-NvU32 kmemsysGetL2EccDedCountRegAddr_TU102(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem, NvU32 fbpa, NvU32 subp);
 
 
 static inline NV_STATUS kmemsysPrepareForXVEReset_56cd7a(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem) {
@@ -1235,6 +1230,10 @@ static inline void kmemsysGetEccCounts_b3696a(OBJGPU *pGpu, struct KernelMemoryS
     return;
 }
 
+NvU32 kmemsysGetL2EccDedCountRegAddr_TU102(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem, NvU32 fbpa, NvU32 subp);
+
+NvU32 kmemsysGetL2EccDedCountRegAddr_GB100(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem, NvU32 fbpa, NvU32 subp);
+
 NvU16 kmemsysGetMaximumBlacklistPages_GM107(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem);
 
 NvU16 kmemsysGetMaximumBlacklistPages_GA100(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem);
@@ -1259,6 +1258,8 @@ NvBool kmemsysCheckReadoutEccEnablement_GV100(OBJGPU *pGpu, struct KernelMemoryS
 
 NvBool kmemsysCheckReadoutEccEnablement_GA100(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem);
 
+NvBool kmemsysCheckReadoutEccEnablement_GB100(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem);
+
 static inline NvBool kmemsysCheckReadoutEccEnablement_3dd2c9(OBJGPU *pGpu, struct KernelMemorySystem *pKernelMemorySystem) {
     return NV_FALSE;
 }
@@ -1282,11 +1283,10 @@ static inline NvBool kmemsysIsL2CleanFbPull(struct KernelMemorySystem *pKernelMe
     (kmemsys && pGpu->getProperty(pGpu, PDB_PROP_GPU_COHERENT_CPU_MAPPING)  &&     \
      (kmemsys->numaOnlineSize != 0) &&                                             \
      ((offset) >= (kmemsys->coherentCpuFbBase + kmemsys->numaOnlineBase)) &&       \
-     (((NvU64)offset + length) <= (kmemsys->coherentCpuFbBase + kmemsys->numaOnlineBase + kmemsys->numaOnlineSize)))
+     (((NvU64)(offset) + (length)) <= (kmemsys->coherentCpuFbBase + kmemsys->numaOnlineBase + kmemsys->numaOnlineSize)))
 
 #define IS_COHERENT_FB_OFFSET(pGpu, kmemsys, offset, length)                       \
     (kmemsys && pGpu->getProperty(pGpu, PDB_PROP_GPU_COHERENT_CPU_MAPPING)  &&     \
-     (kmemsys->numaOnlineSize == 0) &&                                             \
      ((offset) >= (kmemsys->coherentCpuFbBase)) &&                                 \
      (((NvU64)offset + length) <= (kmemsys->coherentCpuFbEnd)))
 

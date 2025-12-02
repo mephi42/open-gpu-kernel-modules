@@ -148,7 +148,9 @@ NV_FORCERESULTCHECK void *portMemAllocNonPaged(NvLength lengthBytes);
  * Otherwise it is defined to @ref portMemAllocNonPaged and @ref portMemFree.
  */
 #define portMemExAllocStack(lengthBytes) __builtin_alloca(lengthBytes)
-#define portMemExAllocStack_SUPPORTED PORT_COMPILER_IS_GCC
+// We can't use portMemExAllocStack on kernel as we get the following error:
+// stack usage might be unbounded
+#define portMemExAllocStack_SUPPORTED PORT_COMPILER_IS_GCC && NVOS_IS_LIBOS
 
 #if portMemExAllocStack_SUPPORTED && NVOS_IS_LIBOS
 #define portMemAllocStackOrHeap(lengthBytes) portMemExAllocStack(lengthBytes)

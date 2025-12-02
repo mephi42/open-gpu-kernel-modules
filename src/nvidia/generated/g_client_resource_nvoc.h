@@ -302,16 +302,6 @@ static inline NV_STATUS cliresCtrlCmdSystemGpsBatchControl(struct RmClientResour
 #define cliresCtrlCmdSystemGpsBatchControl(pRmCliRes, controlParams) cliresCtrlCmdSystemGpsBatchControl_IMPL(pRmCliRes, controlParams)
 #endif // __nvoc_client_resource_h_disabled
 
-NV_STATUS cliresCtrlCmdSystemGetHwbcInfo_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_HWBC_INFO_PARAMS *pParams);
-#ifdef __nvoc_client_resource_h_disabled
-static inline NV_STATUS cliresCtrlCmdSystemGetHwbcInfo(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_HWBC_INFO_PARAMS *pParams) {
-    NV_ASSERT_FAILED_PRECOMP("RmClientResource was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_client_resource_h_disabled
-#define cliresCtrlCmdSystemGetHwbcInfo(pRmCliRes, pParams) cliresCtrlCmdSystemGetHwbcInfo_IMPL(pRmCliRes, pParams)
-#endif // __nvoc_client_resource_h_disabled
-
 NV_STATUS cliresCtrlCmdSystemGetP2pCaps_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_P2P_CAPS_PARAMS *pP2PParams);
 #ifdef __nvoc_client_resource_h_disabled
 static inline NV_STATUS cliresCtrlCmdSystemGetP2pCaps(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_P2P_CAPS_PARAMS *pP2PParams) {
@@ -730,16 +720,6 @@ static inline NV_STATUS cliresCtrlCmdGpuDetachIds(struct RmClientResource *pRmCl
 }
 #else // __nvoc_client_resource_h_disabled
 #define cliresCtrlCmdGpuDetachIds(pRmCliRes, pGpuDetachIds) cliresCtrlCmdGpuDetachIds_IMPL(pRmCliRes, pGpuDetachIds)
-#endif // __nvoc_client_resource_h_disabled
-
-NV_STATUS cliresCtrlCmdGpuGetSvmSize_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS *pSvmSizeGetParams);
-#ifdef __nvoc_client_resource_h_disabled
-static inline NV_STATUS cliresCtrlCmdGpuGetSvmSize(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS *pSvmSizeGetParams) {
-    NV_ASSERT_FAILED_PRECOMP("RmClientResource was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_client_resource_h_disabled
-#define cliresCtrlCmdGpuGetSvmSize(pRmCliRes, pSvmSizeGetParams) cliresCtrlCmdGpuGetSvmSize_IMPL(pRmCliRes, pSvmSizeGetParams)
 #endif // __nvoc_client_resource_h_disabled
 
 NV_STATUS cliresCtrlCmdGpuGetPciInfo_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_GET_PCI_INFO_PARAMS *pPciInfoParams);
@@ -1426,8 +1406,6 @@ NV_STATUS cliresCtrlCmdSystemGpsControl_IMPL(struct RmClientResource *pRmCliRes,
 
 NV_STATUS cliresCtrlCmdSystemGpsBatchControl_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GPS_BATCH_CONTROL_PARAMS *controlParams);
 
-NV_STATUS cliresCtrlCmdSystemGetHwbcInfo_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_HWBC_INFO_PARAMS *pParams);
-
 NV_STATUS cliresCtrlCmdSystemGetP2pCaps_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_P2P_CAPS_PARAMS *pP2PParams);
 
 NV_STATUS cliresCtrlCmdSystemGetP2pCapsV2_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_SYSTEM_GET_P2P_CAPS_V2_PARAMS *pP2PParams);
@@ -1511,8 +1489,6 @@ NV_STATUS cliresCtrlCmdGpuAsyncAttachId_IMPL(struct RmClientResource *pRmCliRes,
 NV_STATUS cliresCtrlCmdGpuWaitAttachId_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_WAIT_ATTACH_ID_PARAMS *pWaitAttachIdParams);
 
 NV_STATUS cliresCtrlCmdGpuDetachIds_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_DETACH_IDS_PARAMS *pGpuDetachIds);
-
-NV_STATUS cliresCtrlCmdGpuGetSvmSize_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_GET_SVM_SIZE_PARAMS *pSvmSizeGetParams);
 
 NV_STATUS cliresCtrlCmdGpuGetPciInfo_IMPL(struct RmClientResource *pRmCliRes, NV0000_CTRL_GPU_GET_PCI_INFO_PARAMS *pPciInfoParams);
 

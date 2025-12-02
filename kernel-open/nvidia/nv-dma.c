@@ -27,6 +27,17 @@
 #include "nv-linux.h"
 #include "nv-reg.h"
 
+#if IS_ENABLED(CONFIG_DRM)
+#include <drm/drm_device.h>
+#include <drm/drm_drv.h>
+
+#if defined(NV_DRM_DRMP_H_PRESENT)
+#include <drm/drmP.h>
+#endif
+
+#include <drm/drm_gem.h>
+#endif /* IS_ENABLED(CONFIG_DRM) */
+
 #define NV_DMA_DEV_PRINTF(debuglevel, dma_dev, format, ... )                \
     nv_printf(debuglevel, "NVRM: %s: " format,                              \
               (((dma_dev) && ((dma_dev)->dev)) ? dev_name((dma_dev)->dev) : \
@@ -909,7 +920,7 @@ void NV_API_CALL nv_dma_cache_invalidate
 #endif
 }
 
-#if defined(NV_DRM_AVAILABLE)
+#if IS_ENABLED(CONFIG_DRM)
 
 static inline void
 nv_dma_gem_object_put_unlocked(struct drm_gem_object *gem)
@@ -990,4 +1001,4 @@ void NV_API_CALL nv_dma_release_sgt
 )
 {
 }
-#endif /* NV_DRM_AVAILABLE */
+#endif /* IS_ENABLED(CONFIG_DRM) */

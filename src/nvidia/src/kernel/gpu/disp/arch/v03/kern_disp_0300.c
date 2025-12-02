@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -496,7 +496,6 @@ kheadReadPendingVblank_v03_00
     THREAD_STATE_NODE *pThreadState
 )
 {
-    KernelDisplay   *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
     NvU32  intr = pCachedIntr ? *pCachedIntr : GPU_REG_RD32_EX(pGpu, NV_PDISP_FE_RM_INTR_DISPATCH, pThreadState);
 
     if (!FLD_IDX_TEST_DRF(_PDISP, _FE_RM_INTR_DISPATCH, _HEAD_TIMING, pKernelHead->PublicId, _PENDING, intr))
@@ -506,7 +505,7 @@ kheadReadPendingVblank_v03_00
 
     intr = GPU_REG_RD32_EX(pGpu, NV_PDISP_FE_RM_INTR_STAT_HEAD_TIMING(pKernelHead->PublicId), pThreadState);
     
-    if(pKernelDisplay->bIsPanelReplayEnabled == NV_TRUE)
+    if (pKernelHead->bIsPanelReplayEnabled == NV_TRUE)
     {
         if (FLD_TEST_DRF(_PDISP, _FE_EVT_STAT_HEAD_TIMING, _VBLANK, _PENDING, intr))
         {

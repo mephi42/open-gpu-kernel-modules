@@ -326,9 +326,9 @@ unlock_api_lock:
 // In TOT, nv_dma_buf_dup_mem_handles() acquires GPU lock only for calling pGPU
 // instance. However, it is not sufficient as per DupObject() SYSMEM's design since it expects
 // either all GPU locks to be acquired by the caller or do not take any GPU locks.
-// PDB_PROP_GPU_ZERO_FB chips (iGPU) doesn't have local memory. In this case,
+// gpuarchIsZeroFb chips (iGPU) doesn't have local memory. In this case,
 // SYSMEM is used as Device resources. priv->acquire_release_all_gpu_lock_on_dup flag set as
-// NV_TRUE only for PDB_PROP_GPU_ZERO_FB chips.
+// NV_TRUE only for gpuarchIsZeroFb chips.
 //
 // Proper Fix (Bug 4866388):
 // The RS_FLAGS_ACQUIRE_RELAXED_GPUS_LOCK_ON_DUP flag was introduced to allow an
@@ -802,7 +802,7 @@ nv_dma_buf_map_pages (
                     goto free_table;
                 }
 
-                sg_set_page(sg, page, sg_len, NV_GET_OFFSET_IN_PAGE(dma_addr));
+                sg_set_page(sg, page, sg_len, offset_in_page(dma_addr));
                 dma_addr += sg_len;
                 dma_len -= sg_len;
                 sg = sg_next(sg);

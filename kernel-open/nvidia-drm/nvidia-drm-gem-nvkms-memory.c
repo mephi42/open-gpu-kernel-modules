@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 
 #include "nvidia-drm-gem-nvkms-memory.h"
 #include "nvidia-drm-helper.h"
-#include "nvidia-drm-ioctl.h"
+#include "nv_drm_common_ioctl.h"
 
 #include <drm/drm_drv.h>
 #include <drm/drm_prime.h>
@@ -158,6 +158,21 @@ static int __nv_drm_gem_nvkms_map(
     }
 
     if (!nvKms->isVidmem(pMemory)) {
+        goto done;
+    }
+
+    /*
+     * XXX Physical mapping currently broken in cases where we can't guarantee
+     * that the mapping is contiguous. Fail on platforms that don't have
+     * guaranteed contiguous physical mappings.
+     */
+    if (!nv_dev->contiguousPhysicalMappings) {
+        NV_DRM_DEV_LOG_INFO(
+            nv_dev,
+            "Mapping vidmem NvKmsKapiMemory 0x%p is currently "
+            "unsupported on coherent GPU memory configurations",
+            pMemory);
+        ret = -ENOMEM;
         goto done;
     }
 

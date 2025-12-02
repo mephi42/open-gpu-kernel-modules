@@ -2067,46 +2067,16 @@ rcdbDumpJournal_IMPL
     const PRB_FIELD_DESC *pFieldDesc
 )
 {
-    OS_DRIVER_BLOCK DriverBlock;
     EVENT_JOURNAL *pJournal = &pRcDB->Journal;
     NvU8 *pJournalBuff      = pJournal->pBuffer;
     RmRCCommonJournal_RECORD *pRecord;
     NvU32 recSize;
-    NV_STATUS nvStatus = NV_OK;
     RmRCCommonJournal_RECORD List;
 
     // It is OK to dump the journal entries without the RM lock.
     // No need to check pRcDB->nvDumpState.bNoRMLock;
 
     recSize = pJournal->BufferSize - pJournal->BufferRemaining;
-
-    if (NULL != pGpu)
-    {
-        //
-        // Add RVA Header, even when there are no journal records.
-        // This header is required to resolve code addresses using the PDB file.
-        // We can log code addresses outside of the journal entries.
-        //
-        NV_CHECK_OK(nvStatus, LEVEL_ERROR, prbEncNestedStart(pPrbEnc, pFieldDesc));
-        if (nvStatus == NV_OK)
-        {
-            NV_CHECK_OK(nvStatus, LEVEL_ERROR,
-                prbEncNestedStart(pPrbEnc, DCL_DCLMSG_JOURNAL_RVAHEADER));
-            if (nvStatus == NV_OK)
-            {
-                portMemSet(&DriverBlock, 0x00, sizeof(DriverBlock));
-                osGetDriverBlock(pGpu->pOsGpuInfo, &DriverBlock);
-                prbEncAddUInt64(pPrbEnc, JOURNAL_RVAHEADER_DRIVER_START, (NvU64)DriverBlock.driverStart);
-                prbEncAddUInt32(pPrbEnc, JOURNAL_RVAHEADER_OFFSET, DriverBlock.offset);
-                prbEncAddUInt32(pPrbEnc, JOURNAL_RVAHEADER_POINTER_SIZE, sizeof(pJournal));
-                prbEncAddUInt64(pPrbEnc, JOURNAL_RVAHEADER_UNIQUE_ID_HIGH, *((NvU64*) DriverBlock.unique_id));
-                prbEncAddUInt64(pPrbEnc, JOURNAL_RVAHEADER_UNIQUE_ID_LOW, *((NvU64*) (DriverBlock.unique_id + 8)));
-                prbEncAddUInt32(pPrbEnc, JOURNAL_RVAHEADER_AGE, DriverBlock.age);
-                NV_CHECK_OK(nvStatus, LEVEL_ERROR, prbEncNestedEnd(pPrbEnc));
-            }
-            NV_CHECK_OK(nvStatus, LEVEL_ERROR, prbEncNestedEnd(pPrbEnc));
-        }
-    }
 
     // init the list to an empty state
     portMemSet(&List, 0x00, sizeof(List));

@@ -283,8 +283,7 @@ void nvSendHdmiCapsToRm(NVDpyEvoPtr pDpyEvo)
     NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
     NvU32 ret;
 
-    if (!pDevEvo->caps.supportsHDMI20 ||
-        nvConnectorUsesDPLib(pDpyEvo->pConnectorEvo)) {
+    if (nvConnectorUsesDPLib(pDpyEvo->pConnectorEvo)) {
         return;
     }
 
@@ -1277,9 +1276,6 @@ void nvDpyUpdateHdmiVRRCaps(NVDpyEvoPtr pDpyEvo)
 
     const NVParsedEdidEvoRec *pParsedEdid = &pDpyEvo->parsedEdid;
     const NVDispEvoRec *pDispEvo = pDpyEvo->pDispEvo;
-    const NVDevEvoRec *pDevEvo = pDispEvo->pDevEvo;
-
-    const NvBool gpuSupportsHDMIVRR = pDevEvo->hal->caps.supportsHDMIVRR;
 
     const NvBool dispSupportsVrr = nvDispSupportsVrr(pDispEvo) && 
                                        !nvkms_conceal_vrr_caps();
@@ -1288,7 +1284,7 @@ void nvDpyUpdateHdmiVRRCaps(NVDpyEvoPtr pDpyEvo)
 
     nvAssert(pParsedEdid->valid);
 
-    if (dispSupportsVrr && gpuSupportsHDMIVRR && (edidVrrMin > 0)) {
+    if (dispSupportsVrr && (edidVrrMin > 0)) {
         if (nvDpyIsAdaptiveSyncDefaultlisted(pDpyEvo)) {
             pDpyEvo->vrr.type =
                 NVKMS_DPY_VRR_TYPE_ADAPTIVE_SYNC_DEFAULTLISTED;
@@ -1687,7 +1683,6 @@ void nvLogEdidCea861InfoEvo(NVDpyEvoPtr pDpyEvo,
 /*
  * HDMI 2.0 4K@60hz uncompressed RGB 4:4:4 (6G mode) is allowed if:
  *
- * - The GPU supports it.
  * - The EDID and NVT_TIMING indicate the monitor supports it, or
  *   this check is overridden.
  */
@@ -1696,9 +1691,6 @@ NvBool nvHdmi204k60HzRGB444Allowed(const NVDpyEvoRec *pDpyEvo,
                                    const NVT_TIMING *pTiming)
 {
     const NVParsedEdidEvoRec *pParsedEdid = &pDpyEvo->parsedEdid;
-    const NVDevEvoRec *pDevEvo = pDpyEvo->pDispEvo->pDevEvo;
-
-    const NvBool gpuSupports444 = pDevEvo->caps.supportsHDMI20;
 
     const NvBool overrideMonitorCheck = ((pParams->overrides &
         NVKMS_MODE_VALIDATION_NO_HDMI2_CHECK) != 0);
@@ -1709,8 +1701,7 @@ NvBool nvHdmi204k60HzRGB444Allowed(const NVDpyEvoRec *pDpyEvo,
 
     nvAssert(pParsedEdid->valid);
 
-    return (gpuSupports444 &&
-            (overrideMonitorCheck || monitorSupports444));
+    return overrideMonitorCheck || monitorSupports444;
 }
 
 /*
@@ -2108,6 +2099,9 @@ NvBool nvHdmiIsTmdsPossible(const NVDpyEvoRec *pDpyEvo,
             pDpyEvo->pDispEvo->pDevEvo->caps.hdmiTmds10BpcMaxPClkMHz * 1000UL;
         NvU32 adjustedMaxPixelClock =
             (pDpyEvo->maxSingleLinkPixelClockKHz * 4ULL) / 5ULL;
+        NvU32 adjustedMaxEDIDPixelClock =
+            pDpyEvo->parsedEdid.valid ?
+              (pDpyEvo->parsedEdid.limits.max_pclk_10khz * 10 * 4ULL) / 5ULL : 0;
 
         /* Pixel clock must satisfy hdmiTmds10BpcMaxPClkKHz, if applicable. */
         if ((hdmiTmds10BpcMaxPClkKHz > 0) &&
@@ -2117,6 +2111,12 @@ NvBool nvHdmiIsTmdsPossible(const NVDpyEvoRec *pDpyEvo,
 
         /* Pixel clock must also satisfy adjustedMaxPixelClock. */
         if (pixelClock > adjustedMaxPixelClock) {
+            return FALSE;
+        }
+
+        /* Pixel clock must also satisfy adjustedMaxEDIDPixelClock. */
+        if (adjustedMaxEDIDPixelClock != 0 &&
+            pixelClock > adjustedMaxEDIDPixelClock) {
             return FALSE;
         }
 

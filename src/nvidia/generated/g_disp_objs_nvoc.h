@@ -58,6 +58,9 @@ extern "C" {
 #include "gpu/gpu_halspec.h"
 
 #include "ctrl/ctrl0073.h"
+#include "ctrl/ctrl0073/ctrl0073system.h"
+#include "ctrl/ctrl0073/ctrl0073dp.h"
+#include "ctrl/ctrl0073/ctrl0073specific.h"
 #include "ctrl/ctrl5070/ctrl5070or.h"
 #include "ctrl/ctrl5070/ctrl5070system.h"
 #include "ctrl/ctrlc370/ctrlc370chnc.h"
@@ -1938,16 +1941,6 @@ static inline NV_STATUS dispcmnCtrlCmdClearELVBlock(struct DispCommon *pDispComm
 #define dispcmnCtrlCmdClearELVBlock(pDispCommon, pParams) dispcmnCtrlCmdClearELVBlock_IMPL(pDispCommon, pParams)
 #endif // __nvoc_disp_objs_h_disabled
 
-NV_STATUS dispcmnCtrlCmdSpecificDisplayChange_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams);
-#ifdef __nvoc_disp_objs_h_disabled
-static inline NV_STATUS dispcmnCtrlCmdSpecificDisplayChange(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams) {
-    NV_ASSERT_FAILED_PRECOMP("DispCommon was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_disp_objs_h_disabled
-#define dispcmnCtrlCmdSpecificDisplayChange(pDispCommon, pParams) dispcmnCtrlCmdSpecificDisplayChange_IMPL(pDispCommon, pParams)
-#endif // __nvoc_disp_objs_h_disabled
-
 NV_STATUS dispcmnCtrlCmdDfpGetSpreadSpectrum_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_GET_SPREAD_SPECTRUM_PARAMS *pParams);
 #ifdef __nvoc_disp_objs_h_disabled
 static inline NV_STATUS dispcmnCtrlCmdDfpGetSpreadSpectrum(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_GET_SPREAD_SPECTRUM_PARAMS *pParams) {
@@ -1996,16 +1989,6 @@ static inline NV_STATUS dispcmnCtrlCmdDpASSRCtrl(struct DispCommon *pDispCommon,
 }
 #else // __nvoc_disp_objs_h_disabled
 #define dispcmnCtrlCmdDpASSRCtrl(pDispCommon, pParams) dispcmnCtrlCmdDpASSRCtrl_IMPL(pDispCommon, pParams)
-#endif // __nvoc_disp_objs_h_disabled
-
-NV_STATUS dispcmnCtrlCmdDpSetEcf_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams);
-#ifdef __nvoc_disp_objs_h_disabled
-static inline NV_STATUS dispcmnCtrlCmdDpSetEcf(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams) {
-    NV_ASSERT_FAILED_PRECOMP("DispCommon was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_disp_objs_h_disabled
-#define dispcmnCtrlCmdDpSetEcf(pDispCommon, pCtrlEcfParams) dispcmnCtrlCmdDpSetEcf_IMPL(pDispCommon, pCtrlEcfParams)
 #endif // __nvoc_disp_objs_h_disabled
 
 NV_STATUS dispcmnCtrlCmdDfpRecordChannelRegisters_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_SYSTEM_RECORD_CHANNEL_REGS_PARAMS *pParams);
@@ -2678,6 +2661,16 @@ static inline NV_STATUS dispcmnCtrlCmdSpecificSetHdmiAudioMutestream(struct Disp
 #define dispcmnCtrlCmdSpecificSetHdmiAudioMutestream(pDispCommon, pParams) dispcmnCtrlCmdSpecificSetHdmiAudioMutestream_IMPL(pDispCommon, pParams)
 #endif // __nvoc_disp_objs_h_disabled
 
+NV_STATUS dispcmnCtrlCmdSpecificDisplayChange_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams);
+#ifdef __nvoc_disp_objs_h_disabled
+static inline NV_STATUS dispcmnCtrlCmdSpecificDisplayChange(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams) {
+    NV_ASSERT_FAILED_PRECOMP("DispCommon was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_disp_objs_h_disabled
+#define dispcmnCtrlCmdSpecificDisplayChange(pDispCommon, pParams) dispcmnCtrlCmdSpecificDisplayChange_IMPL(pDispCommon, pParams)
+#endif // __nvoc_disp_objs_h_disabled
+
 NV_STATUS dispcmnCtrlCmdDfpEdpDriverUnload_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_EDP_DRIVER_UNLOAD_PARAMS *pParams);
 #ifdef __nvoc_disp_objs_h_disabled
 static inline NV_STATUS dispcmnCtrlCmdDfpEdpDriverUnload(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_EDP_DRIVER_UNLOAD_PARAMS *pParams) {
@@ -3208,6 +3201,16 @@ static inline NV_STATUS dispcmnCtrlCmdDpGetLevelInfoTableData(struct DispCommon 
 #define dispcmnCtrlCmdDpGetLevelInfoTableData(pDispCommon, pParams) dispcmnCtrlCmdDpGetLevelInfoTableData_IMPL(pDispCommon, pParams)
 #endif // __nvoc_disp_objs_h_disabled
 
+NV_STATUS dispcmnCtrlCmdDpSetEcf_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams);
+#ifdef __nvoc_disp_objs_h_disabled
+static inline NV_STATUS dispcmnCtrlCmdDpSetEcf(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams) {
+    NV_ASSERT_FAILED_PRECOMP("DispCommon was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else // __nvoc_disp_objs_h_disabled
+#define dispcmnCtrlCmdDpSetEcf(pDispCommon, pCtrlEcfParams) dispcmnCtrlCmdDpSetEcf_IMPL(pDispCommon, pCtrlEcfParams)
+#endif // __nvoc_disp_objs_h_disabled
+
 NV_STATUS dispcmnCtrlCmdDp2xSetLevelInfoTableData_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP2X_SET_LEVEL_INFO_TABLE_DATA_PARAMS *pParams);
 #ifdef __nvoc_disp_objs_h_disabled
 static inline NV_STATUS dispcmnCtrlCmdDp2xSetLevelInfoTableData(struct DispCommon *pDispCommon, NV0073_CTRL_DP2X_SET_LEVEL_INFO_TABLE_DATA_PARAMS *pParams) {
@@ -3466,8 +3469,6 @@ NV_STATUS dispcmnCtrlCmdDpEnableVrr_IMPL(struct DispCommon *pDispCommon, NV0073_
 
 NV_STATUS dispcmnCtrlCmdClearELVBlock_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_CLEAR_ELV_BLOCK_PARAMS *pParams);
 
-NV_STATUS dispcmnCtrlCmdSpecificDisplayChange_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams);
-
 NV_STATUS dispcmnCtrlCmdDfpGetSpreadSpectrum_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_GET_SPREAD_SPECTRUM_PARAMS *pParams);
 
 NV_STATUS dispcmnCtrlCmdDfpGetLcdGpioPinNum_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_GET_LCD_GPIO_PIN_NUM_PARAMS *pParams);
@@ -3477,8 +3478,6 @@ NV_STATUS dispcmnCtrlCmdDpRetrieveDpRingBuffer_IMPL(struct DispCommon *pDispComm
 NV_STATUS dispcmnCtrlCmdDpAuxchI2cTransferCtrl_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP_AUXCH_I2C_TRANSFER_CTRL_PARAMS *pParams);
 
 NV_STATUS dispcmnCtrlCmdDpASSRCtrl_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP_ASSR_CTRL_PARAMS *pParams);
-
-NV_STATUS dispcmnCtrlCmdDpSetEcf_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams);
 
 NV_STATUS dispcmnCtrlCmdDfpRecordChannelRegisters_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_SYSTEM_RECORD_CHANNEL_REGS_PARAMS *pParams);
 
@@ -3614,6 +3613,8 @@ NV_STATUS dispcmnCtrlCmdSpecificGetValidHeadWindowAssignment_IMPL(struct DispCom
 
 NV_STATUS dispcmnCtrlCmdSpecificSetHdmiAudioMutestream_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_SPECIFIC_SET_HDMI_AUDIO_MUTESTREAM_PARAMS *pParams);
 
+NV_STATUS dispcmnCtrlCmdSpecificDisplayChange_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_DISPLAY_CHANGE_PARAMS *pParams);
+
 NV_STATUS dispcmnCtrlCmdDfpEdpDriverUnload_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_EDP_DRIVER_UNLOAD_PARAMS *pParams);
 
 NV_STATUS dispcmnCtrlCmdDfpSetForceBlackPixels_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DFP_SET_FORCE_BLACK_PIXELS_PARAMS *pParams);
@@ -3719,6 +3720,8 @@ NV_STATUS dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data_IMPL(struct 
 NV_STATUS dispcmnCtrlCmdDpSetLevelInfoTableData_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP_SET_LEVEL_INFO_TABLE_DATA_PARAMS *pParams);
 
 NV_STATUS dispcmnCtrlCmdDpGetLevelInfoTableData_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP_GET_LEVEL_INFO_TABLE_DATA_PARAMS *pParams);
+
+NV_STATUS dispcmnCtrlCmdDpSetEcf_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams);
 
 NV_STATUS dispcmnCtrlCmdDp2xSetLevelInfoTableData_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_DP2X_SET_LEVEL_INFO_TABLE_DATA_PARAMS *pParams);
 

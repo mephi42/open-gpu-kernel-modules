@@ -131,7 +131,6 @@ NvU64 kpmuReservedMemoryOffsetGet_IMPL
     {
         MemoryManager *pMemoryManager = GPU_GET_MEMORY_MANAGER(pGpu);
         const NvU64 fbTotalMemSize = (pMemoryManager->Ram.fbTotalMemSizeMb << 20U);
-
         KernelFsp *pKernelFsp = GPU_GET_KERNEL_FSP(pGpu);
 
         if ((pKernelFsp != NULL) && !pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_DISABLE_FRTS_VIDMEM))

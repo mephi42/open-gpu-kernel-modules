@@ -50,6 +50,10 @@ typedef enum
     // It is directly encoded as SYS_COH in PTEs and CE/esched methods.
     UVM_APERTURE_SYS,
 
+    // SYS_NON_COHERENT aperture is used when we must prevent PCIe atomics from
+    // being issued to BAR1 P2P addresses. It's only used to control the use of
+    // atomics with no other impact on the coherence model.
+    //
     // On platforms that support the GPU coherently caching system memory,
     // SYS_NON_COHERENT prevents other clients from snooping the GPU L2 cache.
     // This allows noncoherent caching of system memory by GPUs on these
@@ -92,6 +96,11 @@ typedef enum
 } uvm_aperture_t;
 
 const char *uvm_aperture_string(uvm_aperture_t aperture);
+
+static bool uvm_aperture_is_sys(uvm_aperture_t aperture)
+{
+    return (aperture == UVM_APERTURE_SYS) || (aperture == UVM_APERTURE_SYS_NON_COHERENT);
+}
 
 static bool uvm_aperture_is_peer(uvm_aperture_t aperture)
 {
@@ -514,9 +523,9 @@ static uvm_membar_t uvm_membar_max(uvm_membar_t membar_1, uvm_membar_t membar_2)
 
 typedef enum
 {
-    UVM_ACCESS_COUNTER_CLEAR_OP_NONE = 0,
-    UVM_ACCESS_COUNTER_CLEAR_OP_TARGETED,
-    UVM_ACCESS_COUNTER_CLEAR_OP_ALL
+    UVM_ACCESS_COUNTER_CLEAR_OP_TARGETED = 0,
+    UVM_ACCESS_COUNTER_CLEAR_OP_ALL,
+    UVM_ACCESS_COUNTER_CLEAR_OP_COUNT,
 } uvm_access_counter_clear_op_t;
 
 struct uvm_access_counter_buffer_entry_struct

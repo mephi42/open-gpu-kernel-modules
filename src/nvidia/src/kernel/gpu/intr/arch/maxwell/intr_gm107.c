@@ -32,8 +32,6 @@
 #include "vgpu/vgpu_events.h"
 #include "gpu/disp/kern_disp.h"
 
-#include "published/maxwell/gm107/dev_boot.h"
-
 /**
  * @brief Returns a bitfield with the MC_ENGINES that have pending interrupts
  */

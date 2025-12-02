@@ -98,7 +98,7 @@ static NV_STATUS gpuDetermineVirtualMode(OBJGPU *);
 
 #if RMCFG_FEATURE_GSPRM_BULLSEYE || defined(GSPRM_BULLSEYE_ENABLE)
 #include "nv_sriov_defines.h"
-#include "diagnostics/code_coverage_mgr.h"
+#include "diagnostics/instrumentation_manager.h"
 #endif
 
 #include "kernel/gpu/mig_mgr/kernel_mig_manager.h"
@@ -385,6 +385,7 @@ gpuPostConstruct_IMPL
     pGpu->simMode = NV_SIM_MODE_INVALID;
 
     gpuInitChipInfo(pGpu);
+    pGpu->setProperty(pGpu, PDB_PROP_GPU_IS_SOC_SDM, gpuIsSocSdmEnabled_HAL(pGpu));
 
     //
     // gpuInitRegistryOverrides() must be called before the child engines
@@ -580,11 +581,11 @@ gpuPostConstruct_IMPL
     if (IS_GSP_CLIENT(pGpu))
     {
         OBJSYS *pSys = SYS_GET_INSTANCE();
-        codecovmgrRegisterCoverageBuffer(pSys->pCodeCovMgr, GFID_TASK_RM,
+        instrumentationmanagerRegisterBuffer(pSys->pInstrumentationManager, GFID_TASK_RM,
                                          pGpu->gpuInstance, BULLSEYE_TASK_RM_COVERAGE_SIZE);
         for (NvU32 gfid = 1; gfid <= MAX_PARTITIONS_WITH_GFID; gfid++)
         {
-            codecovmgrRegisterCoverageBuffer(pSys->pCodeCovMgr, gfid,
+            instrumentationmanagerRegisterBuffer(pSys->pInstrumentationManager, gfid,
                                              pGpu->gpuInstance, BULLSEYE_TASK_VGPU_COVERAGE_SIZE);
         }
     }
@@ -592,7 +593,7 @@ gpuPostConstruct_IMPL
 
     // Initialize the GPU recovery action, if the OS is already in a bad state.
     pGpu->currentRecoveryAction = GPU_RECOVERY_ACTION_UNKNOWN;
-    gpuRefreshRecoveryAction_KERNEL(pGpu, NV_TRUE);
+    gpuRefreshRecoveryAction_HAL(pGpu, NV_TRUE);
 
     ConfidentialCompute  *pCC = GPU_GET_CONF_COMPUTE(pGpu);
     if (pCC != NULL)
@@ -1534,14 +1535,8 @@ gpuDestruct_IMPL
         }
     }
 
-    //
-    // If device instance is unassigned, we haven't initialized far enough to
-    // do any accounting with it
-    //
-    if (gpuGetDeviceInstance(pGpu) != NV_MAX_DEVICES)
-    {
-        rmapiReportLeakedDevices(gpuGetGpuMask(pGpu));
-    }
+    // Report any internal objects that were not destroyed during gpuStateUnload and gpuStateDestroy.
+    rmapiReportInternalLeakedDevices(gpuGetGpuMask(pGpu));
 
     if (
         IS_VIRTUAL(pGpu))
@@ -1769,7 +1764,7 @@ gpuRemoveMissingEngines
         // all associated API classes and remove the stale engine descriptors
         // from the GPU HAL engine lists.
         //
-        NV_PRINTF(LEVEL_INFO, "engine %d:%d is missing, removing\n",
+        NV_PRINTF(LEVEL_INFO, "engine 0x%06x:%d is missing, removing\n",
                   ENGDESC_FIELD(curEngDescriptor, _CLASS),
                   ENGDESC_FIELD(curEngDescriptor, _INST));
 
@@ -1878,6 +1873,20 @@ gpuDestroyMissingEngine
             return;
         }
     }
+}
+
+/*!
+ * @brief Introduced to optimize ENG_GET_GPU by skipping checks and dynamic cast
+ */
+OBJGPU *gpuEngineGetGpu(Object *pObject)
+{
+    Object *pObj = pObject;
+    while ((pObj = pObj->pParent) != NULL)
+    {
+        if (objGetClassId(objFullyDerive(pObj)) == classId(OBJGPU))
+            return (OBJGPU *)objFullyDerive(pObj);
+    }
+    return NULL;
 }
 
 /*
@@ -3621,6 +3630,15 @@ gpuStatePreUnload
         gpuServiceInterruptsAllGpus(pGpu);
     }
 
+    if (!(flags & (GPU_STATE_FLAGS_PRESERVING | GPU_STATE_FLAGS_FAST_UNLOAD)))
+    {
+        //
+        // Report any leaked devices if we are not preserving RM state.
+        // Any internal objects are allowed to live until the end of gpuStateDestroy.
+        //
+        rmapiReportLeakedDevices(NVBIT(pGpu->gpuInstance));
+    }
+
     if (rmStatus != NV_OK)
     {
         _gpuStatePreUnloadUnknownFailureStore(
@@ -3635,7 +3653,7 @@ gpuEnterShutdown_IMPL
     OBJGPU *pGpu
 )
 {
-    NV_STATUS rmStatus = gpuStateUnload(pGpu, GPU_STATE_DEFAULT);
+    NV_STATUS rmStatus = gpuStateUnload(pGpu, GPU_STATE_FLAGS_FAST_UNLOAD);
     if (rmStatus != NV_OK)
     {
         NV_PRINTF(LEVEL_ERROR,
@@ -5087,6 +5105,63 @@ fillGidData:
     return rmStatus;
 }
 
+NV_STATUS
+gpuGetUgidInfo_IMPL
+(
+    OBJGPU  *pGpu,
+    NvU8   **ppGidString,
+    NvU32   *pGidStrlen,
+    NvU32    gidFlags,
+    NvU32    ugpuId
+)
+{
+    NV_STATUS rmStatus = NV_OK;
+    NvU8      gidData[RM_SHA1_GID_SIZE];
+    NvU32     gidSize = RM_SHA1_GID_SIZE;
+
+    if (!FLD_TEST_DRF(2080_GPU_CMD,_GPU_GET_GID_FLAGS,_TYPE,_SHA1,gidFlags))
+    {
+        return NV_ERR_INVALID_FLAGS;
+    }
+
+    rmStatus = gpuGenUgidData_HAL(pGpu, gidData, gidSize, gidFlags, ugpuId);
+
+    if (rmStatus != NV_OK)
+    {
+        return rmStatus;
+    }
+
+    if (ppGidString != NULL)
+    {
+        if (FLD_TEST_DRF(2080_GPU_CMD, _GPU_GET_GID_FLAGS, _FORMAT, _BINARY,
+                         gidFlags))
+        {
+            //
+            // Instead of transforming the Gid into a string, just use it in its
+            // original binary form. The allocation rules are the same as those
+            // followed by the transformGidToUserFriendlyString routine: we
+            // allocate ppGidString here, and the caller frees ppGidString.
+            //
+            *ppGidString = portMemAllocNonPaged(gidSize);
+            if (*ppGidString == NULL)
+            {
+                return NV_ERR_NO_MEMORY;
+            }
+
+            portMemCopy(*ppGidString, gidSize, gidData, gidSize);
+            *pGidStrlen = gidSize;
+        }
+        else
+        {
+            NV_ASSERT_OR_RETURN(pGidStrlen != NULL, NV_ERR_INVALID_ARGUMENT);
+            rmStatus = transformGidToUserFriendlyString(gidData, gidSize,
+                ppGidString, pGidStrlen, gidFlags, RM_UUID_PREFIX_UGC);
+        }
+    }
+
+    return rmStatus;
+}
+
 static void
 _gpuSetDisconnectedPropertiesWorker
 (
@@ -5121,8 +5196,9 @@ gpuSetDisconnectedProperties_IMPL
         osQueueWorkItem(pGpu,
                         _gpuSetDisconnectedPropertiesWorker,
                         NULL,
-                        OS_QUEUE_WORKITEM_FLAGS_FALLBACK_TO_DPC |
-                            OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE));
+                        (OsQueueWorkItemFlags){
+                            .bFallbackToDpc = NV_TRUE,
+                            .bLockGpuGroupDevice = NV_TRUE}));
 }
 
 #include "ctrl/ctrl0080/ctrl0080gpu.h"
@@ -6388,7 +6464,11 @@ gpuIsSliLinkSupported_IMPL
         KernelNvlink * pKernelNvLink =  GPU_GET_KERNEL_NVLINK(pGpu);
         if (pKernelNvLink != NULL)
         {
-           bIsSupported = (knvlinkGetConnectedLinksMask_HAL(pGpu, pKernelNvLink) != 0U);
+            NVLINK_BIT_VECTOR *pConnectedLinksMaskVec = knvlinkGetConnectedLinksMask_HAL(pGpu, pKernelNvLink);
+            if (pConnectedLinksMaskVec != NULL)
+            {
+                bIsSupported = !bitVectorTestAllCleared(pConnectedLinksMaskVec);
+            }
         }
     }
 
@@ -6609,33 +6689,19 @@ gpuCheckEngineWithOrderList_KERNEL
     }
 }
 
-/*!
- *  Obtains the valid scheduling policy for the current platform.
- *  Use: Determine whether software scheduling is required.
- */
-const char *
-gpuGetSchedulerPolicy_IMPL
-(
-    OBJGPU          *pGpu,
-    NvU32           *pSchedPolicy
-)
+NvU32
+_gpuGetSchedulerPolicyGr(OBJGPU *pGpu)
 {
     NvU32   schedPolicy         = SCHED_POLICY_DEFAULT;
     NvU32   regkey              = 0;
 
     if (hypervisorIsVgxHyper() || (RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)))
     {
-        //  Disable OBJSCHED_SW_ENABLE when GPU is older than Pascal.
-        //  This is true for WDDM and vGPU scheduling
-        if (!IsPASCALorBetter(pGpu))
-        {
-            schedPolicy = SCHED_POLICY_DEFAULT;
-        }
         // for pre GB20x, when MIG is enabled, only allow fixed share policy
-        else if (IS_MIG_ENABLED(pGpu) &&
-                (hypervisorIsVgxHyper() || (IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu) && !IS_VIRTUAL(pGpu)))
-                && (!IsGB20XorBetter(pGpu))
-                )
+        if (IS_MIG_ENABLED(pGpu) &&
+            (hypervisorIsVgxHyper() || (IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu) && !IS_VIRTUAL(pGpu)))
+            && (!IsGB20XorBetter(pGpu))
+           )
         {
             schedPolicy = SCHED_POLICY_VGPU_FIXED_SHARE;
         }
@@ -6655,8 +6721,8 @@ gpuGetSchedulerPolicy_IMPL
                     break;
                 default:
                     NV_PRINTF(LEVEL_INFO,
-                              "Invalid scheduling policy %d specified by regkey.\n",
-                              configSchedPolicy);
+                              "Invalid scheduling policy %u specified by PVMRL regkey 0x%08x for GR\n",
+                              configSchedPolicy, regkey);
                     break;
             }
         }
@@ -6666,8 +6732,27 @@ gpuGetSchedulerPolicy_IMPL
         }
     }
 
-    *pSchedPolicy = schedPolicy;
+    return schedPolicy;
+}
 
+/*!
+ *  Obtains the valid scheduling policy for the current platform.
+ *  Use: Determine whether software scheduling is required.
+ */
+NvU32
+gpuGetSchedulerPolicy_IMPL(OBJGPU *pGpu, RM_ENGINE_TYPE rmEngineType)
+{
+    if (RM_ENGINE_TYPE_IS_GR(rmEngineType))
+    {
+        return _gpuGetSchedulerPolicyGr(pGpu);
+    }
+
+    return SCHED_POLICY_DEFAULT;
+}
+
+const char *
+gpuGetSchedulerPolicyName_IMPL(OBJGPU *pGpu, NvU32 schedPolicy)
+{
     switch (schedPolicy)
     {
         case SCHED_POLICY_BEST_EFFORT:
@@ -6683,6 +6768,11 @@ gpuGetSchedulerPolicy_IMPL
     }
 }
 
+static inline const char *_getEnabledString(NvBool isEnabled)
+{
+    return ((isEnabled) ? (MAKE_NV_PRINTF_STR("ENABLED")) : (MAKE_NV_PRINTF_STR("DISABLED")));
+}
+
 void
 gpuApplySchedulerPolicy_IMPL
 (
@@ -6694,32 +6784,28 @@ gpuApplySchedulerPolicy_IMPL
     NvU32               domain             = gpuGetDomain(pGpu);
     NvU32               bus                = gpuGetBus(pGpu);
     NvU32               device             = gpuGetDevice(pGpu);
-    NvBool              bIsSchedSwEnabled  = NV_FALSE;
+    const char         *isEnabledString;
 
-    schedPolicyName = gpuGetSchedulerPolicy(pGpu, &configSchedPolicy);
+    // Get GR engine scheduler policy
+    configSchedPolicy = gpuGetSchedulerPolicy(pGpu, RM_ENGINE_TYPE_GR(0));
+    schedPolicyName   = gpuGetSchedulerPolicyName(pGpu, configSchedPolicy);
+    isEnabledString   = _getEnabledString(configSchedPolicy != SCHED_POLICY_DEFAULT);
 
-    // PVMRL is disabled when GPU is older than Pascal
-    if (((RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)) || hypervisorIsVgxHyper()) && IsPASCALorBetter(pGpu))
+    if ((RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)) || hypervisorIsVgxHyper())
     {
-        bIsSchedSwEnabled = (configSchedPolicy != SCHED_POLICY_DEFAULT);
-
-        portDbgPrintf("NVRM: GPU at %04x:%02x:%02x.0 has software scheduler %s with policy %s.\n",
-                      domain, bus, device,
-                      bIsSchedSwEnabled ? MAKE_NV_PRINTF_STR("ENABLED") : MAKE_NV_PRINTF_STR("DISABLED"),
-                      schedPolicyName);
+        portDbgPrintf("NVRM: GPU at %04x:%02x:%02x.0 has software scheduler %s with policy %s on GR\n",
+                      domain, bus, device, isEnabledString, schedPolicyName);
     }
     else
     {
         // RM is not yet ready to print this message in release builds on baremetal.
         NV_PRINTF(LEVEL_INFO,
-                  "GPU at %04x:%02x:%02x.0 has software scheduler %s with policy %s.\n",
-                  domain, bus, device,
-                  bIsSchedSwEnabled ? MAKE_NV_PRINTF_STR("ENABLED") : MAKE_NV_PRINTF_STR("DISABLED"),
-                  schedPolicyName);
+                  "GPU at %04x:%02x:%02x.0 has software scheduler %s with policy %s on GR\n",
+                  domain, bus, device, isEnabledString, schedPolicyName);
     }
 
-    // Enabled SWRL Granular locking only if SWRL is enabled on hypervisor or VGPU_GSP_PLUGIN_OFFLOAD is enabled
-    if (((RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)) || hypervisorIsVgxHyper()) && bIsSchedSwEnabled)
+    // SWRL is always enabled on GR engine on vGPU. Enabled SWRL Granular locking on vGPU.
+    if ((RMCFG_FEATURE_PLATFORM_GSP && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)) || hypervisorIsVgxHyper())
     {
         pGpu->setProperty(pGpu, PDB_PROP_GPU_SWRL_GRANULAR_LOCKING, NV_TRUE);
     }
@@ -7057,7 +7143,7 @@ gpuRefreshRecoveryAction_KERNEL
         NV_ASSERT_OK(osQueueWorkItem(pGpu,
                                      _gpuRefreshRecoveryActionInLock,
                                      NULL,
-                                     OS_QUEUE_WORKITEM_FLAGS_LOCK_GPUS));
+                                     (OsQueueWorkItemFlags){.bLockGpus = NV_TRUE}));
     }
     else
     {
@@ -7268,6 +7354,95 @@ gpuGenGidData_SOC
         return NV_ERR_INVALID_FLAGS;
     }
 }
+
+
+NV_STATUS
+gpuIterDeviceInfo_IMPL
+(
+    OBJGPU         *pGpu,
+    DeviceInfoIter *pIter,
+    NvU32           deviceTypeEnum,
+    NvS32           dieletInstance
+)
+{
+    NV_ASSERT_OR_RETURN(pIter != NULL, NV_ERR_INVALID_ARGUMENT);
+
+    pIter->pEntry            = &pGpu->pDeviceInfoTable[-1];
+    pIter->devTypeEnum       = deviceTypeEnum;
+    pIter->dieletIdMask = (dieletInstance == DEVICE_INFO_DIELET_INSTANCE_ANY) ?
+        0xffffffffu :
+        NVBIT32(dieletInstance);
+    return NV_OK;
+}
+
+
+NvBool
+gpuDeviceInfoIterNext_IMPL
+(
+    OBJGPU         *pGpu,
+    DeviceInfoIter *pIter
+)
+{
+    for (pIter->pEntry++; // initialized to [-1] on first call
+         pIter->pEntry < &pGpu->pDeviceInfoTable[pGpu->numDeviceInfoEntries];
+         pIter->pEntry++)
+    {
+        if (pIter->pEntry->typeEnum == pIter->devTypeEnum &&
+            (NVBIT32(pIter->pEntry->groupId) & pIter->dieletIdMask))
+        {
+            return NV_TRUE;
+        }
+    }
+    return NV_FALSE;
+}
+
+
+NV_STATUS
+gpuGetOneDeviceEntry_IMPL
+(
+    OBJGPU     *pGpu,
+    NvU32       deviceTypeEnum,
+    NvS32       dieletInstance,
+    NvS32       globalInstanceId,
+    NvS32       dieLocalInstanceId,
+    const DEVICE_INFO_ENTRY **ppDeviceEntry
+)
+{
+    NV_ASSERT_OR_RETURN(ppDeviceEntry != NULL, NV_ERR_INVALID_ARGUMENT);
+    *ppDeviceEntry = NULL;
+    NV_ASSERT_OK_OR_RETURN(gpuConstructDeviceInfoTable_HAL(pGpu));
+
+    DeviceInfoIter iter;
+    NV_ASSERT_OK_OR_RETURN(gpuIterDeviceInfo(pGpu, &iter,
+                                             deviceTypeEnum,
+                                             dieletInstance));
+
+    const DEVICE_INFO_ENTRY *pFirstMatch = NULL;
+    for (; gpuDeviceInfoIterNext(pGpu, &iter);)
+    {
+        if ((globalInstanceId == DEVICE_INFO_GLOBAL_INSTANCE_ID_ANY ||
+             globalInstanceId == (NvS32)iter.pEntry->instanceId) &&
+            (dieLocalInstanceId == DEVICE_INFO_DIE_LOCAL_INSTANCE_ID_ANY ||
+             dieLocalInstanceId == (NvS32)iter.pEntry->groupLocalInstanceId))
+        {
+            if (pFirstMatch != NULL)
+            {
+                return NV_ERR_MORE_DATA_AVAILABLE;
+            }
+
+            pFirstMatch = iter.pEntry;
+        }
+    }
+
+    if (pFirstMatch == NULL)
+    {
+        return NV_ERR_OBJECT_NOT_FOUND;
+    }
+
+    *ppDeviceEntry = pFirstMatch;
+    return NV_OK;
+}
+
 
 /*!
  * Boot GSP-RM Proxy by sending COT command to either FSP or SEC2.

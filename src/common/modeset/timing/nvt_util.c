@@ -214,6 +214,34 @@ void patchChecksum(NvU8 *pBuf)
 }
 
 CODE_SEGMENT(PAGE_DD_CODE)
+NvU32 NvTiming_CalculateVBlankTimeInUs(const NVT_TIMING *pT)
+{
+    NvU32 activeLines, blankLines;
+    NvU32 blankPixels;
+    NvU32 pclk1khz = pT->pclk1khz;
+
+    if (pclk1khz == 0)
+    {
+        pclk1khz = RRx1kToPclk1khz(pT);
+        if (pclk1khz == 0)
+        {
+            return 0;
+        }
+    }
+
+    // Calculate HBlank pixels on the last active line
+    blankPixels = pT->HTotal - pT->HVisible;
+    
+    // Calculate active and blank lines (handle interlaced mode)
+    activeLines = pT->interlaced ? pT->VVisible * 2 : pT->VVisible;
+    blankLines  = (pT->interlaced == 0) ? (pT->VTotal - activeLines): (pT->VTotal * 2 + 1 - activeLines);
+    
+    // Include HBlank time on the last active line together with all VBlank lines
+    blankPixels = blankPixels + (blankLines * pT->HTotal);
+    return (NvU32)((NvU64)blankPixels * 1000 / pclk1khz);
+}
+
+CODE_SEGMENT(PAGE_DD_CODE)
 NVT_STATUS NvTiming_ComposeCustTimingString(NVT_TIMING *pT)
 {
     if (pT == NULL) 
@@ -341,7 +369,7 @@ NvU32 NvTiming_IsTimingRelaxedEqual(const NVT_TIMING *pT1, const NVT_TIMING *pT2
 }
 
 CODE_SEGMENT(NONPAGE_DD_CODE)
-NvU32 RRx1kToPclk (NVT_TIMING *pT)
+NvU32 RRx1kToPclk (const NVT_TIMING *pT)
 {
     return (NvU32)axb_div_c_64(pT->HTotal * (pT->VTotal + ((pT->interlaced != 0) ? (pT->VTotal + 1) : 0)),
                                pT->etc.rrx1k,
@@ -349,7 +377,7 @@ NvU32 RRx1kToPclk (NVT_TIMING *pT)
 }
 
 CODE_SEGMENT(NONPAGE_DD_CODE)
-NvU32 RRx1kToPclk1khz (NVT_TIMING *pT)
+NvU32 RRx1kToPclk1khz (const NVT_TIMING *pT)
 {
     return (NvU32)axb_div_c_64((NvU32)pT->HTotal * (NvU32)(pT->VTotal + ((pT->interlaced != 0) ? (pT->VTotal + 1) : 0)),
                                pT->etc.rrx1k,

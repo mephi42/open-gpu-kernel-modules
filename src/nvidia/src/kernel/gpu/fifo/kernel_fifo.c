@@ -1,4 +1,4 @@
-/*
+ /*
  * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
@@ -2545,7 +2545,6 @@ kfifoGetRunlistBufInfo_IMPL
     CHID_MGR       *pChidMgr = kfifoGetChidMgr(pGpu, pKernelFifo, runlistId);
     NvU32           runlistSizeMultiplier = 1;
     RM_ENGINE_TYPE  rmEngineType;
-    NvU32           schedPolicy;
 
     NV_ASSERT_OR_RETURN(pSize != NULL, NV_ERR_INVALID_ARGUMENT);
     NV_ASSERT_OR_RETURN(pAlignment != NULL, NV_ERR_INVALID_ARGUMENT);
@@ -2578,9 +2577,11 @@ kfifoGetRunlistBufInfo_IMPL
     NV_ASSERT_OK_OR_RETURN(kfifoEngineInfoXlate_HAL(pGpu, pKernelFifo, ENGINE_INFO_TYPE_RUNLIST,
                 runlistId, ENGINE_INFO_TYPE_RM_ENGINE_TYPE, (NvU32 *)&rmEngineType));
 
-    if (RM_ENGINE_TYPE_IS_GR(rmEngineType) && IS_MIG_IN_USE(pGpu))
+    if (IS_MIG_IN_USE(pGpu) && (
+                                RM_ENGINE_TYPE_IS_GR(rmEngineType)))
     {
-        gpuGetSchedulerPolicy(pGpu, &schedPolicy);
+        NvU32 schedPolicy = gpuGetSchedulerPolicy(pGpu, rmEngineType);
+
         if (schedPolicy != SCHED_POLICY_DEFAULT)
         {
             runlistSizeMultiplier = vgpuMgrGetSwrlCountToAllocate(pGpu);

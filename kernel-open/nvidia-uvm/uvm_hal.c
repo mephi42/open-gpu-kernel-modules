@@ -154,6 +154,7 @@ static uvm_hal_class_ops_t ce_table[] =
         .id = HOPPER_DMA_COPY_A,
         .parent_id = AMPERE_DMA_COPY_B,
         .u.ce_ops = {
+            .phys_mode = uvm_hal_hopper_ce_phys_mode,
             .semaphore_release = uvm_hal_hopper_ce_semaphore_release,
             .semaphore_timestamp = uvm_hal_hopper_ce_semaphore_timestamp,
             .semaphore_reduction_inc = uvm_hal_hopper_ce_semaphore_reduction_inc,
@@ -172,7 +173,9 @@ static uvm_hal_class_ops_t ce_table[] =
     {
         .id = BLACKWELL_DMA_COPY_A,
         .parent_id = HOPPER_DMA_COPY_A,
-        .u.ce_ops = {},
+        .u.ce_ops = {
+            .memcopy_is_valid = uvm_hal_blackwell_ce_memcopy_is_valid,
+        },
     },
     {
         .id = BLACKWELL_DMA_COPY_B,
@@ -1166,8 +1169,6 @@ void uvm_hal_ce_memcopy_patch_src_stub(uvm_push_t *push, uvm_gpu_address_t *src)
 void uvm_hal_host_l2_invalidate_unsupported(uvm_push_t *push, uvm_aperture_t aperture)
 {
     uvm_gpu_t *gpu = uvm_push_get_gpu(push);
-    UVM_ERR_PRINT("L2 cache invalidation: Called on unsupported GPU %s (arch: 0x%x, impl: 0x%x)\n", 
-                   uvm_gpu_name(gpu), gpu->parent->rm_info.gpuArch, gpu->parent->rm_info.gpuImplementation);
     UVM_ASSERT_MSG(false, "L2 invalidate is not supported on %s",
                    uvm_parent_gpu_name(gpu->parent));
 }

@@ -512,6 +512,8 @@ NV_STATUS AMD_RP1480_setupFunc(OBJGPU *, OBJCL*);
 NV_STATUS AMD_RP1630_setupFunc(OBJGPU *, OBJCL*);
 NV_STATUS AMD_RP1483_setupFunc(OBJGPU *, OBJCL*);
 
+NV_STATUS Qualcomm_Snapdragon8cx_RP_setupFunc(OBJGPU *, OBJCL*);
+
 // Determines if the GPU is in a multi-GPU board based on devid checks
 NvBool gpuIsMultiGpuBoard(OBJGPU *);
 

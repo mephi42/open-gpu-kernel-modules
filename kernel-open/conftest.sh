@@ -669,50 +669,6 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_IOREMAP_WC_PRESENT" "" "functions"
         ;;
 
-        ioremap_driver_hardened)
-            #
-            # Determine if the ioremap_driver_hardened() function is present.
-            # It does not exist on all architectures.
-            # TODO: Update the commit ID once the API is upstreamed.
-            #
-            CODE="
-            #include <asm/io.h>
-            void conftest_ioremap_driver_hardened(void) {
-                ioremap_driver_hardened();
-            }"
-
-            compile_check_conftest "$CODE" "NV_IOREMAP_DRIVER_HARDENED_PRESENT" "" "functions"
-        ;;
-
-        ioremap_driver_hardened_wc)
-            #
-            # Determine if the ioremap_driver_hardened_wc() function is present.
-            # It does not exist on all architectures.
-            # TODO: Update the commit ID once the API is upstreamed.
-            #
-            CODE="
-            #include <asm/io.h>
-            void conftest_ioremap_driver_hardened_wc(void) {
-                ioremap_driver_hardened_wc();
-            }"
-
-            compile_check_conftest "$CODE" "NV_IOREMAP_DRIVER_HARDENED_WC_PRESENT" "" "functions"
-        ;;
-
-        ioremap_cache_shared)
-            #
-            # Determine if the ioremap_cache_shared() function is present.
-            # It does not exist on all architectures.
-            # TODO: Update the commit ID once the API is upstreamed.
-            #
-            CODE="
-            #include <asm/io.h>
-            void conftest_ioremap_cache_shared(void) {
-                ioremap_cache_shared();
-            }"
-
-            compile_check_conftest "$CODE" "NV_IOREMAP_CACHE_SHARED_PRESENT" "" "functions"
-        ;;
         dom0_kernel_present)
             # Add config parameter if running on DOM0.
             if [ -n "$VGX_BUILD" ]; then
@@ -1330,33 +1286,34 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_EVENTFD_SIGNAL_HAS_COUNTER_ARG" "" "types"
         ;;
 
-        drm_available)
-            # Determine if the DRM subsystem is usable
+
+        drm_sysfs_connector_property_event)
+            #
+            # Determine if drm_sysfs_connector_property_event() is present.
+            #
+            # Commit 0cf8d292ba5e ("drm/sysfs: rename drm_sysfs_connector_status_event()")
+            # renamed drm_sysfs_connector_status_event() to
+            # drm_sysfs_connector_property_event() in Linux v6.5.
+            #
             CODE="
-            #if defined(NV_DRM_DRMP_H_PRESENT)
-            #include <drm/drmP.h>
-            #endif
-
-            #include <drm/drm_drv.h>
-
-            #if !defined(CONFIG_DRM) && !defined(CONFIG_DRM_MODULE) && !defined(__FreeBSD__)
-            #error DRM not enabled
-            #endif
-
-            void conftest_drm_available(void) {
-                struct drm_driver drv;
-
-                /* 2013-10-02 1bb72532ac260a2d3982b40bdd4c936d779d0d16 */
-                (void)drm_dev_alloc;
-
-                /* 2013-10-02 c22f0ace1926da399d9a16dfaf09174c1b03594c */
-                (void)drm_dev_register;
-
-                /* 2013-10-02 c3a49737ef7db0bdd4fcf6cf0b7140a883e32b2a */
-                (void)drm_dev_unregister;
+            #include <drm/drm_sysfs.h>
+            void conftest_drm_sysfs_connector_property_event(void) {
+                drm_sysfs_connector_property_event();
             }"
+            compile_check_conftest "$CODE" "NV_DRM_SYSFS_CONNECTOR_PROPERTY_EVENT_PRESENT" "" "functions"
+        ;;
 
-            compile_check_conftest "$CODE" "NV_DRM_AVAILABLE" "" "generic"
+        drm_sysfs_connector_status_event)
+            #
+            # Determine if drm_sysfs_connector_status_event() is present.
+            #
+            #
+            CODE="
+            #include <drm/drm_sysfs.h>
+            void conftest_drm_sysfs_connector_status_event(void) {
+                drm_sysfs_connector_status_event();
+            }"
+            compile_check_conftest "$CODE" "NV_DRM_SYSFS_CONNECTOR_STATUS_EVENT_PRESENT" "" "functions"
         ;;
 
         pde_data)
@@ -1435,71 +1392,6 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_VMF_INSERT_PFN_PROT_PRESENT" "" "functions"
-        ;;
-
-        drm_atomic_available)
-            #
-            # Determine if the DRM atomic modesetting subsystem is usable
-            #
-            # Added by commit 036ef5733ba4
-            # ("drm/atomic: Allow drivers to subclass drm_atomic_state, v3") in
-            # v4.2 (2018-05-18).
-            #
-            # Make conftest more robust by adding test for
-            # drm_atomic_set_mode_prop_for_crtc(), this function added by
-            # commit 955f3c334f0f ("drm/atomic: Add MODE_ID property") in v4.2
-            # (2015-05-25). If the DRM atomic modesetting subsystem is
-            # back ported to Linux kernel older than v4.2, then commit
-            # 955f3c334f0f must be back ported in order to get NVIDIA-DRM KMS
-            # support.
-            # Commit 72fdb40c1a4b ("drm: extract drm_atomic_uapi.c") in v4.20
-            # (2018-09-05), moved drm_atomic_set_mode_prop_for_crtc() function
-            # prototype from drm/drm_atomic.h to drm/drm_atomic_uapi.h.
-            #
-            echo "$CONFTEST_PREAMBLE
-            #if defined(NV_DRM_DRMP_H_PRESENT)
-            #include <drm/drmP.h>
-            #endif
-            #include <drm/drm_atomic.h>
-            #if !defined(CONFIG_DRM) && !defined(CONFIG_DRM_MODULE) && !defined(__FreeBSD__)
-            #error DRM not enabled
-            #endif
-            void conftest_drm_atomic_modeset_available(void) {
-                size_t a;
-
-                a = offsetof(struct drm_mode_config_funcs, atomic_state_alloc);
-            }" > conftest$$.c;
-
-            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
-            rm -f conftest$$.c
-
-            if [ -f conftest$$.o ]; then
-                rm -f conftest$$.o
-
-                echo "$CONFTEST_PREAMBLE
-                #if defined(NV_DRM_DRMP_H_PRESENT)
-                #include <drm/drmP.h>
-                #endif
-                #include <drm/drm_atomic.h>
-                #if defined(NV_DRM_DRM_ATOMIC_UAPI_H_PRESENT)
-                #include <drm/drm_atomic_uapi.h>
-                #endif
-                void conftest_drm_atomic_set_mode_prop_for_crtc(void) {
-                    drm_atomic_set_mode_prop_for_crtc();
-                }" > conftest$$.c;
-
-                $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
-                rm -f conftest$$.c
-
-                if [ -f conftest$$.o ]; then
-                    rm -f conftest$$.o
-                    echo "#undef NV_DRM_ATOMIC_MODESET_AVAILABLE" | append_conftest "generic"
-                else
-                    echo "#define NV_DRM_ATOMIC_MODESET_AVAILABLE" | append_conftest "generic"
-                fi
-            else
-                echo "#undef NV_DRM_ATOMIC_MODESET_AVAILABLE" | append_conftest "generic"
-            fi
         ;;
 
         drm_driver_has_legacy_dev_list)
@@ -2330,6 +2222,7 @@ compile_test() {
             # drm_helper_mode_fill_fb_struct()") in linux-next
             # (2025-07-16)
             CODE="
+            #include <linux/stddef.h>
             #include <drm/drm_modeset_helper.h>
 
             void conftest_drm_fill_fb_struct_takes_format_info(void) {
@@ -2442,6 +2335,23 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_PM_RUNTIME_AVAILABLE" "" "generic"
+        ;;
+
+        pm_domain_available)
+            #
+            # Determine whether dev_pm_genpd_suspend() exists.
+            #
+            # This was added to the kernel in commit fc51989062138
+            # ("PM: domains: Rename pm_genpd_syscore_poweroff|poweron()")
+            # in v5.11-rc1 (2020-11-10),
+            #
+            CODE="
+            #include <linux/pm_domain.h>
+            void pm_domain_conftest(void) {
+                dev_pm_genpd_suspend();
+            }"
+
+            compile_check_conftest "$CODE" "NV_PM_DOMAIN_AVAILABLE" "" "functions"
         ;;
 
         dma_direct_map_resource)
@@ -2615,31 +2525,6 @@ compile_test() {
             }"
 
             compile_check_conftest "$CODE" "NV_MMU_NOTIFIER_OPS_HAS_ARCH_INVALIDATE_SECONDARY_TLBS" "" "types"
-        ;;
-
-        drm_format_num_planes)
-            #
-            # Determine if drm_format_num_planes() function is present.
-            #
-            # The drm_format_num_planes() function was added by commit
-            # d0d110e09629 drm: Add drm_format_num_planes() utility function in
-            # v3.3 (2011-12-20). Prototype was moved from drm_crtc.h to
-            # drm_fourcc.h by commit ae4df11a0f53 (drm: Move format-related
-            # helpers to drm_fourcc.c) in v4.8 (2016-06-09).
-            # drm_format_num_planes() has been removed by commit 05c452c115bf
-            # (drm: Remove users of drm_format_num_planes) removed v5.3
-            # (2019-05-16).
-            #
-            CODE="
-            #include <drm/drm_crtc.h>
-            #include <drm/drm_fourcc.h>
-
-            void conftest_drm_format_num_planes(void) {
-                drm_format_num_planes();
-            }
-            "
-
-            compile_check_conftest "$CODE" "NV_DRM_FORMAT_NUM_PLANES_PRESENT" "" "functions"
         ;;
 
         drm_gem_object_has_resv)
@@ -3712,6 +3597,90 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DEVM_CLK_BULK_GET_ALL_PRESENT" "" "functions"
         ;;
 
+        thermal_zone_for_each_trip)
+            #
+            # Determine if thermal_zone_for_each_trip() function is present
+            #
+            # Added by commit a56cc0a83385 ("thermal: core: Add function to
+            # walk trips under zone lock") in v6.6-rc3
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_thermal_zone_for_each_trip(void)
+            {
+                thermal_zone_for_each_trip();
+            }
+            "
+            compile_check_conftest "$CODE" "NV_THERMAL_ZONE_FOR_EACH_TRIP_PRESENT" "" "functions"
+        ;;
+
+        thermal_bind_cdev_to_trip)
+            #
+            # Determine if thermal_bind_cdev_to_trip() function is present
+            #
+            # Added by commit d069ed6b752f ("thermal: core: Allow trip
+            # pointers to be used for cooling device binding") in v6.6-rc3
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_thermal_bind_cdev_to_trip(void)
+            {
+                thermal_bind_cdev_to_trip();
+            }
+            "
+            compile_check_conftest "$CODE" "NV_THERMAL_BIND_CDEV_TO_TRIP_PRESENT" "" "functions"
+        ;;
+
+        thermal_unbind_cdev_from_trip)
+            #
+            # Determine if thermal_unbind_cdev_from_trip() function is present
+            #
+            # Added by commit d069ed6b752f ("thermal: core: Allow trip
+            # pointers to be used for cooling device binding") in v6.6-rc3
+            #
+            CODE="
+            #include <linux/thermal.h>
+            void conftest_thermal_unbind_cdev_from_trip(void)
+            {
+                thermal_unbind_cdev_from_trip();
+            }
+            "
+            compile_check_conftest "$CODE" "NV_THERMAL_UNBIND_CDEV_FROM_TRIP_PRESENT" "" "functions"
+        ;;
+
+        update_devfreq)
+            #
+            # Determine if update_devfreq() function is present
+            #
+            # Added by commit b596d895fa29 ("PM / devfreq: Make update_devfreq()
+            # public") in v4.20
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            void conftest_update_devfreq(void)
+            {
+                update_devfreq();
+            }
+            "
+            compile_check_conftest "$CODE" "NV_UPDATE_DEVFREQ_PRESENT" "" "functions"
+        ;;
+
+        devfreq_dev_profile_has_is_cooling_device)
+            #
+            # Determine if the 'devfreq_dev_profile' structure has 'is_cooling_device'
+            #
+            # Added by commit 1224451bb6f93 ("PM / devfreq: Register devfreq as a cooling device
+            # on demand") in v5.12-rc1
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            int conftest_devfreq_dev_profile_has_is_cooling_device(void) {
+                return offsetof(struct devfreq_dev_profile, is_cooling_device);
+            }
+            "
+            compile_check_conftest "$CODE" "NV_DEVFREQ_DEV_PROFILE_HAS_IS_COOLING_DEVICE" "" "types"
+        ;;
+
         devfreq_has_freq_table)
             #
             # Determine if the 'devfreq' structure has 'freq_table'
@@ -3727,6 +3696,38 @@ compile_test() {
             }
             "
             compile_check_conftest "$CODE" "NV_DEVFREQ_HAS_FREQ_TABLE" "" "types"
+        ;;
+
+        devfreq_has_suspend_freq)
+            #
+            # Determine if the 'devfreq' structure has 'suspend_freq'
+            #
+            # Commit 83f8ca45afbf ("PM / devfreq: add support for
+            # suspend/resume of a devfreq device") updated the devfreq
+            # and add the suspend_freq field in v5.0.
+            #
+            CODE="
+            #include <linux/devfreq.h>
+            int conftest_devfreq_has_suspend_freq(void) {
+                return offsetof(struct devfreq, suspend_freq);
+            }
+            "
+            compile_check_conftest "$CODE" "NV_DEVFREQ_HAS_SUSPEND_FREQ" "" "types"
+        ;;
+
+        bpmp_mrq_has_strap_set)
+            #
+            # Determine if STRAP_SET is present in the bpmp MRQ ABI.
+            #
+            # STRAP_SET was added by commit 4bef358c9071 ("soc/tegra:
+            #bpmp: Update ABI header") in v5.0.
+            #
+            CODE="
+            #include <stdint.h>
+            #include <soc/tegra/bpmp-abi.h>
+            int bpmp_mrq_has_strap = STRAP_SET;
+            "
+            compile_check_conftest "$CODE" "NV_BPMP_MRQ_HAS_STRAP_SET" "" "types"
         ;;
 
         dma_resv_add_fence)
@@ -4854,6 +4855,46 @@ compile_test() {
             };"
 
             compile_check_conftest "$CODE" "NV_DRM_CONNECTOR_HELPER_FUNCS_MODE_VALID_HAS_CONST_MODE_ARG" "" "types"
+        ;;
+
+        register_shrinker_has_format_arg)
+            # TODO:desc
+            # Determine if the 'mode' pointer argument is const in
+            # drm_connector_helper_funcs::mode_valid.
+            #
+            # The 'mode' pointer argument in
+            # drm_connector_helper_funcs::mode_valid was made const by commit
+            # 26d6fd81916e ("drm/connector: make mode_valid take a const struct
+            # drm_display_mode") in linux-next, expected in v6.15.
+            #
+            CODE="
+            #include <linux/mm.h>
+
+            void conftest_register_shrinker_has_format_arg(void) {
+                register_shrinker(NULL, \"%d\", 0);
+            }"
+
+            compile_check_conftest "$CODE" "NV_REGISTER_SHRINKER_HAS_FMT_ARG" "" "types"
+        ;;
+
+        shrinker_alloc)
+            # TODO:desc
+            # Determine if the 'mode' pointer argument is const in
+            # drm_connector_helper_funcs::mode_valid.
+            #
+            # The 'mode' pointer argument in
+            # drm_connector_helper_funcs::mode_valid was made const by commit
+            # 26d6fd81916e ("drm/connector: make mode_valid take a const struct
+            # drm_display_mode") in linux-next, expected in v6.15.
+            #
+            CODE="
+            #include <linux/mm.h>
+
+            void conftest_shrinker_alloc(void) {
+                shrinker_alloc();
+            }"
+
+            compile_check_conftest "$CODE" "NV_SHRINKER_ALLOC_PRESENT" "" "functions"
         ;;
 
         memory_device_coherent_present)

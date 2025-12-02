@@ -66,90 +66,6 @@ typedef struct NV2080_CTRL_CMD_SET_GPFIFO_PARAMS {
 } NV2080_CTRL_CMD_SET_GPFIFO_PARAMS;
 
 /*
- * NV2080_CTRL_FIFO_BIND_CHANNEL
- *
- * This structure is used to describe a channel that is to have
- * it's bindable engines bound to those of other channels.
- *
- * hClient
- *  This structure member contains the handle of the client object
- *  that owns the channel object specified by hChannel.
- *
- * hChannel
- *  This structure member contains the channel handle of the channel
- *  object.
- */
-
-typedef struct NV2080_CTRL_FIFO_BIND_CHANNEL {
-    NvHandle hClient;
-    NvHandle hChannel;
-} NV2080_CTRL_FIFO_BIND_CHANNEL;
-
-/*
- * NV2080_CTRL_CMD_FIFO_BIND_ENGINES
- *
- * This control call is now deprecated.
- * This command can be used to bind different video engines on G8X from separate
- * channels together for operations such as idling.  The set of bindable engines
- * includes the NV2080_ENGINE_TYPE_BSP, NV2080_ENGINE_TYPE_VP and
- * NV2080_ENGINE_TYPE_PPP engines.
- *
- * bindChannelCount
- *  This parameter specifies the number of channels to bind together.  This
- *  parameter cannot exceed NV2080_CTRL_FIFO_BIND_ENGINES_MAX_CHANNELS.
- *
- * bindChannels
- *  The parameter specifies the array of channels to bind together.  The first
- *  bindChannelCount entries are used in the bind channel operation.
- *
- * Possible status values returned are:
- *  NV_OK
- *  NV_ERR_INVALID_DEVICE
- *  NV_ERR_INVALID_CHANNEL
- *  NV_ERR_INVALID_ARGUMENT
- *  NV_ERR_NOT_SUPPORTED
- */
-#define NV2080_CTRL_FIFO_BIND_ENGINES_MAX_CHANNELS (16)
-
-#define NV2080_CTRL_FIFO_BIND_ENGINES_PARAMS_MESSAGE_ID (0x3U)
-
-typedef struct NV2080_CTRL_FIFO_BIND_ENGINES_PARAMS {
-    NvU32                         bindChannelCount;
-    NV2080_CTRL_FIFO_BIND_CHANNEL bindChannels[NV2080_CTRL_FIFO_BIND_ENGINES_MAX_CHANNELS];
-} NV2080_CTRL_FIFO_BIND_ENGINES_PARAMS;
-
-#define NV2080_CTRL_CMD_FIFO_BIND_ENGINES          (0x20801103) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FIFO_INTERFACE_ID << 8) | NV2080_CTRL_FIFO_BIND_ENGINES_PARAMS_MESSAGE_ID" */
-
-/*
- * NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES
- *
- * This command is used for a client to setup specialized custom operational
- * properties that may be specific to an environment, or properties that
- * should be set generally but are not for reasons of backward compatibility
- * with previous chip generations
- *
- *  flags
- *   This field specifies the operational properties to be applied
- *
- * Possible return status values returned are
- *   NV_OK
- *   NV_ERR_INVALID_CHANNEL
- *   NV_ERR_INVALID_ARGUMENT
- *
- */
-#define NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES (0x20801104) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FIFO_INTERFACE_ID << 8) | NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_PARAMS_MESSAGE_ID" */
-
-#define NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_PARAMS_MESSAGE_ID (0x4U)
-
-typedef struct NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_PARAMS {
-    NvU32 flags;
-} NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_PARAMS;
-
-#define NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_FLAGS_ERROR_ON_STUCK_SEMAPHORE                 0:0
-#define NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_FLAGS_ERROR_ON_STUCK_SEMAPHORE_FALSE (0x00000000)
-#define NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_FLAGS_ERROR_ON_STUCK_SEMAPHORE_TRUE  (0x00000001)
-
-/*
  * NV2080_CTRL_CMD_FIFO_GET_PHYSICAL_CHANNEL_COUNT
  *
  * This command returns the maximum number of physical channels available for
@@ -166,7 +82,7 @@ typedef struct NV2080_CTRL_CMD_SET_OPERATIONAL_PROPERTIES_PARAMS {
  *   NV_OK
  *
  */
-#define NV2080_CTRL_CMD_FIFO_GET_PHYSICAL_CHANNEL_COUNT                                 (0x20801108) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FIFO_INTERFACE_ID << 8) | NV2080_CTRL_FIFO_GET_PHYSICAL_CHANNEL_COUNT_PARAMS_MESSAGE_ID" */
+#define NV2080_CTRL_CMD_FIFO_GET_PHYSICAL_CHANNEL_COUNT (0x20801108) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_FIFO_INTERFACE_ID << 8) | NV2080_CTRL_FIFO_GET_PHYSICAL_CHANNEL_COUNT_PARAMS_MESSAGE_ID" */
 
 #define NV2080_CTRL_FIFO_GET_PHYSICAL_CHANNEL_COUNT_PARAMS_MESSAGE_ID (0x8U)
 

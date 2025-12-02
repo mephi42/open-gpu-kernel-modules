@@ -314,7 +314,7 @@ knvlinkSetupPeerMapping_GP100
  * @param[in] pGpu           OBJGPU ptr
  * @param[in] pKernelNvlink  KernelNvlink ptr
  */
-NvU32
+NVLINK_BIT_VECTOR *
 knvlinkGetConnectedLinksMask_GP100
 (
     OBJGPU       *pGpu,

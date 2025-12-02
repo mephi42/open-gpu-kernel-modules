@@ -687,3 +687,13 @@ memmgrCalculateHeapOffsetWithGSP_TU102
 
     return NV_OK;
 }
+
+NvU32
+memmgrGetPteKindGenericMemoryCompressible_TU102
+(
+    OBJGPU* pGpu,
+    MemoryManager* pMemoryManager
+)
+{
+    return NV_MMU_PTE_KIND_GENERIC_MEMORY_COMPRESSIBLE;
+}

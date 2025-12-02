@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1999-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1999-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -28,6 +28,7 @@
 #include "nv-reg.h"
 
 #include <linux/acpi.h>
+#include <acpi/video.h>
 
 #if defined(NV_LINUX_ACPI_EVENTS_SUPPORTED)
 static NV_STATUS   nv_acpi_extract_integer (const union acpi_object *, void *, NvU32, NvU32 *);
@@ -55,16 +56,6 @@ static NvBool battery_present = NV_FALSE;
 #define BIX_BATTERY_TECHNOLOGY_OFFSET 0x4
 #define BIF_BATTERY_TECHNOLOGY_OFFSET 0x3
 #define BATTERY_RECHARGABLE           0x1
-
-/* Moved into acpi/video.h in Linux 4.10 */
-#ifndef ACPI_VIDEO_NOTIFY_PROBE
-#define ACPI_VIDEO_NOTIFY_PROBE    0x81
-#endif
-
-/* Added to acpi/video.h in Linux 3.1 */
-#ifndef ACPI_VIDEO_CLASS
-#define ACPI_VIDEO_CLASS    "video"
-#endif
 
 /* Maximum size of ACPI _DSM method's 4th argument */
 #define NV_MAX_ACPI_DSM_PARAM_SIZE     1024

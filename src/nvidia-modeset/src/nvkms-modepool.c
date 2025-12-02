@@ -223,7 +223,7 @@ static void GetHdmi3DValue(const NVDpyEvoRec *pDpyEvo,
 /*
  * DP 1.3 decimated YUV 4:2:0 mode is required if:
  *
- * - The GPU and monitor both support it.
+ * - The monitor supports it.
  * - Either the monitor doesn't support RGB 4:4:4 scanout of this mode, or
  *   the user prefers YUV 4:2:0 scanout when possible.
  */
@@ -231,14 +231,8 @@ static NvBool DpYuv420Required(const NVDpyEvoRec *pDpyEvo,
                                const struct NvKmsModeValidationParams *pParams,
                                const NVT_TIMING *pTiming)
 {
-    const NVDevEvoRec *pDevEvo = pDpyEvo->pDispEvo->pDevEvo;
     const NvBool monitorSupports444 =
         IS_BPC_SUPPORTED_COLORFORMAT(pTiming->etc.rgb444.bpcs);
-
-    if (!pDevEvo->caps.supportsDP13) {
-        // The GPU doesn't support YUV420.
-        return FALSE;
-    }
 
     if (!nvDPLibDpyIsYuv420ModeSupported(pDpyEvo)) {
         // The dpy doesn't support YUV420.
@@ -1689,7 +1683,7 @@ static NvBool ValidateMode(NVDpyEvoPtr pDpyEvo,
     nvEvoLogInfoString(pInfoString,
             "DSCPassThrough: %s", flags->dscPassThrough ? "Yes" : "No");
 
-    if (pTimingsEvo->yuv420Mode != NV_YUV420_MODE_NONE) {
+    if (pModeTimings->yuv420Mode != NV_YUV420_MODE_NONE) {
         dpyColor.format = NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_YCbCr420;
         dpyColor.bpc = NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_8;
         dpyColor.range = NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED;

@@ -95,6 +95,10 @@ void uvm_hal_hopper_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
 
     parent_gpu->non_replayable_faults_supported = true;
 
+    parent_gpu->access_counters_serialize_clear_ops_by_type = false;
+
+    parent_gpu->access_bits_supported = false;
+
     parent_gpu->fault_cancel_va_supported = true;
 
     parent_gpu->scoped_atomics_supported = true;
@@ -112,6 +116,8 @@ void uvm_hal_hopper_arch_init_properties(uvm_parent_gpu_t *parent_gpu)
     parent_gpu->plc_supported = true;
 
     parent_gpu->ats.no_ats_range_required = true;
+
+    parent_gpu->ats.gmmu_pt_depth0_init_required = false;
 
     // Hopper doesn't prefetch translations for physical requests, so the only
     // concern would be if we enabled physical ATS with 4K pages. In that case

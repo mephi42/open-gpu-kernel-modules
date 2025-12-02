@@ -780,6 +780,10 @@ namespace DisplayPort
     virtual bool willLinkSupportModeSST(const LinkConfiguration &linkConfig,
                                         const ModesetInfo &modesetInfo,
                                         const DscParams *pDscParams = NULL) = 0;
+    virtual bool isDpInTunnelingSupported() = 0;
+    virtual bool isDpInTunnelingPanelReplayOptimizationSupported() = 0;
+    virtual bool isDpInTunnelingBwAllocationSupported() = 0;
+    virtual bool getUSBDpInAdapterInfo(NvU32 displayId, NV0073_CTRL_DP_USB4_INFO *pInfo) = 0;
 
     protected:
            virtual ~Connector() {}

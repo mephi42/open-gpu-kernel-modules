@@ -56,6 +56,47 @@ using namespace DisplayPort;
 //
 NvU32 bSupportInternalUhbrOnFpga;
 
+unsigned int ConnectorImpl2x::WatermarkCacheElement::hash() const
+{
+    // Hash the parameters used in DP IMP calculation
+    unsigned int hash =
+        (m_linkConfig.lanes ^ static_cast<unsigned int>(m_linkConfig.peakRate) ^
+         static_cast<unsigned int>(m_linkConfig.bIs128b132bChannelCoding) ^
+         static_cast<unsigned int>(m_linkConfig.bEnableFEC) ^
+         static_cast<unsigned int>(m_linkConfig.multistream)) ^
+        (m_modesetInfo.twoChannelAudioHz ^ m_modesetInfo.eightChannelAudioHz ^
+         static_cast<unsigned int>(m_modesetInfo.pixelClockHz) ^ m_modesetInfo.rasterWidth ^
+         m_modesetInfo.surfaceWidth ^ m_modesetInfo.surfaceHeight ^ m_modesetInfo.depth ^
+         m_modesetInfo.rasterBlankStartX ^ m_modesetInfo.rasterBlankEndX ^
+         m_modesetInfo.bitsPerComponent ^ static_cast<unsigned int>(m_modesetInfo.colorFormat) ^
+         static_cast<unsigned int>(m_modesetInfo.bEnableDsc));
+    if (m_forcedDscParamsValid)
+    {
+        hash ^= (m_forcedDscParams.sliceCount ^ m_forcedDscParams.sliceWidth ^
+                 m_forcedDscParams.sliceHeight ^ m_forcedDscParams.dscRevision.versionMajor ^
+                 m_forcedDscParams.dscRevision.versionMinor);
+    }
+
+    return hash;
+}
+
+bool ConnectorImpl2x::WatermarkCacheElement::isEqual(const HashMapElement *other) const
+{
+    const auto *pOther = (const WatermarkCacheElement *)other;
+    if (pOther == NULL)
+        return false;
+
+    // Equality is based on the parameters used in DP IMP calculation
+    return (m_linkConfig == pOther->m_linkConfig && m_modesetInfo == pOther->m_modesetInfo) &&
+        ((m_forcedDscParamsValid == false && pOther->m_forcedDscParamsValid == false) ||
+         (m_forcedDscParamsValid == true && pOther->m_forcedDscParamsValid == true &&
+          m_forcedDscParams.sliceCount == pOther->m_forcedDscParams.sliceCount &&
+          m_forcedDscParams.sliceWidth == pOther->m_forcedDscParams.sliceWidth &&
+          m_forcedDscParams.sliceHeight == pOther->m_forcedDscParams.sliceHeight &&
+          m_forcedDscParams.dscRevision.versionMajor == pOther->m_forcedDscParams.dscRevision.versionMajor &&
+          m_forcedDscParams.dscRevision.versionMinor == pOther->m_forcedDscParams.dscRevision.versionMinor));
+}
+
 /*!
  * @brief Convert data rate to link rate
  *
@@ -72,6 +113,9 @@ void ConnectorImpl2x::applyDP2xRegkeyOverrides()
     this->bSupportUHBR5_00      = dpRegkeyDatabase.supportInternalUhbrOnFpga & NV_DP2X_REGKEY_FPGA_UHBR_SUPPORT_5_0G;
     this->maxLinkRateFromRegkey = dpRegkeyDatabase.applyMaxLinkRateOverrides;
     bSupportInternalUhbrOnFpga  = dpRegkeyDatabase.supportInternalUhbrOnFpga;
+	// Disabling watermark caching by default on 590 irrespective of the regkey
+	// TODO: Set it back to read regkey value while fixing the issues on 595
+    this->bDisableWatermarkCaching = true;
     if (dpRegkeyDatabase.bIgnoreCableIdCaps)
     {
         hal->setIgnoreCableIdCaps(true);
@@ -110,6 +154,9 @@ bool ConnectorImpl2x::getValidLowestLinkConfig
         {
             // Get next entry.
             lowestSelected = this->allPossibleLinkCfgs[i+1];
+            // Update enhancedFraming/bDisableDownspread/bEnableFEC for target config
+            lowestSelected.enhancedFraming = lConfig.enhancedFraming;
+            lowestSelected.bDisableDownspread = lConfig.bDisableDownspread;
             lowestSelected.enableFEC(lConfig.bEnableFEC);
         }
     }
@@ -123,23 +170,22 @@ bool ConnectorImpl2x::willLinkSupportModeSST
     const DscParams *pDscParams
 )
 {
-    NvBool result = false;
     LinkConfiguration lc = linkConfig;
     if (!main->isSupportedDPLinkConfig(lc))
         return false;
 
-    // no headIndex (default 0) for mode enumeration.
-    result = willLinkSupportMode(linkConfig, modesetInfo, 0, NULL, pDscParams);
-    if (result && linkConfig.bIs128b132bChannelCoding)
+    if (linkConfig.bIs128b132bChannelCoding)
     {
         unsigned base_pbn, slots, slots_pbn;
         lc.pbnRequired(modesetInfo, base_pbn, slots, slots_pbn);
         if (slots_pbn > lc.pbnTotal())
         {
-            result = false;
+            return false;
         }
     }
-    return result;
+
+    // no headIndex (default 0) for mode enumeration.
+    return willLinkSupportMode(linkConfig, modesetInfo, 0, NULL, pDscParams);
 }
 
 bool ConnectorImpl2x::willLinkSupportMode
@@ -164,6 +210,28 @@ bool ConnectorImpl2x::willLinkSupportMode
 
     DP_ASSERT(this->isFECSupported());
 
+    if (!this->bDisableWatermarkCaching)
+    {
+        // Check if the watermark is already cached
+        WatermarkCacheElement query{linkConfig, modesetInfo, pDscParams};
+        auto *pCachedWatermark = (WatermarkCacheElement *)m_watermarkCache.get(&query);
+        if (pCachedWatermark != NULL)
+        {
+            if (watermark != NULL)
+            {
+                // If there's a cache hit, return the cached watermark
+                watermark->waterMark    = pCachedWatermark->m_watermark.waterMark;
+                watermark->tuSize       = pCachedWatermark->m_watermark.tuSize;
+                watermark->hBlankSym    = pCachedWatermark->m_watermark.hBlankSym;
+                watermark->vBlankSym    = pCachedWatermark->m_watermark.vBlankSym;
+                watermark->effectiveBpp = pCachedWatermark->m_watermark.effectiveBpp;
+            }
+
+            return pCachedWatermark->m_watermark.bIsModePossible;
+        }
+    }
+
+    // If there's no cache hit, calculate the watermark and add it to the cache
     EvoInterface   *provider        = ((EvoMainLink *)main)->getProvider();
     NvU32           nvosStatus      = NVOS_STATUS_SUCCESS;
 
@@ -207,13 +275,20 @@ bool ConnectorImpl2x::willLinkSupportMode
     nvosStatus = provider->rmControl0073(NV0073_CTRL_CMD_CALCULATE_DP_IMP,
                                          &impParams, sizeof impParams);
 
-    if ((nvosStatus == NVOS_STATUS_SUCCESS) && (watermark != NULL))
+    if (nvosStatus == NVOS_STATUS_SUCCESS)
     {
-        watermark->waterMark    = impParams.watermark.waterMark;
-        watermark->tuSize       = impParams.watermark.tuSize;
-        watermark->hBlankSym    = impParams.watermark.hBlankSym;
-        watermark->vBlankSym    = impParams.watermark.vBlankSym;
-        watermark->effectiveBpp = impParams.watermark.effectiveBpp;
+        if (watermark != NULL)
+        {
+            watermark->waterMark    = impParams.watermark.waterMark;
+            watermark->tuSize       = impParams.watermark.tuSize;
+            watermark->hBlankSym    = impParams.watermark.hBlankSym;
+            watermark->vBlankSym    = impParams.watermark.vBlankSym;
+            watermark->effectiveBpp = impParams.watermark.effectiveBpp;
+        }
+
+        if (!this->bDisableWatermarkCaching)
+            m_watermarkCache.add(new WatermarkCacheElement(
+                    linkConfig, modesetInfo, pDscParams, impParams.watermark));
     }
 
     return impParams.watermark.bIsModePossible;
@@ -522,8 +597,8 @@ bool ConnectorImpl2x::compoundQueryAttachMSTGeneric(Group * target,
     else
     {
         //
-        // If DSC is enabled bpp will already be multiplied by 16, we need to mulitply by another 16 
-        // to match scalar of 256 which is used in non-DSC case. 
+        // If DSC is enabled bpp will already be multiplied by 16, we need to mulitply by another 16
+        // to match scalar of 256 which is used in non-DSC case.
         //
         localInfo->localModesetInfo.depth = localInfo->localModesetInfo.depth * EFF_BPP_DSC_SCALER;
     }
@@ -574,11 +649,18 @@ bool ConnectorImpl2x::compoundQueryAttachMSTGeneric(Group * target,
                         tail->bandwidth.compound_query_state.totalTimeSlots)
                     {
                         compoundQueryResult = false;
+                        tail->bandwidth.compound_query_state.timeslots_used_by_query -= linkConfig->slotsForPBN(base_pbn);
+                        tail->bandwidth.compound_query_state.bandwidthAllocatedForIndex &= ~(1 << compoundQueryCount);
                         SET_DP_IMP_ERROR(pErrorCode, DP_IMP_ERROR_INSUFFICIENT_BANDWIDTH)
                     }
                 }
                 tail = (DeviceImpl*)tail->getParent();
             }
+        }
+        // If the compoundQueryResult is false, we need to reset the compoundQueryLocalLinkPBN
+        if (!compoundQueryResult)
+        {
+            compoundQueryLocalLinkPBN -= slots_pbn;
         }
     }
     else
@@ -668,6 +750,8 @@ bool ConnectorImpl2x::notifyAttachBegin(Group *target, const DpModesetParams &mo
         return false;
     }
 
+    ensureMstNodesPoweredUp(target);
+
     for (Device * dev = target->enumDevices(0); dev; dev = target->enumDevices(dev))
     {
         Address::StringBuffer buffer;
@@ -676,7 +760,7 @@ bool ConnectorImpl2x::notifyAttachBegin(Group *target, const DpModesetParams &mo
                   dev->isVideoSink() ? "VIDEO" : "BRANCH");
 
         //
-        // Note: This makes an assumption that all devices in the group have the same values for 
+        // Note: This makes an assumption that all devices in the group have the same values for
         //       bApplyStuffDummySymbolsWAR, bStuffDummySymbolsFor8b10b and bStuffDummySymbolsFor128b132b
         //
         bApplyStuffDummySymbolsWAR |= ((DeviceImpl *)dev)->getApplyStuffDummySymbolsWAR();
@@ -814,7 +898,7 @@ bool ConnectorImpl2x::notifyAttachBegin(Group *target, const DpModesetParams &mo
             NvU32 bitsPerLane                   = (NvU32)NV_CEIL(modesetParams.modesetInfo.surfaceWidth, LOGICAL_LANES) * depth;
             NvU32 totalSymbolsPerLane           = (NvU32)NV_CEIL(bitsPerLane, symbolSize);
             NvU32 totalSymbols                  = totalSymbolsPerLane * LOGICAL_LANES;
-            targetImpl->lastModesetInfo.depth   = (NvU32)NV_CEIL((totalSymbols * symbolSize * EFF_BPP_NON_DSC_SCALER), 
+            targetImpl->lastModesetInfo.depth   = (NvU32)NV_CEIL((totalSymbols * symbolSize * EFF_BPP_NON_DSC_SCALER),
                                                                   modesetParams.modesetInfo.surfaceWidth);
         }
     }
@@ -872,8 +956,8 @@ bool ConnectorImpl2x::notifyAttachBegin(Group *target, const DpModesetParams &mo
 
     // Apply dummy symbol WAR if link training succeeded and device requires dummy symbols
     // for the channel coding mode as per the device's WAR flags
-    if (bLinkTrainingStatus && 
-        bApplyStuffDummySymbolsWAR && 
+    if (bLinkTrainingStatus &&
+        bApplyStuffDummySymbolsWAR &&
         ((activeLinkConfig.bIs128b132bChannelCoding && bStuffDummySymbolsFor128b132b) ||
          ((!activeLinkConfig.bIs128b132bChannelCoding) && bStuffDummySymbolsFor8b10b)))
     {
@@ -1274,7 +1358,8 @@ bool ConnectorImpl2x::train(const LinkConfiguration &lConfig, bool force, LinkTr
     // and VCONN source is unknown.
     if (!trainResult && main->isConnectorUSBTypeC() &&
         lConfig.bIs128b132bChannelCoding && lConfig.peakRate > dp2LinkRate_10_0Gbps &&
-        main->isCableVconnSourceUnknown())
+        main->isCableVconnSourceUnknown() &&
+        !hal->isCableIdHandshakeCompleted())
     {
         hal->overrideCableIdCap(lConfig.peakRate, false);
     }

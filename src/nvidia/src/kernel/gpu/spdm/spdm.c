@@ -480,6 +480,7 @@ spdmContextInit_IMPL
     CHECK_SPDM_STATUS(libspdm_set_data(pSpdm->pLibspdmContext, LIBSPDM_DATA_APP_CONTEXT_DATA,
                                        NULL, (void *)&pSpdm, sizeof(void *)));
 
+    // TODO: When we move to SPDM 1.2 for all profiles, remove the THV check and set opaqueDataFormat1 directly.
     //
     // Perform any device-specific initialization. spdmDeviceInit is also
     // responsible for registering transport layer functions with libspdm.

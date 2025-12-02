@@ -909,29 +909,6 @@ void nvDpyProbeMaxPixelClock(NVDpyEvoPtr pDpyEvo)
                     pDpyEvo->maxPixelClockKHz =
                         ((4 * 12 * 1000 * 1000 * 16) / 18);
                 }
-            } else {
-                const NVParsedEdidEvoRec *pParsedEdid = &pDpyEvo->parsedEdid;
-
-                if (pParsedEdid->valid) {
-                    const NVT_EDID_INFO *pEdidInfo = &pParsedEdid->info;
-                    /* Default Maximum HDMI TMDS character rate is 165MHz. */
-                    NvU32 maxTmdsCharRate = 33;
-
-                    if (pEdidInfo->ext861.valid.H20_HF_VSDB &&
-                        (pEdidInfo->hdmiForumInfo.max_TMDS_char_rate > 0)) {
-                        maxTmdsCharRate =
-                            NV_MIN(pEdidInfo->hdmiForumInfo.max_TMDS_char_rate, 120);
-                    } else if (pEdidInfo->ext861.valid.H14B_VSDB &&
-                               (pEdidInfo->hdmiLlcInfo.max_tmds_clock > 0)) {
-                        maxTmdsCharRate =
-                            NV_MIN(pEdidInfo->hdmiLlcInfo.max_tmds_clock, 68);
-                    }
-
-                    /* Max Pixel Rate = Max TMDS character Rate * 5MHz */
-                    pDpyEvo->maxPixelClockKHz =
-                        pDpyEvo->maxSingleLinkPixelClockKHz =
-                        maxTmdsCharRate * 5000;
-                }
             }
         } else {
             /*
@@ -3248,14 +3225,6 @@ void nvDpyUpdateCurrentAttributes(NVDpyEvoRec *pDpyEvo)
             newAttributes.dithering.mode);
     }
 
-    if (newAttributes.imageSharpening.available !=
-        pDpyEvo->currentAttributes.imageSharpening.available) {
-        nvSendDpyAttributeChangedEventEvo(
-            pDpyEvo,
-            NV_KMS_DPY_ATTRIBUTE_IMAGE_SHARPENING_AVAILABLE,
-            newAttributes.imageSharpening.available);
-    }
-
     if (newAttributes.digitalSignal !=
             pDpyEvo->currentAttributes.digitalSignal) {
         nvSendDpyAttributeChangedEventEvo(
@@ -3567,9 +3536,6 @@ NvU32 nvDpyGetPossibleApiHeadsMask(const NVDpyEvoRec *pDpyEvo)
 
 NvBool nvDpyIsHDRCapable(const NVDpyEvoRec *pDpyEvo)
 {
-    const NVDispEvoRec *pDispEvo = pDpyEvo->pDispEvo;
-    const NVDevEvoRec *pDevEvo = pDispEvo->pDevEvo;
-
     const NVT_EDID_INFO *pInfo = &pDpyEvo->parsedEdid.info;
     const NVT_HDR_STATIC_METADATA *pHdrInfo =
         &pInfo->hdr_static_metadata_info;
@@ -3578,10 +3544,6 @@ NvBool nvDpyIsHDRCapable(const NVDpyEvoRec *pDpyEvo)
     if (nvDpyUsesDPLib(pDpyEvo)) {
         unsigned int major;
         unsigned int minor;
-
-        if(!pDevEvo->caps.supportsDP13) {
-            return FALSE;
-        }
 
         if (!nvDPDpyGetDpcdRevision(pDpyEvo, &major, &minor)) {
             return FALSE;

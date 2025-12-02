@@ -33,6 +33,7 @@
 #define BPPX256_SCALER       256U
 
 #include "os/os.h"
+#include "core/locks.h"
 #include "gpu/gpu.h"
 #include "gpu/disp/kern_disp.h"
 #include "gpu/disp/disp_objs.h"
@@ -347,10 +348,12 @@ static NV_STATUS _kheadCheckVblankCountCallback
     KernelDisplay *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
     KernelHead    *pKernelHead    = KDISP_GET_HEAD(pKernelDisplay, param1);
 
+    portSyncSpinlockAcquire(pKernelHead->Vblank.pSpinlock);
     if ((--pKernelHead->Vblank.VblankCountTimeout) == 0)
     {
         pKernelHead->Vblank.Callback.CheckVblankCount.Flags &= ~VBLANK_CALLBACK_FLAG_PERSISTENT;
     }
+    portSyncSpinlockRelease(pKernelHead->Vblank.pSpinlock);
 
     return NV_OK;
 }
@@ -366,6 +369,14 @@ dispcmnCtrlCmdSystemGetVblankCounter_IMPL
     KernelDisplay *pKernelDisplay = GPU_GET_KERNEL_DISPLAY(pGpu);
     KernelHead    *pKernelHead;
     NvU32 flags =  (VBLANK_CALLBACK_FLAG_SPECIFIED_VBLANK_NEXT | VBLANK_CALLBACK_FLAG_PERSISTENT);
+
+    //
+    // Ensure that GPU locks are not held, otherwise we would need to maintain a strict order of locks,
+    // in case if some other GPU lock is held by the current thread. This is not necessary,
+    // since this ctrl/ would only be called by UMD clients, thus there would never be any GPU lock held.
+    // If any GPU lock is held by the current thread, we just bail out early.
+    //
+    NV_CHECK_OR_RETURN(LEVEL_ERROR, rmGpuLocksGetOwnedMask() == 0, NV_ERR_INVALID_LOCK_STATE);
 
     pKernelHead = KDISP_GET_HEAD(pKernelDisplay, pVBCounterParams->head);
     if (pKernelHead == NULL)
@@ -385,18 +396,45 @@ dispcmnCtrlCmdSystemGetVblankCounter_IMPL
         flags |= VBLANK_CALLBACK_FLAG_LOW_LATENCY;
     }
 
-    pKernelHead->Vblank.VblankCountTimeout = 60 * VBLANK_INFO_GATHER_KEEPALIVE_SECONDS;
+    //
+    // This spinlock is required to prevent a possible race condition with _kheadCheckVblankCountCallback,
+    // given that we don't hold the GPU lock at this point and VblankCountTimeout can be reset
+    // in _kheadCheckVblankCountCallback in parallel.
+    //
+    portSyncSpinlockAcquire(pKernelHead->Vblank.pSpinlock);
 
-    pKernelHead->Vblank.Callback.CheckVblankCount.Proc   = _kheadCheckVblankCountCallback;
-    pKernelHead->Vblank.Callback.CheckVblankCount.pObject = NULL;
-    pKernelHead->Vblank.Callback.CheckVblankCount.bObjectIsChannelDescendant = NV_FALSE;
-    pKernelHead->Vblank.Callback.CheckVblankCount.Param1 = pKernelHead->PublicId;
-    pKernelHead->Vblank.Callback.CheckVblankCount.Param2 = 0;
-    pKernelHead->Vblank.Callback.CheckVblankCount.Status = NV_OK;
-    pKernelHead->Vblank.Callback.CheckVblankCount.bIsVblankNotifyEnable = NV_TRUE;
-    pKernelHead->Vblank.Callback.CheckVblankCount.Flags  = flags;
+    NvBool bAddCallback = pKernelHead->Vblank.VblankCountTimeout == 0;
+    if (!bAddCallback)
+    {
+        pKernelHead->Vblank.VblankCountTimeout = 60 * VBLANK_INFO_GATHER_KEEPALIVE_SECONDS;
+    }
 
-    kheadAddVblankCallback(pGpu, pKernelHead, &pKernelHead->Vblank.Callback.CheckVblankCount);
+    //
+    // Safe to release the lock immediately, since the counter is monotonically decrementing and
+    // the only possible race condition here is adding multiple callbacks.
+    // But that wouldn't never happen, since kheadAddVblankCallback doesn't allow duplicates.
+    //
+    portSyncSpinlockRelease(pKernelHead->Vblank.pSpinlock);
+
+    if (bAddCallback)
+    {
+        NV_ASSERT_OK_OR_RETURN(rmDeviceGpuLocksAcquire(pGpu, GPUS_LOCK_FLAGS_NONE, RM_LOCK_MODULES_DISP));
+
+        pKernelHead->Vblank.VblankCountTimeout = 60 * VBLANK_INFO_GATHER_KEEPALIVE_SECONDS;
+
+        pKernelHead->Vblank.Callback.CheckVblankCount.Proc   = _kheadCheckVblankCountCallback;
+        pKernelHead->Vblank.Callback.CheckVblankCount.pObject = NULL;
+        pKernelHead->Vblank.Callback.CheckVblankCount.bObjectIsChannelDescendant = NV_FALSE;
+        pKernelHead->Vblank.Callback.CheckVblankCount.Param1 = pKernelHead->PublicId;
+        pKernelHead->Vblank.Callback.CheckVblankCount.Param2 = 0;
+        pKernelHead->Vblank.Callback.CheckVblankCount.Status = NV_OK;
+        pKernelHead->Vblank.Callback.CheckVblankCount.bIsVblankNotifyEnable = NV_TRUE;
+        pKernelHead->Vblank.Callback.CheckVblankCount.Flags  = flags;
+
+        kheadAddVblankCallback(pGpu, pKernelHead, &pKernelHead->Vblank.Callback.CheckVblankCount);
+
+        rmDeviceGpuLocksRelease(pGpu, GPUS_LOCK_FLAGS_NONE, NULL);
+    }
 
     if (IS_GSP_CLIENT(pGpu))
     {

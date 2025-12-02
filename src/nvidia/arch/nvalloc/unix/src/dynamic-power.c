@@ -445,7 +445,7 @@ NV_STATUS NV_API_CALL rm_schedule_gpu_wakeup(
     ret = osQueueWorkItem(pGpu,
                           RmForceGpuNotIdle,
                           NULL,
-                          OS_QUEUE_WORKITEM_FLAGS_NONE);
+                          (OsQueueWorkItemFlags){0});
 
     NV_EXIT_RM_RUNTIME(sp, fp);
 
@@ -792,7 +792,7 @@ void NV_API_CALL rm_init_tegra_dynamic_power_management(
     nv_priv_t *nvp = NV_GET_NV_PRIV(nv);
     void *fp;
 
-    if (!nv->is_tegra_pci_igpu || !nv->supports_tegra_igpu_rg)
+    if (!nv->supports_tegra_igpu_rg)
         return;
 
     NV_ENTER_RM_RUNTIME(sp,fp);
@@ -802,7 +802,8 @@ void NV_API_CALL rm_init_tegra_dynamic_power_management(
     nv->is_tegra_pci_igpu_rg_enabled = NV_FALSE;
 
     NV_PRINTF(LEVEL_INFO,
-                "NVRM: Tegra PCI iGPU Rail-Gating is supported.\n");
+                "NVRM: Tegra PCI iGPU detected, Rail-Gating is supported.\n");
+
     NV_EXIT_RM_RUNTIME(sp,fp);
 }
 
@@ -836,6 +837,7 @@ void NV_API_CALL rm_init_dynamic_power_management(
     NvBool bUefiConsole;
     NvU32 status;
     NvU32 regkeyValue;
+    NvBool bIsTegraPciIgpuRgSupported = nv->supports_tegra_igpu_rg;
 
     NV_ENTER_RM_RUNTIME(sp,fp);
 
@@ -863,7 +865,7 @@ void NV_API_CALL rm_init_dynamic_power_management(
 
     nvp->pr3_acpi_method_present = bPr3AcpiMethodPresent;
     if (!nv_dynamic_power_available(nv) || (status != NV_OK) ||
-        (!bPr3AcpiMethodPresent && !nv->supports_tegra_igpu_rg))
+        (!bPr3AcpiMethodPresent && !bIsTegraPciIgpuRgSupported))
     {
         NV_PRINTF(LEVEL_NOTICE,
                   "%s: Disabling dynamic power management either due to lack"
@@ -915,7 +917,7 @@ void NV_API_CALL rm_init_dynamic_power_management(
         // fallthrough
     case NV_REG_DYNAMIC_POWER_MANAGEMENT_NEVER:
         nvp->dynamic_power.mode = NV_DYNAMIC_PM_NEVER;
-        nv->supports_tegra_igpu_rg = NV_FALSE;
+        bIsTegraPciIgpuRgSupported = NV_FALSE;
         break;
     }
 
@@ -924,9 +926,9 @@ void NV_API_CALL rm_init_dynamic_power_management(
         (nvp->dynamic_power.dynamic_power_regkey == NV_REG_DYNAMIC_POWER_MANAGEMENT_DEFAULT))
     {
         // Enable Dynamic Rail-Gating for Tegra PCI iGPU
-        if (nv->supports_tegra_igpu_rg)
+        if (bIsTegraPciIgpuRgSupported)
         {
-            if (nv_pci_tegra_pm_init(nv) == NV_TRUE)
+            if (nv_pci_tegra_pm_init(nv))
             {
                 nv_printf(NV_DBG_INFO, "NVRM: Tegra PCI iGPU railgating is enabled\n");
                 nv->is_tegra_pci_igpu_rg_enabled = NV_TRUE;
@@ -989,12 +991,12 @@ void NV_API_CALL rm_cleanup_dynamic_power_management(
     // Disable RTD3 infrastructure from OS side.
     if (((nvp->dynamic_power.mode == NV_DYNAMIC_PM_FINE) &&
         (nvp->dynamic_power.dynamic_power_regkey == NV_REG_DYNAMIC_POWER_MANAGEMENT_DEFAULT)) ||
-        nv->is_tegra_pci_igpu_rg_enabled == NV_TRUE)
+        nv->is_tegra_pci_igpu_rg_enabled)
     {
         nv_disallow_runtime_suspend(nv);
 
         // Disable Dynamic Rail-Gating for Tegra PCI iGPU
-        if (nv->supports_tegra_igpu_rg)
+        if (nv->is_tegra_pci_igpu_rg_enabled)
         {
             nv_pci_tegra_pm_deinit(nv);
             nv->is_tegra_pci_igpu_rg_enabled = NV_FALSE;
@@ -1409,7 +1411,7 @@ static NvBool RmCheckForGcxSupportOnCurrentState(
  * finished.
  *
  * Queue with lock flags:
- *     OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE
+ *     bLockGpuGroupSubdevice
  *
  * @param[in]   gpuInstance     GPU instance ID.
  * @param[in]   pArgs           Unused callback closure.
@@ -1454,7 +1456,7 @@ static void timerCallbackToRemoveIdleHoldoff(
     status = osQueueWorkItem(pGpu,
                              RmRemoveIdleHoldoff,
                              NULL,
-                             OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE);
+                             (OsQueueWorkItemFlags){.bLockGpuGroupSubdevice = NV_TRUE});
 
     if (status != NV_OK)
     {
@@ -1487,7 +1489,7 @@ static void timerCallbackToIndicateIdle(
         osQueueWorkItem(pGpu,
                         RmIndicateIdle,
                         NULL,
-                        OS_QUEUE_WORKITEM_FLAGS_NONE);
+                        (OsQueueWorkItemFlags){0});
     }
     else
     {
@@ -2828,7 +2830,7 @@ static void RmQueueIdleSustainedWorkitem(
         status = osQueueWorkItem(pGpu,
             RmHandleIdleSustained,
             NULL,
-            OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_SUBDEVICE);
+            (OsQueueWorkItemFlags){.bLockGpuGroupSubdevice = NV_TRUE});
         if (status != NV_OK)
         {
             NV_PRINTF(LEVEL_WARNING,

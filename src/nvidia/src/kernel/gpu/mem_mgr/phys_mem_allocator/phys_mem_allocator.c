@@ -244,6 +244,13 @@ pmaInitialize(PMA **ppPma, NvU32 initFlags)
     pPma->pmaStats.numFreeFramesProtected = 0;
     pPma->pmaStats.num2mbPagesProtected = 0;
     pPma->pmaStats.numFree2mbPagesProtected = 0;
+    for (NvU32 i = 0; i < PMA_MAX_LOCALIZED_REGION_COUNT; ++i)
+    {
+        // Not implemented yet. Returning 0 for now.
+        pPma->pmaStats.num2mbPagesLocalizable[i] = 0;
+        pPma->pmaStats.numFreeFramesLocalizable[i] = 0;
+        pPma->pmaStats.numFree2mbPagesLocalizable[i] = 0;
+    }
     pPma->regSize = 0;
     portAtomicSetSize(&pPma->initScrubbing, PMA_SCRUB_INITIALIZE);
 
@@ -1816,6 +1823,38 @@ pmaGetFreeMemory
 }
 
 void
+pmaGetUgpuFreeMemory
+(
+    PMA             *pPma,
+    NvU32            ugpuId,
+    NvU64           *pBytesFree
+)
+{
+    if (ugpuId >= PMA_MAX_LOCALIZED_REGION_COUNT)
+    {
+        *pBytesFree = 0;
+        return;
+    }
+
+#if !defined(SRT_BUILD)
+    portSyncSpinlockAcquire(pPma->pPmaLock);
+    NvBool nodeOnlined = pPma->nodeOnlined;
+    portSyncSpinlockRelease(pPma->pPmaLock);
+
+    //
+    // TODO : BUG 4732271.
+    //
+    NV_ASSERT_OR_RETURN_VOID(!nodeOnlined);
+#endif
+
+    portSyncSpinlockAcquire(pPma->pPmaLock);
+
+    *pBytesFree = pPma->pmaStats.numFreeFramesLocalizable[ugpuId] << PMA_PAGE_SHIFT;
+
+    portSyncSpinlockRelease(pPma->pPmaLock);
+}
+
+void
 pmaGetTotalMemory
 (
     PMA             *pPma,
@@ -1853,6 +1892,35 @@ pmaGetTotalMemory
 
         *pBytesTotal += totalBytesInRegion;
     }
+}
+
+void
+pmaGetUgpuTotalMemory
+(
+    PMA             *pPma,
+    NvU32            ugpuId,
+    NvU64           *pBytesTotal
+)
+{
+    *pBytesTotal = 0;
+
+    if (ugpuId >= PMA_MAX_LOCALIZED_REGION_COUNT)
+    {
+        return;
+    }
+
+#if !defined(SRT_BUILD)
+    portSyncSpinlockAcquire(pPma->pPmaLock);
+    NvBool nodeOnlined = pPma->nodeOnlined;
+    portSyncSpinlockRelease(pPma->pPmaLock);
+
+    //
+    // TODO : BUG 4732271.
+    //
+    NV_ASSERT_OR_RETURN_VOID(!nodeOnlined);
+#endif
+
+    *pBytesTotal = 0;
 }
 
 void

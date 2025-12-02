@@ -114,7 +114,7 @@ kbusConstructHal_GM107(OBJGPU *pGpu, KernelBus *pKernelBus)
     pKernelBus->virtualBar2[GPU_GFID_PF].pMapListMemory = NULL;
 
     if (pGpu->getProperty(pGpu, PDB_PROP_GPU_BROKEN_FB) ||
-        pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+        pGpu->pGpuArch->bGpuArchIsZeroFb)
     {
         pKernelBus->bFbFlushDisabled = NV_TRUE;
     }
@@ -908,7 +908,7 @@ kbusInitBar1_GM107(OBJGPU *pGpu, KernelBus *pKernelBus, NvU32 gfid)
         return rmStatus;
     }
 
-    if (IsT234(pGpu) && pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (IsT234(pGpu) && pGpu->pGpuArch->bGpuArchIsZeroFb)
         return NV_OK;
 
     //
@@ -1735,7 +1735,7 @@ kbusSetupBar2GpuVaSpace_GM107
     }
 
     if (kbusIsPhysicalBar2InitPagetableEnabled(pKernelBus) &&
-        ((pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB)) ||
+        ((pGpu->pGpuArch->bGpuArchIsZeroFb) ||
         ((ADDR_FBMEM == pKernelBus->PDEBAR2Aperture) &&
         (ADDR_FBMEM == pKernelBus->PTEBAR2Aperture))))
     {
@@ -2770,7 +2770,7 @@ kbusUpdateRmAperture_GM107
         //
         if ((ADDR_FBMEM == pKernelBus->PDEBAR2Aperture ||
              ADDR_FBMEM == pKernelBus->PTEBAR2Aperture ||
-             pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB)) &&
+             pGpu->pGpuArch->bGpuArchIsZeroFb) &&
              !kbusIsPhysicalBar2InitPagetableEnabled(pKernelBus) &&
              pKernelBus->virtualBar2[gfid].pPageLevels == NULL && IS_GFID_PF(gfid))
         {

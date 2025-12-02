@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -198,20 +198,10 @@ void stdmemDumpOutputAllocParams_IMPL(NV_MEMORY_ALLOCATION_PARAMS *pAllocData);
 NvU64 stdmemQueryPageSize_IMPL(struct MemoryManager *pMemoryManager, NvHandle hClient, NV_MEMORY_ALLOCATION_PARAMS *pAllocData);
 #define stdmemQueryPageSize(pMemoryManager, hClient, pAllocData) stdmemQueryPageSize_IMPL(pMemoryManager, hClient, pAllocData)
 
-#ifdef __nvoc_standard_mem_h_disabled
-static inline NvU64 stdmemGetSysmemPageSize(struct OBJGPU *pGpu, struct StandardMemory *pMemory) {
-    NV_ASSERT_FAILED_PRECOMP("StandardMemory was disabled!");
-    return 0;
-}
-#else // __nvoc_standard_mem_h_disabled
-#define stdmemGetSysmemPageSize(pGpu, pMemory) stdmemGetSysmemPageSize_IMPL(pGpu, pMemory)
-#endif // __nvoc_standard_mem_h_disabled
-
 
 // Wrapper macros for halified functions
 #define stdmemCanCopy_FNPTR(pStandardMemory) pStandardMemory->__nvoc_metadata_ptr->vtable.__stdmemCanCopy__
 #define stdmemCanCopy(pStandardMemory) stdmemCanCopy_DISPATCH(pStandardMemory)
-#define stdmemGetSysmemPageSize_HAL(pGpu, pMemory) stdmemGetSysmemPageSize(pGpu, pMemory)
 #define stdmemIsDuplicate_FNPTR(pMemory) pMemory->__nvoc_base_Memory.__nvoc_metadata_ptr->vtable.__memIsDuplicate__
 #define stdmemIsDuplicate(pMemory, hMemory, pDuplicate) stdmemIsDuplicate_DISPATCH(pMemory, hMemory, pDuplicate)
 #define stdmemGetMapAddrSpace_FNPTR(pMemory) pMemory->__nvoc_base_Memory.__nvoc_metadata_ptr->vtable.__memGetMapAddrSpace__
@@ -367,9 +357,6 @@ static inline NvU32 stdmemGetRefCount_DISPATCH(struct StandardMemory *pResource)
 static inline void stdmemAddAdditionalDependants_DISPATCH(struct RsClient *pClient, struct StandardMemory *pResource, RsResourceRef *pReference) {
     pResource->__nvoc_metadata_ptr->vtable.__stdmemAddAdditionalDependants__(pClient, pResource, pReference);
 }
-
-NvU64 stdmemGetSysmemPageSize_IMPL(struct OBJGPU *pGpu, struct StandardMemory *pMemory);
-
 
 NvBool stdmemCanCopy_IMPL(struct StandardMemory *pStandardMemory);
 

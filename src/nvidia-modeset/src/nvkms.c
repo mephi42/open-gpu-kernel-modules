@@ -47,7 +47,6 @@
 #include "nvkms-headsurface-ioctl.h"
 #include "nvkms-headsurface-swapgroup.h"
 #include "nvkms-flip.h" /* nvFlipEvo */
-#include "nvkms-vrr.h"
 
 #include "dp/nvdp-connector.h"
 
@@ -1428,8 +1427,6 @@ static NvBool AllocDevice(struct NvKmsPerOpen *pOpen,
         pParams->reply.dispHandles[disp] = pOpenDev->disp[disp].nvKmsApiHandle;
     }
 
-    pParams->reply.inputLutAppliesToBase = pDevEvo->caps.inputLutAppliesToBase;
-
     ct_assert(ARRAY_LEN(pParams->reply.layerCaps) ==
               ARRAY_LEN(pDevEvo->caps.layerCaps));
 
@@ -1445,11 +1442,6 @@ static NvBool AllocDevice(struct NvKmsPerOpen *pOpen,
     pParams->reply.olutCaps = pDevEvo->caps.olut;
 
     pParams->reply.surfaceAlignment  = NV_EVO_SURFACE_ALIGNMENT;
-    pParams->reply.requiresVrrSemaphores = !pDevEvo->hal->caps.supportsDisplayRate;
-
-    pParams->reply.nIsoSurfacesInVidmemOnly =
-        !!NV5070_CTRL_SYSTEM_GET_CAP(pDevEvo->capsBits,
-            NV5070_CTRL_SYSTEM_CAPS_BUG_644815_DNISO_VIDMEM_ONLY);
 
     pParams->reply.requiresAllAllocationsInSysmem =
         pDevEvo->requiresAllAllocationsInSysmem;
@@ -1487,12 +1479,6 @@ static NvBool AllocDevice(struct NvKmsPerOpen *pOpen,
         pDevEvo->hal->caps.supportsVblankSyncObjects;
 
     pParams->reply.supportsVblankSemControl = pDevEvo->supportsVblankSemControl;
-
-    pParams->reply.supportsInputColorSpace =
-        pDevEvo->hal->caps.supportsInputColorSpace;
-
-    pParams->reply.supportsInputColorRange =
-        pDevEvo->hal->caps.supportsInputColorRange;
 
     if (pOpen->clientType == NVKMS_CLIENT_KERNEL_SPACE) {
         pParams->reply.vtFbBaseAddress = pDevEvo->vtFbInfo.baseAddress;
@@ -4347,22 +4333,6 @@ static NvBool GetMuxState(
     return pParams->reply.state != MUX_STATE_GET;
 }
 
-static NvBool ExportVrrSemaphoreSurface(
-    struct NvKmsPerOpen *pOpen,
-    void *pParamsVoid)
-{
-    struct NvKmsExportVrrSemaphoreSurfaceParams *pParams = pParamsVoid;
-    const struct NvKmsExportVrrSemaphoreSurfaceRequest *req = &pParams->request;
-    const struct NvKmsPerOpenDev *pOpenDev =
-        GetPerOpenDev(pOpen, pParams->request.deviceHandle);
-
-    if (pOpenDev == NULL) {
-        return FALSE;
-    }
-
-    return nvExportVrrSemaphoreSurface(pOpenDev->pDevEvo, req->memFd);
-}
-
 static void EnableAndSetupVblankSyncObject(NVDispEvoRec *pDispEvo,
                                            const NvU32 apiHead,
                                            NVVblankSyncObjectRec *pVblankSyncObject,
@@ -4967,24 +4937,6 @@ static NvBool AccelVblankSemControls(
                 pParams->request.headMask);
 }
 
-static NvBool VrrSignalSemaphore(
-    struct NvKmsPerOpen *pOpen,
-    void *pParamsVoid)
-{
-    struct NvKmsPerOpenDev *pOpenDev;
-
-    const struct NvKmsVrrSignalSemaphoreParams *pParams = pParamsVoid;
-    NvS32 vrrSemaphoreIndex = pParams->request.vrrSemaphoreIndex;
-
-    pOpenDev = GetPerOpenDev(pOpen, pParams->request.deviceHandle);
-    if (pOpenDev == NULL) {
-        return FALSE;
-    }
-
-    nvVrrSignalSemaphore(pOpenDev->pDevEvo, vrrSemaphoreIndex);
-    return TRUE;
-}
-
 static NvBool FramebufferConsoleDisabled(
     struct NvKmsPerOpen *pOpen,
     void *pParamsVoid)
@@ -5127,7 +5079,6 @@ NvBool nvKmsIoctl(
         ENTRY(NVKMS_IOCTL_RELEASE_SWAP_GROUP, ReleaseSwapGroup),
         ENTRY(NVKMS_IOCTL_SWITCH_MUX, SwitchMux),
         ENTRY(NVKMS_IOCTL_GET_MUX_STATE, GetMuxState),
-        ENTRY(NVKMS_IOCTL_EXPORT_VRR_SEMAPHORE_SURFACE, ExportVrrSemaphoreSurface),
         ENTRY(NVKMS_IOCTL_ENABLE_VBLANK_SYNC_OBJECT, EnableVblankSyncObject),
         ENTRY(NVKMS_IOCTL_DISABLE_VBLANK_SYNC_OBJECT, DisableVblankSyncObject),
         ENTRY(NVKMS_IOCTL_NOTIFY_VBLANK, NotifyVblank),
@@ -5135,7 +5086,6 @@ NvBool nvKmsIoctl(
         ENTRY(NVKMS_IOCTL_ENABLE_VBLANK_SEM_CONTROL, EnableVblankSemControl),
         ENTRY(NVKMS_IOCTL_DISABLE_VBLANK_SEM_CONTROL, DisableVblankSemControl),
         ENTRY(NVKMS_IOCTL_ACCEL_VBLANK_SEM_CONTROLS, AccelVblankSemControls),
-        ENTRY(NVKMS_IOCTL_VRR_SIGNAL_SEMAPHORE, VrrSignalSemaphore),
         ENTRY(NVKMS_IOCTL_FRAMEBUFFER_CONSOLE_DISABLED, FramebufferConsoleDisabled),
     };
 
@@ -6036,9 +5986,6 @@ static const char *
 SignalFormatString(const enum nvKmsTimingsProtocol protocol)
 {
     switch (protocol) {
-    case NVKMS_PROTOCOL_DAC_RGB:
-        return "VGA";
-
     case NVKMS_PROTOCOL_SOR_SINGLE_TMDS_A:
     case NVKMS_PROTOCOL_SOR_SINGLE_TMDS_B:
         return "TMDS";
@@ -6935,6 +6882,44 @@ static void ServiceOneDeferredRequestFifo(
 
         get = (get + 1) % ARRAY_LEN(fifo->request);
     }
+
+
+    /*  
+    ARM weakly ordered memory model can cause the store on the "get"
+    of the deferred request fifo to be written before the items on the
+    fifo have actually been processed.
+    
+    To ensure this does not happens we need to add a barrier.
+    We chose "dmb oshst" as the minimal (most relaxed)  barrier that still
+    guarantees correct behaviour.
+    
+    Breaking down the barrier command by its parts:
+    dmb: Guarantees that all writes or loads (depending on a parameter) before
+         the barrier are completed before any writes or loads after the barrier are
+         executed (dsb would also work but those are a lot heavier barriers).
+    
+    osh: outer shareable scope, it means that the scope is the cpu's
+         (in linux the cpus that the kernel runs in SMP are an inner shareable domain)
+         and peripherals such as the gpu.
+         Full system would be a super set of what we need, while inner shareable
+         scope/domain won't be enough because it would exclude the gpu.
+    
+    st: store, meaning that the barriers would guarantee that all stores before the
+        barrier would have completed, before any stores after the barrier.
+        In our case here, the store that updates "get" at the end, which we care about
+        (i.e. all processing and variable modifications, that is stores,  
+        must have comploeted before we indicate such).
+
+
+    NOTE: This is an initial change, once a set of unified macros (which don't exist
+          yet) to handle barriers across the driver across architectures, then the
+          assembly code below should be changed to use such macros.
+    */
+
+
+#if NVCPU_IS_FAMILY_ARM
+    __asm__ __volatile__ ("dmb oshst" : : : "memory");
+#endif
 
     fifo->get = put;
 }

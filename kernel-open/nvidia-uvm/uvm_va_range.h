@@ -124,11 +124,6 @@ typedef struct
     uvm_rw_semaphore_t lock;
 } uvm_vma_wrapper_t;
 
-// TODO: Bug 1733295.
-//
-//       There's a lot of state in the top-level uvm_va_range_t struct below
-//       which really belongs in the per-type structs (for example, blocks).
-
 typedef struct
 {
     // GPU mapping the allocation. The GPU's RM address space is required when
@@ -232,25 +227,18 @@ struct uvm_va_range_struct
     // start and end + 1 have to be PAGE_SIZED aligned.
     uvm_range_tree_node_t node;
 
-    // Force the next split on this range to fail. Set by error injection ioctl
-    // (testing purposes only).
-    bool inject_split_error;
-
     // Force the next register_gpu_va_space to fail while adding this va_range.
     // Set by error injection ioctl (testing purposes only).
     bool inject_add_gpu_va_space_error;
 
-    // Mask of UVM-Lite GPUs for the VA range
-    //
-    // If the preferred location is set to a non-faultable GPU or the CPU,
-    // this mask contains all non-faultable GPUs that are in the accessed by
-    // mask and the preferred location itself if it's a GPU. Empty otherwise.
-    //
-    // All UVM-Lite GPUs have mappings only to the preferred location. The
-    // mappings are initially established only when the pages are resident on
-    // the preferred location, but persist after that until the preferred
-    // location is changed or a GPU stops being a UVM-Lite GPU.
-    uvm_processor_mask_t uvm_lite_gpus;
+    uvm_va_range_type_t type;
+};
+
+// Subclass of va_range state for va_range.type == UVM_VA_RANGE_TYPE_MANAGED
+struct uvm_va_range_managed_struct
+{
+    // Base class
+    uvm_va_range_t va_range;
 
     // This is a uvm_va_block_t ** array of all VA block pointers under this
     // range. The pointers can be accessed using the functions
@@ -272,15 +260,6 @@ struct uvm_va_range_struct
     //       them all at range allocation.
     atomic_long_t *blocks;
 
-    uvm_va_range_type_t type;
-};
-
-// Subclass of va_range state for va_range.type == UVM_VA_RANGE_TYPE_MANAGED
-struct uvm_va_range_managed_struct
-{
-    // Base class
-    uvm_va_range_t va_range;
-
     // This is null in the case of a zombie allocation. Zombie allocations are
     // created from unfreed allocations at termination of a process which used
     // UVM_INIT_FLAGS_MULTI_PROCESS_SHARING_MODE, when at least one other
@@ -290,6 +269,22 @@ struct uvm_va_range_managed_struct
     // Managed allocations only use this policy and never use the policy
     // stored in the va_block for HMM allocations.
     uvm_va_policy_t policy;
+
+    // Mask of UVM-Lite GPUs for the VA range
+    //
+    // If the preferred location is set to a non-faultable GPU or the CPU, this
+    // mask contains all non-faultable GPUs that are in the accessed by mask and
+    // the preferred location itself if it's a GPU. Empty otherwise.
+    //
+    // All UVM-Lite GPUs have mappings only to the preferred location. The
+    // mappings are initially established only when the pages are resident on
+    // the preferred location, but persist after that until the preferred
+    // location is changed or a GPU stops being a UVM-Lite GPU.
+    uvm_processor_mask_t uvm_lite_gpus;
+
+    // Force the next split on this range to fail. Set by error injection ioctl
+    // (testing purposes only).
+    bool inject_split_error;
 
     uvm_perf_module_data_desc_t perf_modules_data[UVM_PERF_MODULE_TYPE_COUNT];
 };
@@ -1021,7 +1016,7 @@ static uvm_va_block_t *uvm_va_range_block(uvm_va_range_managed_t *managed_range,
     UVM_ASSERT(index < uvm_va_range_num_blocks(managed_range));
     uvm_assert_rwsem_locked(&managed_range->va_range.va_space->lock);
 
-    return (uvm_va_block_t *)atomic_long_read(&managed_range->va_range.blocks[index]);
+    return (uvm_va_block_t *)atomic_long_read(&managed_range->blocks[index]);
 }
 
 // Same as uvm_va_range_block except that the block is created if not already

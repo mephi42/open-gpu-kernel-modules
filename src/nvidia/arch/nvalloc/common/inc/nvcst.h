@@ -65,6 +65,7 @@ CHIPSET_SETUP_FUNC(Intel_0685_setupFunc)
 CHIPSET_SETUP_FUNC(Intel_4381_setupFunc)
 CHIPSET_SETUP_FUNC(Intel_7A82_setupFunc)
 CHIPSET_SETUP_FUNC(Intel_7A04_setupFunc)
+CHIPSET_SETUP_FUNC(Intel_7D06_setupFunc)
 CHIPSET_SETUP_FUNC(SiS_656_setupFunc)
 CHIPSET_SETUP_FUNC(ATI_RS400_setupFunc)
 CHIPSET_SETUP_FUNC(ATI_RS480_setupFunc)
@@ -90,6 +91,7 @@ CHIPSET_SETUP_FUNC(Fujitsu_A64FX_setupFunc)
 CHIPSET_SETUP_FUNC(Ampere_Altra_setupFunc)
 CHIPSET_SETUP_FUNC(Arm_NeoverseN1_setupFunc)
 CHIPSET_SETUP_FUNC(Ampere_AmpereOne_setupFunc)
+CHIPSET_SETUP_FUNC(Qualcomm_Snapdragon_setupFunc)
 CHIPSET_SETUP_FUNC(Nvidia_T210_setupFunc)
 CHIPSET_SETUP_FUNC(Nvidia_T194_setupFunc)
 CHIPSET_SETUP_FUNC(Nvidia_TH500_setupFunc)
@@ -196,6 +198,16 @@ CSINFO chipsetInfo[] =
     {PCI_VENDOR_ID_INTEL,       0x7A04, CS_INTEL_7A04,      "Intel-RaptorLake",     Intel_7A04_setupFunc},
     {PCI_VENDOR_ID_INTEL,       0x5795, CS_INTEL_5795,      "Intel-GraniteRapids",  NULL},
     {PCI_VENDOR_ID_INTEL,       0xA70D, CS_INTEL_B660,      "Intel-B660",           Intel_A70D_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D06, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D1A, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D1B, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D1C, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D2A, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D2D, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D2F, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D35, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D67, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
+    {PCI_VENDOR_ID_INTEL,       0x7D30, CS_INTEL_7D06,      "Intel-Arrowlake",      Intel_7D06_setupFunc},
 
     {PCI_VENDOR_ID_NVIDIA,      0x0FAE, CS_NVIDIA_T210,      "T210",      Nvidia_T210_setupFunc},
     {PCI_VENDOR_ID_NVIDIA,      0x0FAF, CS_NVIDIA_T210,      "T210",      Nvidia_T210_setupFunc},
@@ -278,6 +290,8 @@ CSINFO chipsetInfo[] =
     {PCI_VENDOR_ID_HYGON,       0x790E, CS_HYGON_C86,      "Hygon-C86-7151",   NULL},
     {PCI_VENDOR_ID_MARVELL,     0xA02D, CS_MARVELL_OCTEON_CN96XX, "Marvell Octeon CN96xx", ARMV8_generic_setupFunc},
     {PCI_VENDOR_ID_MARVELL,     0xA02D, CS_MARVELL_OCTEON_CN98XX, "Marvell Octeon CN98xx", ARMV8_generic_setupFunc},
+    {PCI_VENDOR_ID_QUALCOMM,    0x010E, CS_SNAPDRAGON_8CX, "Qualcomm Snapdragon 8cx Gen3", Qualcomm_Snapdragon_setupFunc},
+    {PCI_VENDOR_ID_QUALCOMM,    0x0111, CS_SNAPDRAGON_8CX, "Qualcomm Snapdragon 8cx Gen4", Qualcomm_Snapdragon_setupFunc},
     {PCI_VENDOR_ID_SIFIVE,      0x0000, CS_SIFIVE_FU740_C000, "SiFive FU740-000", Riscv_generic_setupFunc},
     {PCI_VENDOR_ID_PLDA,        0x1111, CS_PLDA_XPRESSRICH_AXI_REF, "XpressRich-AXI Ref Design", PLDA_XpressRichAXI_setupFunc},
     {PCI_VENDOR_ID_AMPERE,      0xE200, CS_AMPERE_AMPEREONE160, "Ampere AmpereOne-160", Ampere_AmpereOne_setupFunc},
@@ -333,6 +347,7 @@ VENDORNAME vendorName[] =
     {PCI_VENDOR_ID_CADENCE,     "Cadence"},
     {PCI_VENDOR_ID_ARM,         "ARM"},
     {PCI_VENDOR_ID_ALIBABA,     "Alibaba"},
+    {PCI_VENDOR_ID_QUALCOMM,    "Qualcomm"},
     {PCI_VENDOR_ID_SIFIVE,      "SiFive"},
     {PCI_VENDOR_ID_PLDA,        "PLDA"},
     {PCI_VENDOR_ID_PHYTIUM,     "Phytium"},
@@ -404,6 +419,8 @@ ARMCSALLOWLISTINFO armChipsetAllowListInfo[] =
     {PCI_VENDOR_ID_MARVELL,     0xA02D, CS_MARVELL_OCTEON_CN96XX}, // Marvell OCTEON CN96xx
     {PCI_VENDOR_ID_MARVELL,     0xA02D, CS_MARVELL_OCTEON_CN98XX}, // Marvell OCTEON CN98xx
     {PCI_VENDOR_ID_ALIBABA,     0x8000, CS_ALIBABA_YITIAN},      // Alibaba Yitian
+    {PCI_VENDOR_ID_QUALCOMM,    0x010E, CS_SNAPDRAGON_8CX},        // Qualcomm Snapdragon 8cx Gen3 - 8280 dev platform
+    {PCI_VENDOR_ID_QUALCOMM,    0x0111, CS_SNAPDRAGON_8CX},        // Qualcomm Snapdragon 8cx Gen4 - 8380 dev(?) platform
     {PCI_VENDOR_ID_AMPERE,      0xE200, CS_AMPERE_AMPEREONE160},   // Ampere AmpereOne-160
     {PCI_VENDOR_ID_AMPERE,      0xE201, CS_AMPERE_AMPEREONE160},   // Ampere AmpereOne-160
     {PCI_VENDOR_ID_AMPERE,      0xE202, CS_AMPERE_AMPEREONE160},   // Ampere AmpereOne-160

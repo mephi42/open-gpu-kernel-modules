@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015, 2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -507,10 +507,6 @@ nv_drm_atomic_apply_modeset_config(struct drm_device *dev,
         }
     }
 
-    if (commit && nv_dev->requiresVrrSemaphores && reply_config.vrrFlip) {
-        nvKms->signalVrrSemaphore(nv_dev->pDevice, reply_config.vrrSemaphoreIndex);
-    }
-
     return 0;
 }
 
@@ -523,12 +519,38 @@ int nv_drm_atomic_check(struct drm_device *dev,
     struct drm_crtc_state *crtc_state;
     int i;
 
+    struct drm_plane *plane;
+    struct drm_plane_state *plane_state;
+    int j;
+    bool cursor_surface_changed;
+    bool cursor_only_commit;
+
     nv_drm_for_each_crtc_in_state(state, crtc, crtc_state, i) {
+
+        /*
+         * Committing cursor surface change without any other plane change can
+         * cause cursor surface in use by HW to be freed prematurely. Add all
+         * planes to the commit to avoid this. This is a workaround for bug 4966645.
+         */
+        cursor_surface_changed = false;
+        cursor_only_commit = true;
+        nv_drm_for_each_plane_in_state(crtc_state->state, plane, plane_state, j) {
+            if (plane->type == DRM_PLANE_TYPE_CURSOR) {
+                if (plane_state->fb != plane->state->fb) {
+                    cursor_surface_changed = true;
+                }
+            } else {
+                cursor_only_commit = false;
+                break;
+            }
+        }
+
         /*
          * if the color management changed on the crtc, we need to update the
          * crtc's plane's CSC matrices, so add the crtc's planes to the commit
          */
-        if (crtc_state->color_mgmt_changed) {
+        if (crtc_state->color_mgmt_changed ||
+            (cursor_surface_changed && cursor_only_commit)) {
             if ((ret = drm_atomic_add_affected_planes(state, crtc)) != 0) {
                 goto done;
             }

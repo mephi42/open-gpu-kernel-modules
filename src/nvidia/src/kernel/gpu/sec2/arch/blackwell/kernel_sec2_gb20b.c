@@ -38,13 +38,14 @@
 #include "fsp/fsp_caps_query_rpc.h"
 
 #include "published/blackwell/gb20b/dev_sec_pri.h"
-#include "published/blackwell/gb20b/dev_boot.h"
-#include "sec2/sec2_nvdm_format.h"
+#include "published/blackwell/gb20b/dev_boot_zb.h"
 #include "published/blackwell/gb20b/dev_falcon_v4.h"
+#include "published/blackwell/gb20b/dev_bus.h"
+#include "published/blackwell/gb20b/hwproject.h"
+#include "sec2/sec2_nvdm_format.h"
 #include "os/os.h"
 #include "nvRmReg.h"
 #include "nverror.h"
-
 
 #include "gpu/conf_compute/conf_compute.h"
 #include "conf_compute/cc_keystore.h"
@@ -545,7 +546,7 @@ _ksec2WaitBootCond_GB20B
 )
 {
     // FWSEC writes 0xFF value in NV_PMC_SCRATCH_RESET_PLUS_2 register after completion of boot
-    NvU32 reg  = GPU_REG_RD32(pGpu, NV_PMC_SCRATCH_RESET_PLUS_2);
+    NvU32 reg  = GPU_REG_RD32(pGpu, NV_PMC0_PRI_BASE + NV_PMC_ZB_SCRATCH_RESET_PLUS_2);
     return reg == 0xFF;
 }
 
@@ -852,9 +853,49 @@ ksec2DumpDebugState_GB20B
     KernelSec2 *pKernelSec2
 )
 {
+    NvU32 scratchReg = 0;
 
     NV_PRINTF(LEVEL_ERROR, "GPU %04x:%02x:%02x\n",
               gpuGetDomain(pGpu), gpuGetBus(pGpu), gpuGetDevice(pGpu));
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(12));
+    NV_PRINTF(LEVEL_ERROR, "Devinit Boot Status = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(54));
+    NV_PRINTF(LEVEL_ERROR, "COT Polling Status = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(52));
+    NV_PRINTF(LEVEL_ERROR, "FRTS Completion = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PMC0_PRI_BASE + NV_PMC_ZB_SCRATCH_RESET_PLUS_2);
+    NV_PRINTF(LEVEL_ERROR, "FWSEC Completion = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PSEC_FALCON_COMMON_SCRATCH_GROUP_2(0));
+    NV_PRINTF(LEVEL_ERROR, "FWSEC Error Code = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PSEC_FALCON_COMMON_SCRATCH_GROUP_2(1));
+    NV_PRINTF(LEVEL_ERROR, "FWSEC Offending PC = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PSEC_FALCON_COMMON_SCRATCH_GROUP_2(2));
+    NV_PRINTF(LEVEL_ERROR, "FWSEC Offending Address = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PSEC_FALCON_COMMON_SCRATCH_GROUP_2(3));
+    NV_PRINTF(LEVEL_ERROR, "FWSEC Additional info = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(0));
+    NV_PRINTF(LEVEL_ERROR, "FWSEC version = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(2));
+    NV_PRINTF(LEVEL_ERROR, "Devinit version = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(15));
+    NV_PRINTF(LEVEL_ERROR, "Failing Register Addr = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(16));
+    NV_PRINTF(LEVEL_ERROR, "Devinit PC = 0x%x\n", scratchReg);
+
+    scratchReg = GPU_REG_RD32(pGpu, NV_PBUS_SW_SCRATCH(28));
+    NV_PRINTF(LEVEL_ERROR, "PRI error code = 0x%x\n", scratchReg);
 
 }
 
@@ -964,7 +1005,7 @@ ksec2PrepareBootCommands_GB20B
     // Confirm SEC2 secure boot partition is done
     if (statusBoot != NV_OK)
     {
-        NV_PRINTF(LEVEL_ERROR, "SEC2 secure boot partition timed out.\n");
+        NV_PRINTF(LEVEL_ERROR, "FWSEC timed out processing COT command\n");
         status = statusBoot;
         goto failed;
     }
@@ -972,7 +1013,7 @@ ksec2PrepareBootCommands_GB20B
     statusBoot = ksec2SafeToSendBootCommands_HAL(pGpu, pKernelSec2);
     if (statusBoot != NV_OK)
     {
-        NV_PRINTF(LEVEL_ERROR, "SEC2 secure boot GSP prechecks failed.\n");
+        NV_PRINTF(LEVEL_ERROR, "FWSEC not ready to process COT command\n");
         status = statusBoot;
         goto failed;
     }
@@ -1011,7 +1052,7 @@ ksec2PrepareBootCommands_GB20B
     return NV_OK;
 
 failed:
-    NV_PRINTF(LEVEL_ERROR, "Preparing SEC2 boot cmds failed. RM cannot boot.\n");
+    NV_PRINTF(LEVEL_ERROR, "FWSEC failed to process boot command. RM cannot boot.\n");
 
     ksec2CleanupBootState(pGpu, pKernelSec2);
 
@@ -1045,7 +1086,7 @@ ksec2SendBootCommands_GB20B
                                     sizeof(NVDM_PAYLOAD_COT), NVDM_TYPE_COT, NULL, 0);
     if (status != NV_OK)
     {
-        NV_PRINTF(LEVEL_ERROR, "Sent following content to SEC2: \n");
+        NV_PRINTF(LEVEL_ERROR, "Sent following content to FWSEC: \n");
         NV_PRINTF(LEVEL_ERROR, "version=0x%x, size=0x%x, gspFmcSysmemOffset=0x%llx\n",
             pKernelSec2->pCotPayload->version, pKernelSec2->pCotPayload->size,
             pKernelSec2->pCotPayload->gspFmcSysmemOffset);
@@ -1075,7 +1116,7 @@ ksec2SendBootCommands_GB20B
     return NV_OK;
 
 failed:
-    NV_PRINTF(LEVEL_ERROR, "SEC2 boot cmds failed. RM cannot boot.\n");
+    NV_PRINTF(LEVEL_ERROR, "FWSEC failed to process boot command. RM cannot boot.\n");
     ksec2DumpDebugState_HAL(pGpu, pKernelSec2);
 
     ksec2CleanupBootState(pGpu, pKernelSec2);

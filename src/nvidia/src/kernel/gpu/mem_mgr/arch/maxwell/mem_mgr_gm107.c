@@ -290,6 +290,60 @@ memmgrSetZbcReferenced
             sizeof(params)));
 }
 
+/*!
+ * Get the ZBC surfaces index for the given client and device.
+ * For non-SMG, return 0
+ * Else, return the GR index owned by the client
+ */
+NV_STATUS
+_memmgrGetZbcSurfacesIndex
+(
+    OBJGPU *pGpu,
+    NvHandle hClient,
+    NvHandle hDevice,
+    NvU32 *pGrIdx
+)
+{
+    NV_STATUS                   status;
+    RM_ENGINE_TYPE              globalRmEngineType;
+    MIG_INSTANCE_REF            ref;
+    RsClient                   *pClient;
+    Device                     *pDevice;
+    KernelMIGManager           *pKernelMIGManager = GPU_GET_KERNEL_MIG_MANAGER(pGpu);
+
+    *pGrIdx = 0;
+
+    if (IS_MIG_IN_USE(pGpu))
+    {
+        NV_ASSERT_OK_OR_RETURN(serverGetClientUnderLock(&g_resServ, hClient, &pClient));
+
+        // hDevice can be either Device or Subdevice
+        status = deviceGetByHandle(pClient, hDevice, &pDevice);
+        if (status != NV_OK)
+        {
+            Subdevice *pSubdevice;
+
+            NV_ASSERT_OK_OR_RETURN(
+                subdeviceGetByHandle(pClient, hDevice, &pSubdevice));
+
+            pDevice = GPU_RES_GET_DEVICE(pSubdevice);
+        }
+
+        NV_ASSERT_OK_OR_RETURN(kmigmgrGetInstanceRefFromDevice(pGpu, pKernelMIGManager, pDevice, &ref));
+
+        NV_ASSERT_OR_RETURN(ref.pKernelMIGGpuInstance != NULL, NV_ERR_INVALID_STATE);
+        NV_ASSERT_OR_RETURN(ref.pMIGComputeInstance != NULL, NV_ERR_INVALID_STATE);
+        if(ref.pMIGComputeInstance->resourceAllocation.gfxGpcCount > 0)
+        {
+            NV_ASSERT_OK_OR_RETURN(
+                kmigmgrGetLocalToGlobalEngineType(pGpu, pKernelMIGManager, ref, RM_ENGINE_TYPE_GR(0), &globalRmEngineType));
+            *pGrIdx = RM_ENGINE_TYPE_GR_IDX(globalRmEngineType);
+        }
+    }
+
+    return NV_OK;
+}
+
 //
 // Update user alloc request parameter according to memory
 // type and (possibly) reserve hw resources.
@@ -471,19 +525,22 @@ memmgrAllocHal_GM107
     //
     if (FLD_TEST_DRF(OS32, _ATTR2, _ZBC_SKIP_ZBCREFCOUNT, _NO, pFbAllocInfo->pageFormat->attr2))
     {
-        if (
-            memmgrIsKind_HAL(pMemoryManager, FB_IS_KIND_ZBC, pFbAllocInfo->pageFormat->kind) &&
+        if (memmgrIsKind_HAL(pMemoryManager, FB_IS_KIND_ZBC, pFbAllocInfo->pageFormat->kind) &&
             !(pFbAllocInfo->pageFormat->flags & NVOS32_ALLOC_FLAGS_VIRTUAL))
         {
             retAttr2 = FLD_SET_DRF(OS32, _ATTR2, _ZBC, _PREFER_ZBC, retAttr2);
             if (!bAlignPhase)
             {
-                pMemoryManager->zbcSurfaces++;
-                NV_PRINTF(LEVEL_INFO,
-                          "zbcSurfaces = 0x%x, hwResId = 0x%x\n",
-                          pMemoryManager->zbcSurfaces, pFbAllocInfo->hwResId);
+                NvU32 zbcTableIndex;
 
-                if (pMemoryManager->zbcSurfaces == 1)
+                NV_ASSERT_OK_OR_RETURN(_memmgrGetZbcSurfacesIndex(pGpu, pFbAllocInfo->hClient, pFbAllocInfo->hDevice, &zbcTableIndex));
+
+                pMemoryManager->zbcSurfaces[zbcTableIndex]++;
+                NV_PRINTF(LEVEL_INFO,
+                          "zbcSurfaces[%d] = 0x%x, hwResId = 0x%x\n",
+                          zbcTableIndex, pMemoryManager->zbcSurfaces[zbcTableIndex], pFbAllocInfo->hwResId);
+
+                if (pMemoryManager->zbcSurfaces[zbcTableIndex] == 1)
                     memmgrSetZbcReferenced(pGpu, pFbAllocInfo->hClient, pFbAllocInfo->hDevice, NV_TRUE);
             }
         }
@@ -541,12 +598,16 @@ memmgrFreeHal_GM107
     if (FLD_TEST_DRF(OS32, _ATTR2, _ZBC_SKIP_ZBCREFCOUNT, _NO, pFbAllocInfo->pageFormat->attr2) &&
         memmgrIsKind_HAL(pMemoryManager, FB_IS_KIND_ZBC, pFbAllocInfo->format))
     {
-        NV_ASSERT(pMemoryManager->zbcSurfaces !=0 );
-        if (pMemoryManager->zbcSurfaces != 0)
-        {
-            pMemoryManager->zbcSurfaces--;
+        NvU32 zbcTableIndex;
 
-            if (pMemoryManager->zbcSurfaces == 0)
+        NV_ASSERT_OK_OR_RETURN(_memmgrGetZbcSurfacesIndex(pGpu, pFbAllocInfo->hClient, pFbAllocInfo->hDevice, &zbcTableIndex));
+
+        NV_ASSERT(pMemoryManager->zbcSurfaces[zbcTableIndex] != 0);
+        if (pMemoryManager->zbcSurfaces[zbcTableIndex] != 0)
+        {
+            pMemoryManager->zbcSurfaces[zbcTableIndex]--;
+
+            if (pMemoryManager->zbcSurfaces[zbcTableIndex] == 0)
                 memmgrSetZbcReferenced(pGpu, pFbAllocInfo->hClient, pFbAllocInfo->hDevice, NV_FALSE);
         }
 
@@ -555,8 +616,8 @@ memmgrFreeHal_GM107
                   pFbAllocInfo->hwResId, pFbAllocInfo->offset,
                   pFbAllocInfo->size);
 
-        NV_PRINTF(LEVEL_INFO, "[2] zbcSurfaces = 0x%x\n",
-                  pMemoryManager->zbcSurfaces);
+        NV_PRINTF(LEVEL_INFO, "[2] zbcSurfaces[%d] = 0x%x\n", zbcTableIndex,
+                  pMemoryManager->zbcSurfaces[zbcTableIndex]);
     }
 
     return NV_OK;
@@ -1229,7 +1290,7 @@ memmgrSetMemDescPageSize_GM107
 
     if (ADDR_SYSMEM == addrSpace)
     {
-        NvU64 sysmemPageSize = RMCFG_FEATURE_PLATFORM_UNIX ? osGetPageSize() : pMemoryManager->sysmemPageSize;
+        NvU64 sysmemPageSize = osGetPageSize();
         RmPhysAddr physAddr = memdescGetPte(pMemDesc, addressTranslation, 0);
         switch (pageSizeAttr)
         {

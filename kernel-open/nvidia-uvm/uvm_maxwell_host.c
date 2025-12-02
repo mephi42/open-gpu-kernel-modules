@@ -352,7 +352,7 @@ uvm_hal_maxwell_access_counter_query_clear_op_unsupported(uvm_parent_gpu_t *pare
                                                           NvU32 num_entries)
 {
     UVM_ASSERT_MSG(false, "host access_counter_query_clear_op called on Maxwell GPU\n");
-    return UVM_ACCESS_COUNTER_CLEAR_OP_NONE;
+    return UVM_ACCESS_COUNTER_CLEAR_OP_COUNT;
 }
 
 NvU64 uvm_hal_maxwell_get_time(uvm_gpu_t *gpu)

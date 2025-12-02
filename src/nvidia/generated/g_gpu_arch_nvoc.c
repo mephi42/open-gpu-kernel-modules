@@ -104,6 +104,29 @@ void __nvoc_init_dataField_GpuArch(GpuArch *pThis) {
     PORT_UNREFERENCED_VARIABLE(pThis);
     PORT_UNREFERENCED_VARIABLE(chipHal);
     PORT_UNREFERENCED_VARIABLE(chipHal_HalVarIdx);
+
+    // Hal field -- bGpuArchIsZeroFb
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) ) ||
+        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) )) /* ChipHal: GB10B | GB20B | GB20C */ 
+    {
+        pThis->bGpuArchIsZeroFb = ((NvBool)(0 == 0));
+    }
+    // default
+    else
+    {
+        pThis->bGpuArchIsZeroFb = ((NvBool)(0 != 0));
+    }
+
+    // Hal field -- bGpuarchSupportsIgpuRg
+    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) )) /* ChipHal: GB10B */ 
+    {
+        pThis->bGpuarchSupportsIgpuRg = ((NvBool)(0 == 0));
+    }
+    // default
+    else
+    {
+        pThis->bGpuarchSupportsIgpuRg = ((NvBool)(0 != 0));
+    }
 }
 
 NV_STATUS __nvoc_ctor_Object(Object* );
@@ -139,7 +162,7 @@ static void __nvoc_init_funcTable_GpuArch_1(GpuArch *pThis) {
     PORT_UNREFERENCED_VARIABLE(chipHal_HalVarIdx);
 
     // gpuarchGetSystemPhysAddrWidth -- halified (4 hals)
-    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00005000UL) )) /* ChipHal: T234D | T264D */ 
+    if (( ((chipHal_HalVarIdx >> 5) == 3UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x0000a000UL) )) /* ChipHal: T234D | T264D */ 
     {
         pThis->__gpuarchGetSystemPhysAddrWidth__ = &gpuarchGetSystemPhysAddrWidth_T234D;
     }
@@ -167,36 +190,13 @@ static void __nvoc_init_funcTable_GpuArch_1(GpuArch *pThis) {
     {
         pThis->__gpuarchGetDmaAddrWidth__ = &gpuarchGetDmaAddrWidth_4a4dee;
     }
-
-    // gpuarchIsZeroFb -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) ) ||
-        ( ((chipHal_HalVarIdx >> 5) == 2UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x00000c00UL) )) /* ChipHal: GB10B | GB20B | GB20C */ 
-    {
-        pThis->__gpuarchIsZeroFb__ = &gpuarchIsZeroFb_cbe027;
-    }
-    // default
-    else
-    {
-        pThis->__gpuarchIsZeroFb__ = &gpuarchIsZeroFb_491d52;
-    }
-
-    // gpuarchSupportsIgpuRg -- halified (2 hals) body
-    if (( ((chipHal_HalVarIdx >> 5) == 1UL) && ((1UL << (chipHal_HalVarIdx & 0x1f)) & 0x80000000UL) )) /* ChipHal: GB10B */ 
-    {
-        pThis->__gpuarchSupportsIgpuRg__ = &gpuarchSupportsIgpuRg_cbe027;
-    }
-    // default
-    else
-    {
-        pThis->__gpuarchSupportsIgpuRg__ = &gpuarchSupportsIgpuRg_491d52;
-    }
-} // End __nvoc_init_funcTable_GpuArch_1 with approximately 10 basic block(s).
+} // End __nvoc_init_funcTable_GpuArch_1 with approximately 6 basic block(s).
 
 
-// Initialize vtable(s) for 4 virtual method(s).
+// Initialize vtable(s) for 2 virtual method(s).
 void __nvoc_init_funcTable_GpuArch(GpuArch *pThis) {
 
-    // Initialize vtable(s) with 4 per-object function pointer(s).
+    // Initialize vtable(s) with 2 per-object function pointer(s).
     __nvoc_init_funcTable_GpuArch_1(pThis);
 }
 
@@ -231,10 +231,19 @@ NV_STATUS __nvoc_objCreate_GpuArch(GpuArch **ppThis, Dynamic *pParent, NvU32 cre
     Object *pParentObj = NULL;
     GpuArch *pThis;
 
-    // Assign `pThis`, allocating memory unless suppressed by flag.
-    status = __nvoc_handleObjCreateMemAlloc(createFlags, sizeof(GpuArch), (void**)&pThis, (void**)ppThis);
-    if (status != NV_OK)
-        return status;
+    // Don't allocate memory if the caller has already done so.
+    if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
+    {
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, ppThis != NULL && *ppThis != NULL, NV_ERR_INVALID_PARAMETER);
+        pThis = *ppThis;
+    }
+
+    // Allocate memory
+    else
+    {
+        pThis = portMemAllocNonPaged(sizeof(GpuArch));
+        NV_CHECK_OR_RETURN(LEVEL_ERROR, pThis != NULL, NV_ERR_NO_MEMORY);
+    }
 
     // Zero is the initial value for everything.
     portMemSet(pThis, 0, sizeof(GpuArch));
@@ -252,6 +261,7 @@ NV_STATUS __nvoc_objCreate_GpuArch(GpuArch **ppThis, Dynamic *pParent, NvU32 cre
         pThis->__nvoc_base_Object.pParent = NULL;
     }
 
+    // Initialize vtable, RTTI, etc., then call constructor.
     __nvoc_init__GpuArch(pThis, ChipHal_arch, ChipHal_impl, ChipHal_hidrev, TegraChipHal_tegraType);
     status = __nvoc_ctor_GpuArch(pThis, arg_chipArch, arg_chipImpl, arg_hidrev, arg_tegraType);
     if (status != NV_OK) goto __nvoc_objCreate_GpuArch_cleanup;
@@ -259,24 +269,28 @@ NV_STATUS __nvoc_objCreate_GpuArch(GpuArch **ppThis, Dynamic *pParent, NvU32 cre
     // Assignment has no effect if NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT is set.
     *ppThis = pThis;
 
+    // Success
     return NV_OK;
 
+    // Do not call destructors here since the constructor already called them.
 __nvoc_objCreate_GpuArch_cleanup:
 
     // Unlink the child from the parent if it was linked above.
     if (pParentObj != NULL)
         objRemoveChild(pParentObj, &pThis->__nvoc_base_Object);
 
-    // Do not call destructors here since the constructor already called them.
+    // Zero out memory that was allocated by caller.
     if (createFlags & NVOC_OBJ_CREATE_FLAGS_IN_PLACE_CONSTRUCT)
         portMemSet(pThis, 0, sizeof(GpuArch));
+
+    // Free memory allocated by `__nvoc_handleObjCreateMemAlloc`.
     else
     {
         portMemFree(pThis);
         *ppThis = NULL;
     }
 
-    // coverity[leaked_storage:FALSE]
+    // Failure
     return status;
 }
 

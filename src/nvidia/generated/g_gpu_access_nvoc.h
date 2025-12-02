@@ -131,7 +131,7 @@ typedef struct DEVICE_MAPPING
 {
     GPUHWREG             *gpuNvAddr;        // CPU Virtual Address
     RmPhysAddr            gpuNvPAddr;       // Physical Base Address
-    NvU32                 gpuNvLength;      // Length of the Aperture
+    NvU64                 gpuNvLength;      // Length of the Aperture
     NvU32                 gpuNvSaveLength;
     NvU32                 gpuDeviceEnum;    // Device ID NV_DEVID_*
     NvU32                 refCount;         // refCount for the device map.
@@ -443,7 +443,7 @@ struct IoAperture {
     DEVICE_MAPPING *pMapping;
     NvU32 mappingStartAddr;
     NvU32 baseAddress;
-    NvU32 length;
+    NvU64 length;
 };
 
 
@@ -491,14 +491,17 @@ extern const struct NVOC_CLASS_DEF __nvoc_class_def_IoAperture;
 
 NV_STATUS __nvoc_objCreateDynamic_IoAperture(IoAperture**, Dynamic*, NvU32, va_list);
 
-NV_STATUS __nvoc_objCreate_IoAperture(IoAperture**, Dynamic*, NvU32, struct IoAperture *arg_pParentAperture, OBJGPU *arg_pGpu, NvU32 arg_deviceIndex, NvU32 arg_deviceInstance, DEVICE_MAPPING *arg_pMapping, NvU32 arg_mappingStartAddr, NvU32 arg_offset, NvU32 arg_length);
+NV_STATUS __nvoc_objCreate_IoAperture(IoAperture**, Dynamic*, NvU32, struct IoAperture *arg_pParentAperture, OBJGPU *arg_pGpu, NvU32 arg_deviceIndex, NvU32 arg_deviceInstance, DEVICE_MAPPING *arg_pMapping, NvU32 arg_mappingStartAddr, NvU32 arg_offset, NvU64 arg_length);
 #define __objCreate_IoAperture(ppNewObj, pParent, createFlags, arg_pParentAperture, arg_pGpu, arg_deviceIndex, arg_deviceInstance, arg_pMapping, arg_mappingStartAddr, arg_offset, arg_length) \
     __nvoc_objCreate_IoAperture((ppNewObj), staticCast((pParent), Dynamic), (createFlags), arg_pParentAperture, arg_pGpu, arg_deviceIndex, arg_deviceInstance, arg_pMapping, arg_mappingStartAddr, arg_offset, arg_length)
 
 
 // Wrapper macros for implementation functions
-NV_STATUS ioaprtConstruct_IMPL(struct IoAperture *arg_pAperture, struct IoAperture *arg_pParentAperture, OBJGPU *arg_pGpu, NvU32 arg_deviceIndex, NvU32 arg_deviceInstance, DEVICE_MAPPING *arg_pMapping, NvU32 arg_mappingStartAddr, NvU32 arg_offset, NvU32 arg_length);
+NV_STATUS ioaprtConstruct_IMPL(struct IoAperture *arg_pAperture, struct IoAperture *arg_pParentAperture, OBJGPU *arg_pGpu, NvU32 arg_deviceIndex, NvU32 arg_deviceInstance, DEVICE_MAPPING *arg_pMapping, NvU32 arg_mappingStartAddr, NvU32 arg_offset, NvU64 arg_length);
 #define __nvoc_ioaprtConstruct(arg_pAperture, arg_pParentAperture, arg_pGpu, arg_deviceIndex, arg_deviceInstance, arg_pMapping, arg_mappingStartAddr, arg_offset, arg_length) ioaprtConstruct_IMPL(arg_pAperture, arg_pParentAperture, arg_pGpu, arg_deviceIndex, arg_deviceInstance, arg_pMapping, arg_mappingStartAddr, arg_offset, arg_length)
+
+void ioaprtDestruct_IMPL(struct IoAperture *pAperture);
+#define __nvoc_ioaprtDestruct(pAperture) ioaprtDestruct_IMPL(pAperture)
 
 
 // Wrapper macros for halified functions
@@ -576,7 +579,7 @@ static inline NvU32 ioaprtGetBaseAddr(struct IoAperture *pAperture) {
     return pAperture->baseAddress;
 }
 
-static inline NvU32 ioaprtGetLength(struct IoAperture *pAperture) {
+static inline NvU64 ioaprtGetLength(struct IoAperture *pAperture) {
     return pAperture->length;
 }
 

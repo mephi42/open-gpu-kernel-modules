@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -205,6 +205,7 @@ kbifPollBarFirewallDisengage_GB202
 {
     RMTIMEOUT timeout;
     NvU32     val;
+    NV_STATUS status;
 
     //
     // Polling for CFG BAR firewall disenage
@@ -220,10 +221,24 @@ kbifPollBarFirewallDisengage_GB202
     gpuSetTimeout(pGpu, NV_MAX(gpuScaleTimeout(pGpu, 500000), pGpu->timeoutData.defaultus),
                   &timeout, GPU_TIMEOUT_FLAGS_OSTIMER | GPU_TIMEOUT_FLAGS_BYPASS_THREAD_STATE);
 
-    GPU_BUS_CFG_CYCLE_RD32(pGpu, NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2, &val);
+    status = GPU_BUS_CFG_CYCLE_RD32(pGpu, NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2, &val);
+    if (status != NV_OK)
+    {
+        NV_PRINTF(LEVEL_ERROR,
+            "Unable to read NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2.\n");
+        return status;
+    }
+
     while (!FLD_TEST_DRF(_EP_PCFG_GPU, _VSEC_DEBUG_SEC_2, _BAR_FIREWALL_ENGAGE, _INIT, val))
     {
-        GPU_BUS_CFG_CYCLE_RD32(pGpu, NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2, &val);
+        status = GPU_BUS_CFG_CYCLE_RD32(pGpu, NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2, &val);
+        if (status != NV_OK)
+        {
+            NV_PRINTF(LEVEL_ERROR,
+                "Unable to read NV_EP_PCFG_GPU_VSEC_DEBUG_SEC_2.\n");
+            return status;
+        }
+
         if (gpuCheckTimeout(pGpu, &timeout) == NV_ERR_TIMEOUT)
         {
             NV_PRINTF(LEVEL_ERROR, "Timeout polling CFG BAR firewall disengage.\n");

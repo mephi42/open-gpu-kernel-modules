@@ -876,7 +876,7 @@ _fecsTimerCallback
                 osQueueWorkItem(pGpu,
                                 _fecsOsWorkItem,
                                 NULL,
-                                OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE));
+                                (OsQueueWorkItemFlags){.bLockGpuGroupDevice = NV_TRUE}));
 
             if (status != NV_OK)
                 _fecsClearCallbackScheduled(pFecsGlobalTraceInfo);

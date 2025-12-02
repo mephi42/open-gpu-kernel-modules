@@ -348,6 +348,7 @@ void uvm_hal_hopper_ce_offset_in_out(uvm_push_t *push, NvU64 offset_in, NvU64 of
 typedef NvU32 (*uvm_hal_ce_phys_mode_t)(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 NvU32 uvm_hal_maxwell_ce_phys_mode(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 NvU32 uvm_hal_ampere_ce_phys_mode(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
+NvU32 uvm_hal_hopper_ce_phys_mode(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 
 typedef NvU32 (*uvm_hal_ce_plc_mode_t)(void);
 NvU32 uvm_hal_maxwell_ce_plc_mode(void);
@@ -368,6 +369,7 @@ typedef bool (*uvm_hal_ce_memcopy_is_valid)(uvm_push_t *push, uvm_gpu_address_t 
 bool uvm_hal_maxwell_ce_memcopy_is_valid(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 bool uvm_hal_ampere_ce_memcopy_is_valid_c6b5(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 bool uvm_hal_hopper_ce_memcopy_is_valid(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
+bool uvm_hal_blackwell_ce_memcopy_is_valid(uvm_push_t *push, uvm_gpu_address_t dst, uvm_gpu_address_t src);
 
 // Patching of the memcopy source; if not needed for a given architecture use
 // the (empty) uvm_hal_ce_memcopy_patch_src_stub implementation

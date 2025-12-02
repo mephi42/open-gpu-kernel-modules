@@ -1,5 +1,5 @@
 /*******************************************************************************
-    Copyright (c) 2018-2024 NVIDIA Corporation
+    Copyright (c) 2018-2025 NVIDIA Corporation
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to
@@ -111,8 +111,6 @@ void uvm_hal_ampere_host_clear_faulted_channel_register(uvm_user_channel_t *user
     uvm_spin_loop_t spin;
     NvU32 channel_faulted_mask = 0;
     NvU32 clear_type_value = 0;
-    NvU32 doorbell_value = 0;
-    volatile NvU32 *doorbell_ptr;
 
     UVM_ASSERT(!user_channel->gpu->parent->has_clear_faulted_channel_method);
 
@@ -129,12 +127,6 @@ void uvm_hal_ampere_host_clear_faulted_channel_register(uvm_user_channel_t *user
                        uvm_mmu_engine_type_string(fault->fault_source.mmu_engine_type));
     }
 
-    doorbell_ptr = (NvU32 *)((NvU8 *)user_channel->runlist_pri_base_register + NV_RUNLIST_INTERNAL_DOORBELL);
-
-    // GFID is not required since we clear faulted channel with a SW method on
-    // SRIOV. On baremetal, GFID is always zero.
-    doorbell_value = HWVALUE(_RUNLIST, INTERNAL_DOORBELL, CHID, user_channel->hw_channel_id);
-
     // Wait for the channel to have the FAULTED bit set as this can race with
     // interrupt notification
     UVM_SPIN_WHILE(!(UVM_GPU_READ_ONCE(*user_channel->chram_channel_register) & channel_faulted_mask), &spin);
@@ -143,7 +135,7 @@ void uvm_hal_ampere_host_clear_faulted_channel_register(uvm_user_channel_t *user
 
     wmb();
 
-    UVM_GPU_WRITE_ONCE(*doorbell_ptr, doorbell_value);
+    UVM_GPU_WRITE_ONCE(*user_channel->work_submission_offset, user_channel->work_submission_token);
 }
 
 static NvU32 instance_ptr_aperture_type_to_hw_value(uvm_aperture_t aperture)

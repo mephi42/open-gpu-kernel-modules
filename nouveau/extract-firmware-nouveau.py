@@ -709,7 +709,7 @@ def main():
         ' the script will guess the URL and download the file automatically.')
     parser.add_argument('-i', '--input', default = os.getcwd(),
         help = 'Path to source directory (where version.mk exists)')
-    parser.add_argument('-o', '--output', default = os.path.abspath(os.getcwd() + '/_out'),
+    parser.add_argument('-o', '--output', default = os.path.join(os.getcwd(), '_out'),
         help = 'Path to target directory (where files will be written)')
     parser.add_argument('-r', '--revision',
         help = 'Files will be named with this version number')
@@ -724,6 +724,7 @@ def main():
         help = 'Also generate a WHENCE file')
     args = parser.parse_args()
 
+    args.output = os.path.abspath(args.output)
     os.chdir(args.input)
 
     version = args.revision
@@ -807,4 +808,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

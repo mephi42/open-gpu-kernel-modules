@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -129,6 +129,7 @@ struct __nvoc_inner_struc_KernelHead_1__ {
     } Callback;
     NvU32 VblankCountTimeout;
     NvU32 IntrState;
+    PORT_SPINLOCK *pSpinlock;
 };
 
 
@@ -168,6 +169,8 @@ struct KernelHead {
     // Data members
     struct __nvoc_inner_struc_KernelHead_1__ Vblank;
     NvU32 PublicId;
+    NvBool bIsPanelReplayEnabled;
+    void *pRgVblankCb;
 };
 
 
@@ -209,6 +212,9 @@ NV_STATUS __nvoc_objCreate_KernelHead(KernelHead**, Dynamic*, NvU32);
 // Wrapper macros for implementation functions
 NV_STATUS kheadConstruct_IMPL(struct KernelHead *arg_pKernelHead);
 #define __nvoc_kheadConstruct(arg_pKernelHead) kheadConstruct_IMPL(arg_pKernelHead)
+
+void kheadDestruct_IMPL(struct KernelHead *pKernelHead);
+#define __nvoc_kheadDestruct(pKernelHead) kheadDestruct_IMPL(pKernelHead)
 
 #ifdef __nvoc_kernel_head_h_disabled
 static inline NvU32 kheadGetVblankTotalCounter(struct KernelHead *pKernelHead) {

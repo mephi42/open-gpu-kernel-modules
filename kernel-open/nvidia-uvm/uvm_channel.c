@@ -3140,13 +3140,25 @@ static void pick_ces_conf_computing(uvm_channel_manager_t *manager,
                                                 UVM_CHANNEL_TYPE_MEMOPS,
                                                 UVM_CHANNEL_TYPE_WLC };
 
+    static const uvm_channel_type_t types_p2p[] = { UVM_CHANNEL_TYPE_CPU_TO_GPU,
+                                                    UVM_CHANNEL_TYPE_GPU_TO_CPU,
+                                                    UVM_CHANNEL_TYPE_GPU_INTERNAL,
+                                                    UVM_CHANNEL_TYPE_GPU_TO_GPU,
+                                                    UVM_CHANNEL_TYPE_MEMOPS,
+                                                    UVM_CHANNEL_TYPE_WLC };
+
     UVM_ASSERT(g_uvm_global.conf_computing_enabled);
 
-    pick_ces_for_channel_types(manager, ce_caps, types, ARRAY_SIZE(types), preferred_ce);
+    if (gpu->parent->peer_copy_mode == UVM_GPU_PEER_COPY_MODE_UNSUPPORTED) {
+        pick_ces_for_channel_types(manager, ce_caps, types, ARRAY_SIZE(types), preferred_ce);
 
-    // Direct transfers between GPUs are disallowed in Confidential Computing,
-    // but the preferred CE is still set to an arbitrary value for consistency.
-    preferred_ce[UVM_CHANNEL_TYPE_GPU_TO_GPU] = preferred_ce[UVM_CHANNEL_TYPE_GPU_TO_CPU];
+        // If direct transfers between GPUs are disallowed, the preferred
+        // CE is still set to an arbitrary value for consistency.
+        preferred_ce[UVM_CHANNEL_TYPE_GPU_TO_GPU] = preferred_ce[UVM_CHANNEL_TYPE_GPU_TO_CPU];
+    }
+    else {
+        pick_ces_for_channel_types(manager, ce_caps, types_p2p, ARRAY_SIZE(types_p2p), preferred_ce);
+    }
 
     best_wlc_ce = preferred_ce[UVM_CHANNEL_TYPE_WLC];
 

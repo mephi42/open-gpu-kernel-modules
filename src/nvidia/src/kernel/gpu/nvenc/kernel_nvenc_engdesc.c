@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2008-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2008-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -26,12 +26,7 @@
 #include "kernel/gpu/fifo/kernel_channel.h"
 #include "kernel/gpu/device/device.h"
 
-#include "class/clc0b7.h"
 #include "class/cld1b7.h"
-#include "class/cld0b7.h"
-#include "class/clc1b7.h"
-#include "class/clc2b7.h"
-#include "class/clc3b7.h"
 #include "class/clc4b7.h"
 #include "class/clb4b7.h"
 #include "class/clc7b7.h"
@@ -67,14 +62,7 @@ msencGetEngineDescFromAllocParams(OBJGPU *pGpu, NvU32 externalClassId, void *pAl
 
     switch (externalClassId)
     {
-        case NVC0B7_VIDEO_ENCODER:
-            engineInstance = 0;
-            break;
         case NVD1B7_VIDEO_ENCODER:
-        case NVD0B7_VIDEO_ENCODER:
-        case NVC1B7_VIDEO_ENCODER:
-        case NVC2B7_VIDEO_ENCODER:
-        case NVC3B7_VIDEO_ENCODER:
         case NVC4B7_VIDEO_ENCODER:
         case NVB4B7_VIDEO_ENCODER:
         case NVC7B7_VIDEO_ENCODER:

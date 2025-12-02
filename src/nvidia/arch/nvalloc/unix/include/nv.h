@@ -86,6 +86,8 @@ extern const NvBool nv_is_rm_firmware_supported_os;
 
 #define NV_RM_DEVICE_INTR_ADDRESS 0x100
 
+#define NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT 0xFFFFFFFF
+
 /*
  * Clock domain identifier, which is used for fetching the engine
  * load backed by the specified clock domain for Tegra platforms
@@ -413,6 +415,7 @@ typedef struct nv_soc_irq_info_s {
 
 #define NV_MAX_SOC_IRQS              10
 #define NV_MAX_DPAUX_NUM_DEVICES     4
+#define NV_MAX_DPAUX_DEV_NAME_SIZE   10
 
 #define NV_MAX_SOC_DPAUX_NUM_DEVICES 4
 
@@ -428,6 +431,12 @@ typedef struct nv_phys_addr_range
     NvU64 addr;
     NvU64 len;
 } nv_phys_addr_range_t;
+
+typedef struct
+{
+    char vbios_version[15];
+    char firmware_version[64];
+} nv_cached_gpu_info_t;
 
 typedef struct nv_state_t
 {
@@ -465,6 +474,7 @@ typedef struct nv_state_t
     NvU32  num_dpaux_instance;
     NvU32  interrupt_line;
     NvU32  dpaux_irqs[NV_MAX_DPAUX_NUM_DEVICES];
+    char   dpaux_devname[NV_MAX_DPAUX_NUM_DEVICES][NV_MAX_DPAUX_DEV_NAME_SIZE];
     nv_soc_irq_info_t soc_irq_info[NV_MAX_SOC_IRQS];
     NvS32 current_soc_irq;
     NvU32 num_soc_irqs;
@@ -481,6 +491,7 @@ typedef struct nv_state_t
     NvBool is_tegra_pci_igpu;
     NvBool supports_tegra_igpu_rg;
     NvBool is_tegra_pci_igpu_rg_enabled;
+    NvU32 tegra_pci_igpu_pg_mask;
 
     NvBool primary_vga;
 
@@ -588,8 +599,12 @@ typedef struct nv_state_t
     /* Console is managed by drm drivers or NVKMS */
     NvBool client_managed_console;
 
-    /* Bool to check if power management is unsupported */
+    /* Struct to cache the gpu info details */
+    nv_cached_gpu_info_t cached_gpu_info;
+
+    /* Bool to check if power management is supported */
     NvBool is_pm_unsupported;
+
 } nv_state_t;
 
 #define NVFP_TYPE_NONE       0x0
@@ -651,7 +666,7 @@ typedef struct UvmGpuPagingChannelInfo_tag          *nvgpuPagingChannelInfo_t;
 typedef enum   UvmPmaGpuMemoryType_tag               nvgpuGpuMemoryType_t;
 typedef NV_STATUS (*nvPmaEvictPagesCallback)(void *, NvU64, NvU64 *, NvU32, NvU64, NvU64, nvgpuGpuMemoryType_t);
 typedef NV_STATUS (*nvPmaEvictRangeCallback)(void *, NvU64, NvU64, nvgpuGpuMemoryType_t);
-
+typedef struct UvmGpuAccessBitsBufferAlloc_tag      *nvgpuAccessBitBufferAlloc_t;
 /*
  * flags
  */
@@ -988,6 +1003,7 @@ NvBool    NV_API_CALL nv_match_gpu_os_info(nv_state_t *, void *);
 
 void      NV_API_CALL nv_get_updated_emu_seg(NvU32 *start, NvU32 *end);
 void      NV_API_CALL nv_get_screen_info(nv_state_t *, NvU64 *, NvU32 *, NvU32 *, NvU32 *, NvU32 *, NvU64 *);
+void      NV_API_CALL nv_set_gpu_pg_mask(nv_state_t *);
 
 struct dma_buf;
 typedef struct nv_dma_buf nv_dma_buf_t;
@@ -1107,16 +1123,15 @@ NvBool     NV_API_CALL  rm_isr                   (nvidia_stack_t *, nv_state_t *
 void       NV_API_CALL  rm_isr_bh                (nvidia_stack_t *, nv_state_t *);
 void       NV_API_CALL  rm_isr_bh_unlocked       (nvidia_stack_t *, nv_state_t *);
 NvBool     NV_API_CALL  rm_is_msix_allowed       (nvidia_stack_t *, nv_state_t *);
+NvBool     NV_API_CALL  rm_wait_for_bar_firewall (nvidia_stack_t *, NvU32 domain, NvU8 bus, NvU8 device, NvU8 function, NvU16 devId, NvU16 subsystemId);
 NV_STATUS  NV_API_CALL  rm_pmu_perfmon_get_load  (nvidia_stack_t *, nv_state_t *, NvU32 *, TEGRASOC_DEVFREQ_CLK);
 NV_STATUS  NV_API_CALL  rm_power_management      (nvidia_stack_t *, nv_state_t *, nv_pm_action_t);
 NV_STATUS  NV_API_CALL  rm_stop_user_channels    (nvidia_stack_t *, nv_state_t *);
 NV_STATUS  NV_API_CALL  rm_restart_user_channels (nvidia_stack_t *, nv_state_t *);
 NV_STATUS  NV_API_CALL  rm_save_low_res_mode     (nvidia_stack_t *, nv_state_t *);
-void       NV_API_CALL  rm_get_vbios_version     (nvidia_stack_t *, nv_state_t *, char *);
 char*      NV_API_CALL  rm_get_gpu_uuid          (nvidia_stack_t *, nv_state_t *);
 const NvU8* NV_API_CALL rm_get_gpu_uuid_raw      (nvidia_stack_t *, nv_state_t *);
 void       NV_API_CALL  rm_set_rm_firmware_requested(nvidia_stack_t *, nv_state_t *);
-void       NV_API_CALL  rm_get_firmware_version  (nvidia_stack_t *, nv_state_t *, char *, NvLength);
 void       NV_API_CALL  rm_cleanup_file_private  (nvidia_stack_t *, nv_state_t *, nv_file_private_t *);
 void       NV_API_CALL  rm_unbind_lock           (nvidia_stack_t *, nv_state_t *);
 NV_STATUS  NV_API_CALL  rm_read_registry_dword   (nvidia_stack_t *, nv_state_t *, const char *, NvU32 *);

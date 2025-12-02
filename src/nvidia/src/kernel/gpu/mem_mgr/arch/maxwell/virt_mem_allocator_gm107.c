@@ -125,8 +125,6 @@
 #include "kernel/gpu/fifo/kernel_channel.h"
 #include "rmapi/mapping_list.h"
 
-#include "mem_mgr/fla_mem.h"
-
 #include "gpu/mmu/kern_gmmu.h"
 #include "gpu/mem_sys/kern_mem_sys.h"
 #include "gpu_mgr/gpu_group.h"
@@ -177,21 +175,6 @@ typedef struct VASINFO_MAXWELL
     VAS_ALLOC_FLAGS flags;
     VA_MANAGEMENT management; // Level of management.
 } VASINFO_MAXWELL, *PVASINFO_MAXWELL;
-
-static NvBool isPageSizeCompatibleWithVA(NvU64 va_addr, NvU64 fb_addr, NvU64 pageSize)
-{
-    NvU64 pageOffset = fb_addr & (pageSize - 1);
-    NvU64 vaLo = RM_ALIGN_DOWN(va_addr, pageSize);
-    if ((va_addr - vaLo) != 0 &&
-        (va_addr - vaLo) != pageOffset)
-    {
-        return NV_FALSE;
-    }
-    else 
-    {
-        return NV_TRUE;
-    }
-}
 
 static NV_STATUS _dmaGetMaxVAPageSize
 (
@@ -265,6 +248,21 @@ static NV_STATUS _dmaGetMaxVAPageSize
     *pVaMaxPageSize = vaMaxPageSize;
 
     return NV_OK;
+}
+
+static NvBool isPageSizeCompatibleWithVA(NvU64 va_addr, NvU64 fb_addr, NvU64 pageSize)
+{
+    NvU64 pageOffset = fb_addr & (pageSize - 1);
+    NvU64 vaLo = RM_ALIGN_DOWN(va_addr, pageSize);
+    if ((va_addr - vaLo) != 0 &&
+        (va_addr - vaLo) != pageOffset)
+    {
+        return NV_FALSE;
+    }
+    else 
+    {
+        return NV_TRUE;
+    }
 }
 
 NvBool
@@ -649,7 +647,6 @@ dmaAllocMapping_GM107
                     }
                 }
             }
-
             NV_ASSERT_OR_GOTO(pLocals->pageSize != 0, cleanup);
             break;
         case NVOS46_FLAGS_PAGE_SIZE_4KB:
@@ -1099,28 +1096,10 @@ dmaAllocMapping_GM107
     if (pLocals->p2p == NVOS46_FLAGS_P2P_ENABLE_NOSLI)
     {
         NV_ASSERT_OR_GOTO(pLocals->pMemory != NULL, fail_post_register);
+        pLocals->pSrcGpu = pLocals->pMemory->pGpu;
 
-        FlaMemory *pFlaMemory = dynamicCast(pLocals->pMemory, FlaMemory);
-        if (pFlaMemory != NULL)
-        {
-            pLocals->pSrcGpu        = gpumgrGetGpu(pFlaMemory->peerGpuInst);
-            pLocals->bFlaImport     = NV_TRUE;
-
-            if (!pLocals->pSrcGpu)
-            {
-                NV_PRINTF(LEVEL_ERROR, "Cannot map FLA Memory without a valid srcGpu, failing....\n");
-                status = NV_ERR_INVALID_ARGUMENT;
-                DBG_BREAKPOINT();
-                goto fail_post_register;
-            }
-        }
-        else
-        {
-            pLocals->pSrcGpu = pLocals->pMemory->pGpu;
-
-            // XXX - is this required here if we disable SLI BC below?
-            GPU_RES_SET_THREAD_BC_STATE(pLocals->pMemory->pDevice);
-        }
+        // XXX - is this required here if we disable SLI BC below?
+        GPU_RES_SET_THREAD_BC_STATE(pLocals->pMemory->pDevice);
 
         if (IsSLIEnabled(pLocals->pSrcGpu))
         {
@@ -1473,7 +1452,6 @@ dmaAllocMapping_GM107
             // performant SYS_COH mode or the more performant SYS_NCOH mode with cache mgmt ops to maintain
             // functional correctness.
             //
-
             NV_PRINTF(LEVEL_INFO, "SYS_NCOH + VOL=1 mappings do not support platform atomics.\n");
         }
 
@@ -2305,7 +2283,7 @@ dmaUpdateVASpace_GF100
     // encounter a case where a larger page granularity physical surface gets
     // represented by a smaller granularity pageArray.
     //
-    if (!pMemoryManager->bEnableDynamicGranularityPageArrays)
+    if (!SYS_GET_INSTANCE()->bEnableDynamicGranularityPageArrays)
     {
         //
         // VMM-TODO: Merge into PL1 traveral.
@@ -2376,7 +2354,7 @@ dmaUpdateVASpace_GF100
     {
         NvU32       kind = pComprInfo->kind;
         NvU32       kindNoCompression;
-        
+
         // If the original kind is compressible we need to know what the non-compresible
         // kind is so we can fall back to that if we run out of compression tags.
         //
@@ -2710,7 +2688,7 @@ dmaMapBuffer_GM107
 )
 {
     MemoryManager    *pMemoryManager = GPU_GET_MEMORY_MANAGER(pGpu);
-
+    KernelMemorySystem *pKernelMemorySystem = GPU_GET_KERNEL_MEMORY_SYSTEM(pGpu);
     KernelGmmu *pKernelGmmu = GPU_GET_KERNEL_GMMU(pGpu);
     NvU32       kind;
     COMPR_INFO  comprInfo;
@@ -2730,6 +2708,7 @@ dmaMapBuffer_GM107
     NvU64       pageOffs = 0;
     NvU64       pageOffsSubDev = 0;
     NvU32       flags;
+    NvBool      bVolatile;
 
     DMA_PAGE_ARRAY pageArray;
     MEMORY_DESCRIPTOR *pSubDevMemDesc  = NULL;
@@ -2862,6 +2841,19 @@ dmaMapBuffer_GM107
         aperture = GMMU_APERTURE_SYS_NONCOH;
     }
 
+    bVolatile = dmaIsDefaultGpuUncached_HAL(pDma, pSubDevMemDesc, aperture, NV_FALSE);
+
+    if (kmemsysNeedInvalidateGpuCacheOnUnmap(pGpu, pKernelMemorySystem, bVolatile, aperture))
+    {
+        MEMORY_DESCRIPTOR *pRootMemDesc = memdescGetRootMemDesc(pSubDevMemDesc, NULL);
+
+        // mapping creates submemdesc for mapping GPU
+        NV_ASSERT_OR_RETURN(pGpu == pRootMemDesc->pGpu && memdescGetAddressSpace(pRootMemDesc) == ADDR_SYSMEM,
+                            NV_ERR_INVALID_ARGUMENT);
+
+        pRootMemDesc->bInvalidateL2OnFree = NV_TRUE;
+    }
+
     status = dmaUpdateVASpace_HAL(pGpu, pDma, pVAS,
                                   pSubDevMemDesc,
                                   NULL,
@@ -2871,7 +2863,7 @@ dmaMapBuffer_GM107
                                   0,
                                   NV_MMU_PTE_VALID_TRUE,
                                   aperture,
-                                  dmaIsDefaultGpuUncached_HAL(pDma, pSubDevMemDesc, aperture, NV_FALSE),
+                                  bVolatile,
                                   0,
                                   NVLINK_INVALID_FABRIC_ADDR,
                                   NV_FALSE, NV_FALSE,

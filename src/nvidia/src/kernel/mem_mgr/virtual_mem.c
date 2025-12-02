@@ -741,38 +741,6 @@ virtmemAllocResources
     NV_CHECK_OK_OR_GOTO(status, LEVEL_ERROR, memUtilsAllocMemDesc(pGpu, pAllocRequest, pFbAllocInfo, &pMemDesc, NULL,
                                                                   ADDR_VIRTUAL, NV_TRUE, &bAllocedMemDesc), failed);
 
-    // Only a kernel client can request for a protected allocation
-    if (pFbAllocInfo->pageFormat->flags & NVOS32_ALLOC_FLAGS_ALLOCATE_KERNEL_PRIVILEGED)
-    {
-        CALL_CONTEXT *pCallContext = resservGetTlsCallContext();
-        RS_PRIV_LEVEL privLevel;
-
-        //
-        // This fn has usescases where call context is unavailable.
-        // In those cases, fall back to cached privileges.
-        //
-        if (pCallContext == NULL)
-        {
-            privLevel = rmclientGetCachedPrivilege(pFbAllocInfoClient);
-        }
-        else
-        {
-            privLevel = pCallContext->secInfo.privLevel;
-        }
-
-        if (
-            (privLevel >= RS_PRIV_LEVEL_KERNEL))
-        {
-            pFbAllocInfo->bIsKernelAlloc = NV_TRUE;
-        }
-        else
-        {
-            NV_PRINTF(LEVEL_ERROR, "NV_ERR_INSUFFICIENT_PERMISSIONS\n");
-            status = NV_ERR_INSUFFICIENT_PERMISSIONS;
-            goto failed;
-        }
-    }
-
     // Allocate a virtual surface
     if (pVidHeapAlloc->flags & NVOS32_ALLOC_FLAGS_FIXED_ADDRESS_ALLOCATE)
         pFbAllocInfo->offset = pVidHeapAlloc->offset - pFbAllocInfo->alignPad;
@@ -1519,10 +1487,26 @@ vgpu_send_rpc:
 
     if (pMemory->bRpcAlloc)
     {
-        NV_RM_RPC_MAP_MEMORY_DMA(pGpu, hClient, hBroadcastDevice, hVirtualMem, pMemoryRef->hResource,
-                                 offset, length, flags, pDmaOffset, status);
+        NVOS46_PARAMETERS params = {0};
+
+        params.hClient = hClient;
+        params.hDevice = hBroadcastDevice;
+        params.hDma = hVirtualMem;
+        params.hMemory = pMemoryRef->hResource;
+        params.offset = offset;
+        params.length = length;
+        params.flags = flags;
+        params.dmaOffset = *pDmaOffset;
+        if (bSetPteKind)
+        {
+            params.kindOverride = pteKind;
+        }
+
+        NV_RM_RPC_MAP_MEMORY_DMA(pGpu, &params, status);
         if (status != NV_OK)
             goto done;
+
+        *pDmaOffset = params.dmaOffset;
 
         if ((IS_VIRTUAL(pGpu) || IS_GSP_CLIENT(pGpu)) &&
             !gpuIsSplitVasManagementServerClientRmEnabled(pGpu))
@@ -1817,6 +1801,8 @@ failed:
     {
         if (pDmaMappingInfoLeft != NULL)
         {
+            memdescFree(pDmaMappingInfoLeft->pMemDesc);
+            memdescDestroy(pDmaMappingInfoLeft->pMemDesc);
             if (bDmaMappingInfoLeftRegistered)
                 intermapDelDmaMapping(pClient, pVirtualMemory, pDmaMappingInfoLeft->DmaOffset, gpuMask);
             else
@@ -1825,6 +1811,8 @@ failed:
 
         if (pDmaMappingInfoRight != NULL)
         {
+            memdescFree(pDmaMappingInfoRight->pMemDesc);
+            memdescDestroy(pDmaMappingInfoRight->pMemDesc);
             if (bDmaMappingInfoRightRegistered)
                 intermapDelDmaMapping(pClient, pVirtualMemory, pDmaMappingInfoRight->DmaOffset, gpuMask);
             else
@@ -1860,7 +1848,16 @@ failed:
         //
         // ifbDestruct_IMPL-> RmUnmapMemoryDma should not RPC_UNMAP_MEMORY_DMA since RPC_FREE is invoked in call stack earlier.
         //
-        NV_RM_RPC_UNMAP_MEMORY_DMA(pGpu, hClient, hBroadcastDevice, hVirtualMem, hMemory, 0, dmaOffset, status);
+        NVOS47_PARAMETERS params = {0};
+
+        params.hClient = hClient;
+        params.hDevice = hBroadcastDevice;
+        params.hDma = hVirtualMem;
+        params.hMemory = hMemory;
+        params.size = 0;
+        params.dmaOffset = dmaOffset;
+
+        NV_RM_RPC_UNMAP_MEMORY_DMA(pGpu, &params, status);
     }
 
     return status;

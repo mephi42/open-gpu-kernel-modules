@@ -254,7 +254,7 @@ kchangrpapiConstruct_IMPL
         // RM reserved heap. This avoids a constant memory allocation from appearing
         // due to the ctxBufPool reservation out of PMA.
         //
-        if ((pRmClient == NULL) || !(pRmClient->Flags & RMAPI_CLIENT_FLAG_RM_INTERNAL_CLIENT))
+        if ((pRmClient == NULL) || !serverIsClientInternal(&g_resServ, pParams->hClient))
         {
             NV_ASSERT_OK_OR_GOTO(rmStatus,
                 ctxBufPoolInit(pGpu, pHeap, &pKernelChannelGroup->pCtxBufPool),

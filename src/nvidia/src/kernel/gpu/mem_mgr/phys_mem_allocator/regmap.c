@@ -751,7 +751,7 @@ loop_begin:
     if (localStride != 0)
     {
         // Put the address into the correct strideStart
-        if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+        if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
         {
             // align up to next stride
             frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);
@@ -770,7 +770,7 @@ loop_begin:
             frameBaseIdx = nextStrideStart;
 
             // Put the address into the correct strideStart
-            if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+            if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
             {
                 // align up to next stride
                 frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);
@@ -810,7 +810,7 @@ loop_begin:
                     frameBaseIdx = alignUpToMod(frameBaseIdx + 1, (localStride * 2), strideRegionAlignmentPadding);
 
                     // Put the address into the correct strideStart
-                    if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+                    if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
                     {
                         // align up to next stride
                         frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);
@@ -1052,7 +1052,7 @@ loop_begin:
     if (localStride != 0)
     {
         // Put the address into the correct strideStart
-        if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+        if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
         {
             // align up to next stride
             frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);
@@ -1071,7 +1071,7 @@ loop_begin:
             frameBaseIdx = nextStrideStart;
 
             // Put the address into the correct strideStart
-            if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+            if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
             {
                 // align up to next stride
                 frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);
@@ -1111,7 +1111,7 @@ loop_begin:
                     frameBaseIdx = alignUpToMod(frameBaseIdx + 1, (localStride * 2), strideRegionAlignmentPadding);
 
                     // Put the address into the correct strideStart
-                    if ((((frameBaseIdx - frameAlignmentPadding) / localStride) % 2) != strideStart)
+                    if ((((frameBaseIdx - strideRegionAlignmentPadding) / localStride) % 2) != strideStart)
                     {
                         // align up to next stride
                         frameBaseIdx = alignUpToMod((frameBaseIdx + 1), localStride, strideAlignmentPadding);

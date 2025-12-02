@@ -53,9 +53,7 @@ kvidengIsVideoTraceLogSupported_IMPL
     OBJGPU *pGpu
 )
 {
-    NvBool bSupported = !hypervisorIsVgxHyper() &&
-                        !gpuIsSriovEnabled(pGpu) &&
-                        !RMCFG_FEATURE_MODS_FEATURES &&
+    NvBool bSupported = !RMCFG_FEATURE_MODS_FEATURES &&
                         !IS_SIMULATION(pGpu);
 
     bSupported &= !gpuIsCCFeatureEnabled(pGpu);
@@ -68,6 +66,11 @@ kvidengIsVideoTraceLogSupported_IMPL
         bSupported &= (pVSI != NULL) &&
                       pVSI->vgpuStaticProperties.bProfilingTracingEnabled &&
                       IS_VIRTUAL_WITH_FULL_SRIOV(pGpu);
+    }
+
+    if (hypervisorIsVgxHyper())
+    {
+        bSupported = NV_FALSE;
     }
 
     if (pGpu->kernelVideoEngines[0] != NULL)

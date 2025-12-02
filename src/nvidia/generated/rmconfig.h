@@ -5,7 +5,7 @@
 // Profile:  shipping-gpus-openrm
 // Template: templates/gt_rmconfig.h
 //
-// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD102, AD103, AD104, AD106, AD107, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
+// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD10X, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
 //
 
 #ifndef _RMCFG_H_
@@ -47,24 +47,6 @@
 //
 // CHIPS - enabled or disabled
 //
-#define RMCFG_CHIP_GM107     0
-#define RMCFG_CHIP_GM108     0
-
-#define RMCFG_CHIP_GM200     0
-#define RMCFG_CHIP_GM204     0
-#define RMCFG_CHIP_GM206     0
-
-#define RMCFG_CHIP_GP100     0
-#define RMCFG_CHIP_GP102     0
-#define RMCFG_CHIP_GP104     0
-#define RMCFG_CHIP_GP106     0
-#define RMCFG_CHIP_GP107     0
-#define RMCFG_CHIP_GP108     0
-
-#define RMCFG_CHIP_GV100     0
-
-#define RMCFG_CHIP_GV11B     0
-
 #define RMCFG_CHIP_TU102     1
 #define RMCFG_CHIP_TU104     1
 #define RMCFG_CHIP_TU106     1
@@ -103,8 +85,6 @@
 #define RMCFG_CHIP_GB20B     1
 #define RMCFG_CHIP_GB20C     1
 
-#define RMCFG_CHIP_T194      0
-
 #define RMCFG_CHIP_T234      0
 
 #define RMCFG_CHIP_T234D     1
@@ -140,11 +120,25 @@
 #define RMCFG_CHIP_GK110C    0
 #define RMCFG_CHIP_GK208     0
 #define RMCFG_CHIP_GK208S    0
+#define RMCFG_CHIP_GM107     0
+#define RMCFG_CHIP_GM108     0
+#define RMCFG_CHIP_GM200     0
+#define RMCFG_CHIP_GM204     0
+#define RMCFG_CHIP_GM206     0
+#define RMCFG_CHIP_GP100     0
+#define RMCFG_CHIP_GP102     0
+#define RMCFG_CHIP_GP104     0
+#define RMCFG_CHIP_GP106     0
+#define RMCFG_CHIP_GP107     0
+#define RMCFG_CHIP_GP108     0
+#define RMCFG_CHIP_GV100     0
+#define RMCFG_CHIP_GV11B     0
 #define RMCFG_CHIP_T001_FERMI_NOT_EXIST 0
 #define RMCFG_CHIP_T124      0
 #define RMCFG_CHIP_T132      0
 #define RMCFG_CHIP_T210      0
 #define RMCFG_CHIP_T186      0
+#define RMCFG_CHIP_T194      0
 #define RMCFG_CHIP_T002_TURING_NOT_EXIST 0
 #define RMCFG_CHIP_T003_ADA_NOT_EXIST 0
 #define RMCFG_CHIP_T004_HOPPER_NOT_EXIST 0
@@ -174,9 +168,9 @@
 #define RMCFG_CHIP_MAXWELL_CLASSIC_GPUS 0
 #define RMCFG_CHIP_dPASCAL   0
 #define RMCFG_CHIP_DPASCAL   0
-#define RMCFG_CHIP_COMPUTE   1
 #define RMCFG_CHIP_PASCAL    0
 #define RMCFG_CHIP_PASCAL_CLASSIC_GPUS 0
+#define RMCFG_CHIP_COMPUTE   1
 #define RMCFG_CHIP_dVOLTA    0
 #define RMCFG_CHIP_DVOLTA    0
 #define RMCFG_CHIP_VOLTA     0
@@ -224,10 +218,10 @@
 #define RMCFG_CHIP_tPASCAL   0
 #define RMCFG_CHIP_TPASCAL   0
 #define RMCFG_CHIP_PASCAL_TEGRA_BIG_GPUS 0
-#define RMCFG_CHIP_DISPLAYLESS_TEGRA_BIG_GPUS 0
 #define RMCFG_CHIP_tVOLTA    0
 #define RMCFG_CHIP_TVOLTA    0
 #define RMCFG_CHIP_VOLTA_TEGRA_BIG_GPUS 0
+#define RMCFG_CHIP_DISPLAYLESS_TEGRA_BIG_GPUS 0
 #define RMCFG_CHIP_TURING_TEGRA_BIG_GPUS 0
 #define RMCFG_CHIP_T23X      1
 #define RMCFG_CHIP_T23X_TEGRA_BIG_GPUS 0
@@ -387,7 +381,6 @@
 #define RMCFG_CLASS_NV01_MEMORY_LIST_FBMEM        1
 #define RMCFG_CLASS_NV01_MEMORY_LIST_OBJECT       1
 #define RMCFG_CLASS_NV_IMEX_SESSION               1
-#define RMCFG_CLASS_NV01_MEMORY_FLA               1
 #define RMCFG_CLASS_NV_MEMORY_EXPORT              1
 #define RMCFG_CLASS_NV_CE_UTILS                   1
 #define RMCFG_CLASS_NV_MEMORY_FABRIC              1
@@ -412,6 +405,7 @@
 #define RMCFG_CLASS_NV01_TIMER                    1
 #define RMCFG_CLASS_NV1_TIMER                     1  // aka NV01_TIMER
 #define RMCFG_CLASS_KERNEL_GRAPHICS_CONTEXT       1  // Graphics Context in Kernel side
+#define RMCFG_CLASS_KERNEL_WATCHDOG               1  // RC watchdog on CPU
 #define RMCFG_CLASS_LOCK_STRESS_OBJECT            1  // Lock Stress Testing Object
 #define RMCFG_CLASS_LOCK_TEST_RELAXED_DUP_OBJECT  1  // Relaxed Dup Lock Testing Object
 #define RMCFG_CLASS_NV50_CHANNEL_GPFIFO           1
@@ -528,13 +522,7 @@
 #define RMCFG_CLASS_FERMI_VASPACE_A               1  // FERMI virtual address space
 #define RMCFG_CLASS_HOPPER_SEC2_WORK_LAUNCH_A     1  // Confidential Computing Work Launch
 #define RMCFG_CLASS_GF100_HDACODEC                1
-#define RMCFG_CLASS_NVA0B0_VIDEO_DECODER          0  // Combined MSVLD, MSPPP, MSPDEC (Maxwell)
-#define RMCFG_CLASS_NVB0B0_VIDEO_DECODER          0  // Decoder Class for GM20X
-#define RMCFG_CLASS_NVB6B0_VIDEO_DECODER          0  // Decoder Class for GM206
 #define RMCFG_CLASS_NVB8B0_VIDEO_DECODER          1  // Decoder Class for Hopper
-#define RMCFG_CLASS_NVC1B0_VIDEO_DECODER          0  // Decoder Class for Pascal
-#define RMCFG_CLASS_NVC2B0_VIDEO_DECODER          0  // Decoder Class for Pascal
-#define RMCFG_CLASS_NVC3B0_VIDEO_DECODER          0  // Decoder Class for Volta
 #define RMCFG_CLASS_NVC4B0_VIDEO_DECODER          1  // Decoder Class for Turing
 #define RMCFG_CLASS_NVC6B0_VIDEO_DECODER          1  // Decoder Class for Ampere
 #define RMCFG_CLASS_NVC7B0_VIDEO_DECODER          1  // Decoder Class for Ampere
@@ -543,11 +531,6 @@
 #define RMCFG_CLASS_NVCEB0_VIDEO_DECODER          1  // Decoder Class for Blackwell iGPU
 #define RMCFG_CLASS_NVCFB0_VIDEO_DECODER          1  // Decoder Class for GB20X
 #define RMCFG_CLASS_NVD1B0_VIDEO_DECODER          1  // Decoder Class for GB20Y
-#define RMCFG_CLASS_NVC0B7_VIDEO_ENCODER          0
-#define RMCFG_CLASS_NVD0B7_VIDEO_ENCODER          0
-#define RMCFG_CLASS_NVC1B7_VIDEO_ENCODER          0
-#define RMCFG_CLASS_NVC2B7_VIDEO_ENCODER          0
-#define RMCFG_CLASS_NVC3B7_VIDEO_ENCODER          0
 #define RMCFG_CLASS_NVC4B7_VIDEO_ENCODER          1
 #define RMCFG_CLASS_NVB4B7_VIDEO_ENCODER          1
 #define RMCFG_CLASS_NVC7B7_VIDEO_ENCODER          1
@@ -633,6 +616,9 @@
 #define RMCFG_CLASS_NV_CONFIDENTIAL_COMPUTE       1  // Confidential Computing Class
 #define RMCFG_CLASS_NV_COUNTER_COLLECTION_UNIT    1  // Counter Collection Unit Class
 #define RMCFG_CLASS_NV_SEMAPHORE_SURFACE          1  // GPU Semaphore encapsulation class
+#define RMCFG_CLASS_NV_SCHEDULER                  0  // GPU Scheduler class
+#define RMCFG_CLASS_CMC_API                       0  // CMC API class
+#define RMCFG_CLASS_CMC_UMD_API                   0  // CMC UMD Api class
 
 
 
@@ -651,6 +637,7 @@
 #define RMCFG_MODULE_MUTEXABLE                    0  // Base class for engines that implements mutex
 #define RMCFG_MODULE_GpuMutexMgr                  0  // GPU Mutex Manager
 #define RMCFG_MODULE_GPUMUTEXMGR                  0  // aka GpuMutexMgr
+#define RMCFG_MODULE_PXUC                         0  // PXUC Interface
 #define RMCFG_MODULE_BIF                          0  // Bus Interface
 #define RMCFG_MODULE_KERNEL_BIF                   1  // Bus Interface on Kernel(CPU) RM
 #define RMCFG_MODULE_BUS                          0  // Bus
@@ -804,6 +791,7 @@
 #define RMCFG_MODULE_GPUGRP                       1  // Group of GPU(s) that may or may not be in SLI
 #define RMCFG_MODULE_KERNEL_HWPM                  1  // Hardware Performance Monitor on Kernel(CPU) RM
 #define RMCFG_MODULE_HWPM                         0  // Hardware Performance Monitor
+#define RMCFG_MODULE_NOISE                        0  // Noise mitigation features as part of wider DVFS/power management
 #define RMCFG_MODULE_NVLINK                       0  // NVLINK High-speed GPU interconnect
 #define RMCFG_MODULE_KERNEL_NVLINK                1  // Nvlink on Kernel(CPU) RM
 #define RMCFG_MODULE_IOCTRL                       0  // NVLINK Ioctrl
@@ -818,6 +806,7 @@
 #define RMCFG_MODULE_RPCSTRUCTURECOPY             1  // RPC structure copying for VGPU
 #define RMCFG_MODULE_NVJPG                        0  // Video JPEG (NVJPG) Engine
 #define RMCFG_MODULE_KERNEL_NVJPG                 1
+#define RMCFG_MODULE_FSP                          0  // Firmware security processor
 #define RMCFG_MODULE_KERNEL_FSP                   1  // FSP on Kernel(CPU) RM
 #define RMCFG_MODULE_GSP                          0  // GPU system processor
 #define RMCFG_MODULE_KERNEL_GSP                   1  // GSP on Kernel(CPU) RM. Used for booting RM on GSP.
@@ -831,6 +820,7 @@
 #define RMCFG_MODULE_DCB                          0  // Display Control Block for all display related data in VBIOS/DCB Image
 #define RMCFG_MODULE_DISPMACRO                    0  // DispMacro RM infrastructure for IED removal from VBIOS
 #define RMCFG_MODULE_CONF_COMPUTE                 1  // Confidential Compute
+#define RMCFG_MODULE_GSPLITE                      0  // GSPLITE Engines
 #define RMCFG_MODULE_KERNEL_GSPLITE               1  // Required for interfacing with GSPLITE engine from Kernel-RM.
 #define RMCFG_MODULE_DISP_MGR                     0  // Lid- and dock-related disp code for NOTEBOOK
 #define RMCFG_MODULE_PLATFORM                     1  // Object for platform related features

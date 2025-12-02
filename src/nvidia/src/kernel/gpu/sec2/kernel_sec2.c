@@ -97,7 +97,8 @@ _ksec2InitRegistryOverrides
 )
 {
     NvU32 data = 0;
-    if (osReadRegistryDword(pGpu, NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT, &data) == NV_OK && data == NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT_DISABLE)
+    if ((osReadRegistryDword(pGpu, NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT, &data) == NV_OK && data == NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT_DISABLE) || (osReadRegistryDword(pGpu, NV_REG_STR_RM_DEVINIT_BY_SECURE_BOOT, &data) != NV_OK && (IS_EMULATION(pGpu) ||
+        IS_FMODEL(pGpu) || IS_RTLSIM(pGpu))))
     {
         NV_PRINTF(LEVEL_WARNING, "RM to boot GSP due to regkey override.\n");
         pKernelSec2->setProperty(pKernelSec2, PDB_PROP_KSEC2_RM_BOOT_GSP, NV_TRUE);

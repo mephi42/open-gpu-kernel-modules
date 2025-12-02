@@ -165,6 +165,8 @@ typedef struct NV2080_CTRL_ECC_GET_SRAM_UNIQUE_UNCORR_COUNTS_PARAMS {
 #define NV2080_CTRL_ECC_ERROR_TYPE_CORRECTED    0
 #define NV2080_CTRL_ECC_ERROR_TYPE_UNCORRECTED  1
 
+
+
 /*
  * NV2080_CTRL_CMD_ECC_INJECT_ERROR
  *
@@ -185,8 +187,7 @@ typedef struct NV2080_CTRL_ECC_GET_SRAM_UNIQUE_UNCORR_COUNTS_PARAMS {
  *   address
  *     Specific injection address for DRAM
  */
-
-#define NV2080_CTRL_CMD_ECC_INJECT_ERROR (0x20803403) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_ECC_INTERFACE_ID << 8) | NV2080_CTRL_ECC_INJECT_ERROR_PARAMS_MESSAGE_ID" */
+#define NV2080_CTRL_CMD_ECC_INJECT_ERROR                         (0x20803403) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_ECC_INTERFACE_ID << 8) | NV2080_CTRL_ECC_INJECT_ERROR_PARAMS_MESSAGE_ID" */
 
 #define NV2080_CTRL_ECC_INJECT_ERROR_PARAMS_MESSAGE_ID (0x3U)
 
@@ -217,5 +218,38 @@ typedef struct NV2080_CTRL_ECC_GET_REPAIR_STATUS_PARAMS {
     NvBool bTpcRepairPending;
     NvBool bChannelRepairPending;
 } NV2080_CTRL_ECC_GET_REPAIR_STATUS_PARAMS;
+
+/*
+ * NV2080_CTRL_CMD_ECC_INJECTION_SUPPORTED
+ *
+ * Determines if error injection is supported for a given HW unit
+ *
+ * unit [in]:
+ *      The ECC protected unit for which ECC injection support is being checked
+ *
+ * bCorrectableSupported [out]:
+ *      Boolean value that shows if correcatable errors can be injected
+ *
+ * bUncorrectableSupported [out]:
+ *      Boolean value that shows if uncorrecatable errors can be injected
+*/
+
+#define NV2080_CTRL_CMD_ECC_INJECTION_SUPPORTED (0x20803405) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_ECC_INTERFACE_ID << 8) | NV2080_CTRL_ECC_INJECTION_SUPPORTED_PARAMS_MESSAGE_ID" */
+
+#define NV2080_CTRL_ECC_INJECTION_SUPPORTED_PARAMS_MESSAGE_ID (0x5U)
+
+typedef struct NV2080_CTRL_ECC_INJECTION_SUPPORTED_PARAMS {
+    NvU32  unit;
+    NvBool bCorrectableSupported;
+    NvBool bUncorrectableSupported;
+} NV2080_CTRL_ECC_INJECTION_SUPPORTED_PARAMS;
+
+#define NV2080_CTRL_CMD_ECC_GET_UNREPAIRABLE_MEMORY_FLAG (0x20803406) /* finn: Evaluated from "(FINN_NV20_SUBDEVICE_0_ECC_INTERFACE_ID << 8) | NV2080_CTRL_ECC_GET_UNREPAIRABLE_MEMORY_FLAG_PARAMS_MESSAGE_ID" */
+
+#define NV2080_CTRL_ECC_GET_UNREPAIRABLE_MEMORY_FLAG_PARAMS_MESSAGE_ID (0x6U)
+
+typedef struct NV2080_CTRL_ECC_GET_UNREPAIRABLE_MEMORY_FLAG_PARAMS {
+    NvBool bUnrepairableMemory;
+} NV2080_CTRL_ECC_GET_UNREPAIRABLE_MEMORY_FLAG_PARAMS;
 
 /* _ctrl2080ecc_h_ */

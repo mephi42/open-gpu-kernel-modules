@@ -222,11 +222,10 @@ typedef NV_STATUS      RpcCtrlFifoSetChannelProperties(POBJGPU, POBJRPC, NvHandl
 typedef NV_STATUS      RpcCtrlSubdeviceGetP2pCaps(POBJGPU, POBJRPC, NvHandle, NvHandle, void*);
 typedef NV_STATUS      RpcUpdateBarPde(POBJGPU, POBJRPC, NV_RPC_UPDATE_PDE_BAR_TYPE, NvU64, NvU64);
 typedef NV_STATUS      RpcCtrlBindPmResources(POBJGPU, POBJRPC, NvHandle, NvHandle);
-typedef NV_STATUS      RpcMapMemoryDma(POBJGPU, POBJRPC, NvHandle, NvHandle, NvHandle,
-                                    NvHandle, NvU64, NvU64, NvU32, NvU64*);
+typedef NV_STATUS      RpcMapMemoryDma(POBJGPU, POBJRPC, NVOS46_PARAMETERS*);
 typedef NV_STATUS      RpcUpdateGpmGuestBufferInfo(POBJGPU, POBJRPC, NvU64, NvU32, NvU32, NvU32, NvBool);
 typedef NV_STATUS      RpcCtrlSetVgpuFbUsage(POBJGPU, POBJRPC, void*);
-typedef NV_STATUS      RpcUnmapMemoryDma(POBJGPU, POBJRPC, NvHandle, NvHandle, NvHandle, NvHandle, NvU32, NvU64);
+typedef NV_STATUS      RpcUnmapMemoryDma(POBJGPU, POBJRPC, NVOS47_PARAMETERS*);
 typedef NV_STATUS      RpcSetGuestSystemInfoExt(POBJGPU, POBJRPC);
 typedef NV_STATUS      Rpc_iGrp_ipVersions_getInfo(IGRP_IP_VERSIONS_TABLE_INFO *);
 
@@ -676,14 +675,14 @@ typedef struct RPC_HAL_IFACES {
         (_pRpc)->_hal.rpcUpdateBarPde(_pGpu, _pRpc, _arg0, _arg1, _arg2)
 #define rpcCtrlBindPmResources_HAL(_pGpu, _pRpc, _arg0, _arg1)  \
         (_pRpc)->_hal.rpcCtrlBindPmResources(_pGpu, _pRpc, _arg0, _arg1)
-#define rpcMapMemoryDma_HAL(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4, _arg5, _arg6, _pArg7)  \
-        (_pRpc)->_hal.rpcMapMemoryDma(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4, _arg5, _arg6, _pArg7)
+#define rpcMapMemoryDma_HAL(_pGpu, _pRpc, _pArg0)  \
+        (_pRpc)->_hal.rpcMapMemoryDma(_pGpu, _pRpc, _pArg0)
 #define rpcUpdateGpmGuestBufferInfo_HAL(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4)  \
         (_pRpc)->_hal.rpcUpdateGpmGuestBufferInfo(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4)
 #define rpcCtrlSetVgpuFbUsage_HAL(_pGpu, _pRpc, _pArg0)  \
         (_pRpc)->_hal.rpcCtrlSetVgpuFbUsage(_pGpu, _pRpc, _pArg0)
-#define rpcUnmapMemoryDma_HAL(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4, _arg5)  \
-        (_pRpc)->_hal.rpcUnmapMemoryDma(_pGpu, _pRpc, _arg0, _arg1, _arg2, _arg3, _arg4, _arg5)
+#define rpcUnmapMemoryDma_HAL(_pGpu, _pRpc, _pArg0)  \
+        (_pRpc)->_hal.rpcUnmapMemoryDma(_pGpu, _pRpc, _pArg0)
 #define rpcSetGuestSystemInfoExt_HAL(_pGpu, _pRpc)  \
         (_pRpc)->_hal.rpcSetGuestSystemInfoExt(_pGpu, _pRpc)
 #define rpc_iGrp_ipVersions_getInfo_HAL(_pRpc, _pArg0)  \

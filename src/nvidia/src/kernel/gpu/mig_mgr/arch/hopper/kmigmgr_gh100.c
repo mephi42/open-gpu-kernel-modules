@@ -24,8 +24,147 @@
 #define NVOC_KERNEL_MIG_MANAGER_H_PRIVATE_ACCESS_ALLOWED
 
 #include "kernel/gpu/mem_mgr/mem_mgr.h"
+#include "kernel/gpu/ce/kernel_ce.h"
 #include "kernel/gpu/mig_mgr/kernel_mig_manager.h"
 #include "kernel/gpu/fifo/kernel_fifo.h"
+
+/*!
+ * @brief   Once MIG is disabled, apply default non-MIG CE mappings
+ */
+void
+kmigmgrApplyDefaultCeMappings_GH100
+(
+    OBJGPU *pGpu,
+    KernelMIGManager *pKernelMIGManager
+)
+{
+    KernelCE      *pKCe            = NULL;
+    NV_STATUS      status          = NV_OK;
+
+    KCE_ITER_SHIM_BEGIN(pGpu, pKCe)
+        if (pKCe != NULL)
+        {
+            status = kceTopLevelPceLceMappingsUpdate(pGpu, pKCe);
+            if (status != NV_OK)
+            {
+                NV_PRINTF(LEVEL_ERROR, "Failed to update PCE-LCE mappings\n");
+            }
+        }
+    KCE_ITER_END;
+}
+
+/*!
+ * @brief   Clean up CE mappings on this MIG GPU Instance
+ */
+NV_STATUS
+kmigmgrClearMIGGpuInstanceCeMapping_GH100
+(
+    OBJGPU *pGpu,
+    KernelMIGManager *pKernelMIGManager,
+    KERNEL_MIG_GPU_INSTANCE *pKernelMIGGpuInstance
+)
+{
+    KernelCE      *pKCe            = NULL;
+    NvU32         *pLocalPceLceMap = NULL;
+    NvU32          i;
+    RM_ENGINE_TYPE ceEngineType;
+    NvU32 lceAvailableMask = 0;
+    ENGTYPE_BIT_VECTOR ceEngines;
+
+    bitVectorClrAll(&ceEngines);
+    bitVectorSetRange(&ceEngines, RM_ENGINE_RANGE_COPY());
+    bitVectorAnd(&ceEngines, &ceEngines, &pKernelMIGGpuInstance->resourceAllocation.engines);
+    FOR_EACH_IN_BITVECTOR(&ceEngines, ceEngineType)
+    {
+        if (!ceIsCeGrce(pGpu, ceEngineType))
+        {
+            lceAvailableMask |= NVBIT32(RM_ENGINE_TYPE_COPY_IDX((NvU32)ceEngineType));
+        }
+    }
+    FOR_EACH_IN_BITVECTOR_END();
+
+    NV_PRINTF(LEVEL_INFO, "Unmapping LCEs 0x%x as part of GPU Instance clean up\n", lceAvailableMask);
+
+    pLocalPceLceMap = portMemAllocNonPaged(sizeof(NvU32[NV2080_CTRL_MAX_PCES]));
+    NV_ASSERT_OR_RETURN(pLocalPceLceMap  != NULL, NV_ERR_NO_MEMORY);
+
+    for (i = 0; i < NV2080_CTRL_MAX_PCES; i++)
+    {
+        // An all default values will indicate to clear the GPUInstance mapping
+        pLocalPceLceMap[i] = NV2080_CTRL_CE_UPDATE_PCE_LCE_MAPPINGS_INVALID_LCE;
+    }
+
+    KCE_ITER_SHIM_BEGIN(pGpu, pKCe)
+        if (!kceApplyMIGMappings(pGpu, pKCe, pLocalPceLceMap, lceAvailableMask))
+        {
+            NV_PRINTF(LEVEL_ERROR, "Failure to clear MIG Mappings on lceAvailableMask 0x%x\n", lceAvailableMask);
+        }
+    KCE_ITER_END;
+
+    portMemFree(pLocalPceLceMap);
+    return NV_OK;
+}
+
+/*!
+ * @brief   Apply CE mappings on this MIG GPU Instance
+ *
+ * @param[IN]   pGpu
+ * @param[IN]   pKernelMIGManager
+ * @param[IN]   pKernelMIGGpuInstance
+ *
+ * @return  NV_OK on successful mapping
+ *          NV_ERR_NO_MEMORY if unable to create the local mapping array
+ */
+NV_STATUS
+kmigmgrApplyMIGGpuInstanceCeMapping_GH100
+(
+    OBJGPU *pGpu,
+    KernelMIGManager *pKernelMIGManager,
+    KERNEL_MIG_GPU_INSTANCE *pKernelMIGGpuInstance
+)
+{
+        // Get and Set PCE-LCE Mappings for this GPU Instance
+        KernelCE      *pKCe            = NULL;
+        NvU32         *pLocalPceLceMap = NULL;
+        NvU32          lceAvailableMask = 0;
+        NvU32          i;
+        RM_ENGINE_TYPE ceEngineType;
+        ENGTYPE_BIT_VECTOR ceEngines;
+
+        bitVectorClrAll(&ceEngines);
+        bitVectorSetRange(&ceEngines, RM_ENGINE_RANGE_COPY());
+        bitVectorAnd(&ceEngines, &ceEngines, &pKernelMIGGpuInstance->resourceAllocation.engines);
+
+        FOR_EACH_IN_BITVECTOR(&ceEngines, ceEngineType)
+        {
+            if (!ceIsCeGrce(pGpu, ceEngineType))
+            {
+                lceAvailableMask |= NVBIT32(RM_ENGINE_TYPE_COPY_IDX((NvU32)ceEngineType));
+            }
+        }
+        FOR_EACH_IN_BITVECTOR_END();
+
+        NV_PRINTF(LEVEL_INFO, "Setup CE mappings on LCEs 0x%x as part of GPU Instance creation\n", lceAvailableMask);
+
+        pLocalPceLceMap = portMemAllocNonPaged(sizeof(NvU32[NV2080_CTRL_MAX_PCES]));
+        NV_ASSERT_OR_RETURN(pLocalPceLceMap  != NULL, NV_ERR_NO_MEMORY);
+
+        KCE_ITER_SHIM_BEGIN(pGpu, pKCe)
+            for (i = 0; i < NV2080_CTRL_MAX_PCES; i++)
+            {
+                pLocalPceLceMap[i] = NV2080_CTRL_CE_UPDATE_PCE_LCE_MAPPINGS_INVALID_LCE;
+            }
+            kceGetMappingsForMIGGpuInstance_HAL(pGpu, pKCe, lceAvailableMask, pLocalPceLceMap);
+
+            if (!kceApplyMIGMappings(pGpu, pKCe, pLocalPceLceMap, lceAvailableMask))
+            {
+                NV_PRINTF(LEVEL_ERROR, "Failed to apply MIG Mappings on LCE mask 0x%x\n", lceAvailableMask);
+            }
+        KCE_ITER_END;
+
+        portMemFree(pLocalPceLceMap);
+        return NV_OK;
+}
 
 /*!
  * @brief   Function to determine whether gpu instance flags are valid

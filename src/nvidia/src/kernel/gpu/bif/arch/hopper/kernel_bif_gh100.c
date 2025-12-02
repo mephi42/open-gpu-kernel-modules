@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -27,14 +27,15 @@
 #include "nverror.h"
 #include "gpu/bif/kernel_bif.h"
 #include "gpu/fsp/kern_fsp.h"
+#include "gpu/sec2/kernel_sec2.h"
 #include "gpu_mgr/gpu_mgr.h"
 #include "platform/chipset/chipset.h"
 #include "ctrl/ctrl2080/ctrl2080bus.h"
 #include "kernel/gpu/nvlink/kernel_nvlink.h"
+#include "gpu_mgr/gpu_mgr.h"
 
 #include "published/hopper/gh100/dev_xtl_ep_pcfg_gpu.h"
 
-#include "published/hopper/gh100/dev_fb.h"
 #include "published/hopper/gh100/hwproject.h"
 #include "published/hopper/gh100/dev_xtl_ep_pri.h"
 #include "published/hopper/gh100/dev_nv_xpl.h"
@@ -944,8 +945,10 @@ kbifDoFunctionLevelReset_GH100
     NV_STATUS  status = NV_OK;
     NvU32      flrDevInitTimeout;
     NvU32      flrDevInitTimeoutScale = pKernelBif->flrDevInitTimeoutScale;
-
-    KernelFsp *pKernelFsp = GPU_GET_KERNEL_FSP(pGpu);
+    KernelFsp *pKernelFsp = NULL;
+    KernelSec2 *pKernelSec2 = NULL;
+    pKernelFsp = GPU_GET_KERNEL_FSP(pGpu);
+    pKernelSec2 = GPU_GET_KERNEL_SEC2(pGpu);
 
     // If this is non-windows platform or non-ESXi, we already use OS based interface
     {
@@ -1002,6 +1005,19 @@ kbifDoFunctionLevelReset_GH100
     flrDevInitTimeout = BIF_FLR_DEVINIT_COMPLETION_TIMEOUT_DEFAULT *
                         flrDevInitTimeoutScale;
 
+    if (!gpumgrWaitForBarFirewall(
+            gpuGetDomain(pGpu),
+            gpuGetBus(pGpu),
+            gpuGetDevice(pGpu),
+            0,
+            pGpu->idInfo.PCIDeviceID,
+            pGpu->idInfo.PCISubDeviceID))
+    {
+        status = NV_ERR_INVALID_STATE;
+        NV_ASSERT_FAILED("Timed out waiting for devinit to complete\n");
+        goto kbifDoFunctionLevelReset_GH100_exit;
+    }
+
     //
     // After CRS_TIMEOUT, HW will auto-clear SEND_CRS bit which means config cycles
     // will succeed but it is still possible that devinit is not complete yet.
@@ -1035,15 +1051,20 @@ kbifDoFunctionLevelReset_GH100
             NV_PRINTF(LEVEL_ERROR, "Entering secure boot completion wait.\n");
         }
 
-        if (pKernelFsp == NULL ||
-            pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_IS_MISSING))
-        {
-            status = NV_ERR_NOT_SUPPORTED;
-        }
-        else
+
+        if (pKernelFsp != NULL && pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_IS_MISSING) == NV_FALSE )
         {
             status = kfspWaitForSecureBoot_HAL(pGpu, pKernelFsp);
         }
+        else if(pKernelSec2 != NULL && pKernelSec2->getProperty(pKernelSec2, PDB_PROP_KSEC2_IS_MISSING) == NV_FALSE )
+        {
+            status = ksec2WaitForSecureBoot_HAL(pGpu, pKernelSec2);
+        }
+        else
+        {
+           status = NV_ERR_NOT_SUPPORTED;
+        }
+
         if (status != NV_OK)
         {
             DBG_BREAKPOINT();
@@ -1813,15 +1834,20 @@ kbifIsC2CP2PSupported_GH100
     RM_API *pRmApiGpu1 = GPU_GET_PHYSICAL_RMAPI(pGpu1);
     NvU32 gpuAttachCnt = 0U;
     NV_STATUS status;
-
+    
+    if (gpumgrGetGpuAttachInfo(&gpuAttachCnt, NULL) != NV_OK)
+    {
+        NV_PRINTF(LEVEL_ERROR, "Unable to get number of GPU attached\n");
+        return NV_FALSE;
+    }
     if (pGpu0 != pGpu1)
     {
-        if (gpumgrGetGpuAttachInfo(&gpuAttachCnt, NULL) != NV_OK ||
-            gpuAttachCnt > 2)
+        if (gpuAttachCnt > 2)
         {
             return NV_FALSE;
         }
     }
+
 
     if (!pKernelBif0->getProperty(pKernelBif0, PDB_PROP_KBIF_IS_C2C_LINK_UP) ||
         !pKernelBif1->getProperty(pKernelBif1, PDB_PROP_KBIF_IS_C2C_LINK_UP))

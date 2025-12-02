@@ -146,10 +146,18 @@ static NV_STATUS verify_mapping_info(uvm_va_space_t *va_space,
 
     // Add the physical offset for peer mappings
     if (uvm_aperture_is_peer(aperture)) {
-        if (uvm_parent_gpus_are_direct_connected(memory_mapping_gpu->parent, memory_owning_gpu->parent))
+        if (uvm_parent_gpus_are_nvlink_direct_connected(memory_mapping_gpu->parent, memory_owning_gpu->parent))
             phys_offset += memory_owning_gpu->parent->peer_address_info.peer_gpa_memory_window_start;
         else if (uvm_parent_gpus_are_nvswitch_connected(memory_mapping_gpu->parent, memory_owning_gpu->parent))
             phys_offset += memory_owning_gpu->parent->nvswitch_info.fabric_memory_window_start;
+    }
+
+    // Add DMA offset for bar1 p2p.
+    if (uvm_aperture_is_sys(aperture) && !memory_info->sysmem) {
+        uvm_gpu_phys_address_t phys_address = uvm_gpu_peer_phys_address(memory_owning_gpu, memory_info->physAddr, memory_mapping_gpu);
+
+        UVM_ASSERT(uvm_aperture_is_sys(phys_address.aperture));
+        phys_offset += (phys_address.address - memory_info->physAddr);
     }
 
     for (index = 0; index < ext_mapping_info->numWrittenPtes; index++) {
@@ -159,6 +167,16 @@ static NV_STATUS verify_mapping_info(uvm_va_space_t *va_space,
                             prot,
                             pte_flags);
 
+        if (pte != ext_mapping_info->pteBuffer[index * skip]) {
+            UVM_ERR_PRINT("PTE mismatch for %s->%s at %d (aperture: %s) %llx vs. %llx (address: %llx)\n",
+                          uvm_parent_gpu_name(memory_mapping_gpu->parent),
+                          uvm_parent_gpu_name(memory_owning_gpu->parent),
+                          index,
+                          uvm_aperture_string(aperture),
+                          pte,
+                          ext_mapping_info->pteBuffer[index * skip],
+                          memory_info->physAddr);
+        }
         TEST_CHECK_RET(pte == ext_mapping_info->pteBuffer[index * skip]);
 
         phys_offset += page_size;

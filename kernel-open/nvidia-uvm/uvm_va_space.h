@@ -878,8 +878,8 @@ bool uvm_va_space_pageable_mem_access_enabled(uvm_va_space_t *va_space);
 
 NV_STATUS uvm_test_get_pageable_mem_access_type(UVM_TEST_GET_PAGEABLE_MEM_ACCESS_TYPE_PARAMS *params,
                                                  struct file *filp);
-NV_STATUS uvm_test_enable_nvlink_peer_access(UVM_TEST_ENABLE_NVLINK_PEER_ACCESS_PARAMS *params, struct file *filp);
-NV_STATUS uvm_test_disable_nvlink_peer_access(UVM_TEST_DISABLE_NVLINK_PEER_ACCESS_PARAMS *params, struct file *filp);
+NV_STATUS uvm_test_enable_static_peer_access(UVM_TEST_ENABLE_STATIC_PEER_ACCESS_PARAMS *params, struct file *filp);
+NV_STATUS uvm_test_disable_static_peer_access(UVM_TEST_DISABLE_STATIC_PEER_ACCESS_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_destroy_gpu_va_space_delay(UVM_TEST_DESTROY_GPU_VA_SPACE_DELAY_PARAMS *params, struct file *filp);
 NV_STATUS uvm_test_force_cpu_to_cpu_copy_with_ce(UVM_TEST_FORCE_CPU_TO_CPU_COPY_WITH_CE_PARAMS *params,
                                                  struct file *filp);

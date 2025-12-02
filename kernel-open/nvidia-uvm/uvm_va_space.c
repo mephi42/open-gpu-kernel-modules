@@ -103,9 +103,10 @@ static NV_STATUS register_gpu_peers(uvm_va_space_t *va_space, uvm_gpu_t *gpu)
         if (uvm_id_equal(other_gpu->id, gpu->id))
             continue;
 
-        // Enable NVLINK and SMC peers.
+        // Enable NVLINK, BAR1 and SMC peers.
         if (uvm_gpus_are_smc_peers(gpu, other_gpu) ||
-            uvm_parent_gpu_peer_link_type(gpu->parent, other_gpu->parent) >= UVM_GPU_LINK_NVLINK_1) {
+            (uvm_parent_gpu_peer_link_type(gpu->parent, other_gpu->parent) >= UVM_GPU_LINK_NVLINK_1) ||
+            uvm_parent_gpus_are_bar1_peers(gpu->parent, other_gpu->parent)) {
             NV_STATUS status = enable_peers(va_space, gpu, other_gpu);
             if (status != NV_OK)
                 return status;
@@ -354,8 +355,8 @@ static void unregister_gpu(uvm_va_space_t *va_space,
         if (test_bit(pair_index, va_space->enabled_peers)) {
             disable_peers(va_space, gpu, peer_gpu, deferred_free_list);
 
-            // Only PCIE peers need to be globally released. NVLINK and MIG
-            // peers are brought up and torn down automatically within
+            // Only PCIE peers need to be globally released. NVLINK, BAR1, and
+            // SMC peers are brought up and torn down automatically within
             // add_gpu() and remove_gpu().
             if (peers_to_release && uvm_parent_gpu_peer_link_type(gpu->parent, peer_gpu->parent) == UVM_GPU_LINK_PCIE)
                 uvm_processor_mask_set(peers_to_release, peer_gpu->id);
@@ -1305,6 +1306,13 @@ static bool uvm_va_space_pcie_peer_enabled(uvm_va_space_t *va_space, uvm_gpu_t *
 {
     return !processor_mask_array_test(va_space->has_fast_link, gpu0->id, gpu1->id) &&
            !uvm_gpus_are_smc_peers(gpu0, gpu1) &&
+           !uvm_parent_gpus_are_bar1_peers(gpu0->parent, gpu1->parent) &&
+           uvm_va_space_peer_enabled(va_space, gpu0, gpu1);
+}
+
+static bool uvm_va_space_bar1_peer_enabled(uvm_va_space_t *va_space, uvm_gpu_t *gpu0, uvm_gpu_t *gpu1)
+{
+    return uvm_parent_gpus_are_bar1_peers(gpu0->parent, gpu1->parent) &&
            uvm_va_space_peer_enabled(va_space, gpu0, gpu1);
 }
 
@@ -2044,6 +2052,7 @@ NV_STATUS uvm_api_enable_peer_access(UVM_ENABLE_PEER_ACCESS_PARAMS *params, stru
 
     uvm_mutex_lock(&g_uvm_global.global_lock);
     status = retain_pcie_peers_from_uuids(va_space, &params->gpuUuidA, &params->gpuUuidB, &gpu0, &gpu1);
+
     uvm_mutex_unlock(&g_uvm_global.global_lock);
     if (status != NV_OK)
         return status;
@@ -2146,8 +2155,7 @@ bool uvm_va_space_pageable_mem_access_supported(uvm_va_space_t *va_space)
     return uvm_hmm_is_enabled(va_space);
 }
 
-NV_STATUS uvm_test_get_pageable_mem_access_type(UVM_TEST_GET_PAGEABLE_MEM_ACCESS_TYPE_PARAMS *params,
-                                                 struct file *filp)
+NV_STATUS uvm_test_get_pageable_mem_access_type(UVM_TEST_GET_PAGEABLE_MEM_ACCESS_TYPE_PARAMS *params, struct file *filp)
 {
     uvm_va_space_t *va_space = uvm_va_space_get(filp);
 
@@ -2155,7 +2163,7 @@ NV_STATUS uvm_test_get_pageable_mem_access_type(UVM_TEST_GET_PAGEABLE_MEM_ACCESS
 
     if (uvm_va_space_pageable_mem_access_enabled(va_space)) {
         if (g_uvm_global.ats.enabled)
-            params->type = UVM_TEST_PAGEABLE_MEM_ACCESS_TYPE_ATS_DRIVER;
+            params->type = UVM_TEST_PAGEABLE_MEM_ACCESS_TYPE_ATS;
         else
             params->type = UVM_TEST_PAGEABLE_MEM_ACCESS_TYPE_HMM;
     }
@@ -2179,7 +2187,7 @@ NV_STATUS uvm_test_flush_deferred_work(UVM_TEST_FLUSH_DEFERRED_WORK_PARAMS *para
     }
 }
 
-NV_STATUS uvm_test_enable_nvlink_peer_access(UVM_TEST_ENABLE_NVLINK_PEER_ACCESS_PARAMS *params, struct file *filp)
+NV_STATUS uvm_test_enable_static_peer_access(UVM_TEST_ENABLE_STATIC_PEER_ACCESS_PARAMS *params, struct file *filp)
 {
     uvm_va_space_t *va_space = uvm_va_space_get(filp);
     NV_STATUS status = NV_OK;
@@ -2196,17 +2204,18 @@ NV_STATUS uvm_test_enable_nvlink_peer_access(UVM_TEST_ENABLE_NVLINK_PEER_ACCESS_
         !gpu1 ||
         uvm_id_equal(gpu0->id, gpu1->id) ||
         uvm_gpus_are_smc_peers(gpu0, gpu1) ||
-        uvm_parent_gpu_peer_link_type(gpu0->parent, gpu1->parent) < UVM_GPU_LINK_NVLINK_1) {
+        ((uvm_parent_gpu_peer_link_type(gpu0->parent, gpu1->parent) < UVM_GPU_LINK_NVLINK_1) &&
+         !uvm_parent_gpus_are_bar1_peers(gpu0->parent, gpu1->parent))) {
         uvm_va_space_up_write(va_space);
         return NV_ERR_INVALID_DEVICE;
     }
 
     pair_index = uvm_gpu_pair_index(gpu0->id, gpu1->id);
 
-    // NVLink peers are automatically enabled in the VA space at VA space
-    // registration time. In order to avoid tests having to keep track of the
-    // different initial state for PCIe and NVLink peers, we just return NV_OK
-    // if NVLink peer were already enabled.
+    // NVLink and BAR1 peers are automatically enabled in the VA space at VA
+    // space registration time. In order to avoid tests having to keep track of
+    // the different initial state for PCIe and NVLink peers, we just return
+    // NV_OK if NVLink peer were already enabled.
     if (test_bit(pair_index, va_space->enabled_peers))
         status = NV_OK;
     else
@@ -2217,7 +2226,7 @@ NV_STATUS uvm_test_enable_nvlink_peer_access(UVM_TEST_ENABLE_NVLINK_PEER_ACCESS_
     return status;
 }
 
-NV_STATUS uvm_test_disable_nvlink_peer_access(UVM_TEST_DISABLE_NVLINK_PEER_ACCESS_PARAMS *params, struct file *filp)
+NV_STATUS uvm_test_disable_static_peer_access(UVM_TEST_DISABLE_STATIC_PEER_ACCESS_PARAMS *params, struct file *filp)
 {
     uvm_va_space_t *va_space = uvm_va_space_get(filp);
     NV_STATUS status = NV_OK;
@@ -2239,7 +2248,8 @@ NV_STATUS uvm_test_disable_nvlink_peer_access(UVM_TEST_DISABLE_NVLINK_PEER_ACCES
         goto error;
     }
 
-    if (!uvm_va_space_nvlink_peer_enabled(va_space, gpu0, gpu1)) {
+    if (!uvm_va_space_nvlink_peer_enabled(va_space, gpu0, gpu1) &&
+        !uvm_va_space_bar1_peer_enabled(va_space, gpu0, gpu1)) {
         status = NV_ERR_INVALID_DEVICE;
         goto error;
     }

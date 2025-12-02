@@ -53,9 +53,6 @@ tmrConstructEngine_IMPL
     ENGDESCRIPTOR engDesc
 )
 {
-    // Mark that this timer is not yet initialized
-    pTmr->bInitialized = NV_FALSE;
-
     // Create the Granular lock for SWRL Timer callback
     pTmr->pTmrSwrlLock = portSyncSpinlockCreate(portMemAllocatorGetGlobalNonPaged());
     if (pTmr->pTmrSwrlLock == NULL)

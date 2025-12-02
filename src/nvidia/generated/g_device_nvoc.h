@@ -139,7 +139,6 @@ struct Device {
     NvHandle hTargetClient;
     NvHandle hTargetDevice;
     NvU32 deviceAllocFlags;
-    NvU32 deviceInternalAllocFlags;
     NvU64 vaStartInternal;
     NvU64 vaLimitInternal;
     NvU64 vaSize;
@@ -269,16 +268,6 @@ static inline NV_STATUS deviceSetDefaultVASpace(struct Device *pDevice, NvHandle
 #define deviceSetDefaultVASpace(pDevice, hVASpace) deviceSetDefaultVASpace_IMPL(pDevice, hVASpace)
 #endif // __nvoc_device_h_disabled
 
-NV_STATUS deviceCtrlCmdBifAspmFeatureSupported_IMPL(struct Device *pDevice, NV0080_CTRL_BIF_SET_ASPM_FEATURE_PARAMS *pBifAspmParams);
-#ifdef __nvoc_device_h_disabled
-static inline NV_STATUS deviceCtrlCmdBifAspmFeatureSupported(struct Device *pDevice, NV0080_CTRL_BIF_SET_ASPM_FEATURE_PARAMS *pBifAspmParams) {
-    NV_ASSERT_FAILED_PRECOMP("Device was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_device_h_disabled
-#define deviceCtrlCmdBifAspmFeatureSupported(pDevice, pBifAspmParams) deviceCtrlCmdBifAspmFeatureSupported_IMPL(pDevice, pBifAspmParams)
-#endif // __nvoc_device_h_disabled
-
 NV_STATUS deviceCtrlCmdBifAspmCyaUpdate_IMPL(struct Device *pDevice, NV0080_CTRL_BIF_ASPM_CYA_UPDATE_PARAMS *pBifAspmCyaParams);
 #ifdef __nvoc_device_h_disabled
 static inline NV_STATUS deviceCtrlCmdBifAspmCyaUpdate(struct Device *pDevice, NV0080_CTRL_BIF_ASPM_CYA_UPDATE_PARAMS *pBifAspmCyaParams) {
@@ -397,16 +386,6 @@ static inline NV_STATUS deviceCtrlCmdDmaSetVASpaceSize(struct Device *pDevice, N
 }
 #else // __nvoc_device_h_disabled
 #define deviceCtrlCmdDmaSetVASpaceSize(pDevice, pParams) deviceCtrlCmdDmaSetVASpaceSize_IMPL(pDevice, pParams)
-#endif // __nvoc_device_h_disabled
-
-NV_STATUS deviceCtrlCmdDmaEnablePrivilegedRange_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_ENABLE_PRIVILEGED_RANGE_PARAMS *pParams);
-#ifdef __nvoc_device_h_disabled
-static inline NV_STATUS deviceCtrlCmdDmaEnablePrivilegedRange(struct Device *pDevice, NV0080_CTRL_DMA_ENABLE_PRIVILEGED_RANGE_PARAMS *pParams) {
-    NV_ASSERT_FAILED_PRECOMP("Device was disabled!");
-    return NV_ERR_NOT_SUPPORTED;
-}
-#else // __nvoc_device_h_disabled
-#define deviceCtrlCmdDmaEnablePrivilegedRange(pDevice, pParams) deviceCtrlCmdDmaEnablePrivilegedRange_IMPL(pDevice, pParams)
 #endif // __nvoc_device_h_disabled
 
 NV_STATUS deviceCtrlCmdDmaSetDefaultVASpace_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_SET_DEFAULT_VASPACE_PARAMS *pParams);
@@ -1030,8 +1009,6 @@ NV_STATUS deviceControl_IMPL(struct Device *pResource, struct CALL_CONTEXT *pCal
 
 NV_STATUS deviceInternalControlForward_IMPL(struct Device *pDevice, NvU32 command, void *pParams, NvU32 size);
 
-NV_STATUS deviceCtrlCmdBifAspmFeatureSupported_IMPL(struct Device *pDevice, NV0080_CTRL_BIF_SET_ASPM_FEATURE_PARAMS *pBifAspmParams);
-
 NV_STATUS deviceCtrlCmdBifAspmCyaUpdate_IMPL(struct Device *pDevice, NV0080_CTRL_BIF_ASPM_CYA_UPDATE_PARAMS *pBifAspmCyaParams);
 
 NV_STATUS deviceCtrlCmdBifGetPciePowerControlMask_IMPL(struct Device *pDevice, NV0080_CTRL_CMD_BIF_GET_PCIE_POWER_CONTROL_MASK_PARAMS *pBifPciePowerControlParams);
@@ -1061,8 +1038,6 @@ NV_STATUS deviceCtrlCmdDmaInvalidateTLB_IMPL(struct Device *pDevice, NV0080_CTRL
 NV_STATUS deviceCtrlCmdDmaGetCaps_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_GET_CAPS_PARAMS *pDmaCapsParams);
 
 NV_STATUS deviceCtrlCmdDmaSetVASpaceSize_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_SET_VA_SPACE_SIZE_PARAMS *pParams);
-
-NV_STATUS deviceCtrlCmdDmaEnablePrivilegedRange_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_ENABLE_PRIVILEGED_RANGE_PARAMS *pParams);
 
 NV_STATUS deviceCtrlCmdDmaSetDefaultVASpace_IMPL(struct Device *pDevice, NV0080_CTRL_DMA_SET_DEFAULT_VASPACE_PARAMS *pParams);
 

@@ -199,7 +199,6 @@ confComputeIsGpuCcCapable_GB100
 {
     if (confComputeIsDebugModeEnabled_HAL(pGpu, pConfCompute))
     {
-
         NV_PRINTF(LEVEL_ERROR, "Cannot boot Confidential Compute as debug board is not supported.\n");
         return NV_FALSE;
     }

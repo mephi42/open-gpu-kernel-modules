@@ -200,7 +200,7 @@ NV_STATUS __nvoc_objCreate_SwIntr(SwIntr**, Dynamic*, NvU32);
 #define swintrServiceNotificationInterrupt(pGpu, pIntrService, pParams) swintrServiceNotificationInterrupt_DISPATCH(pGpu, pIntrService, pParams)
 
 // Dispatch functions
-static inline void swintrRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct SwIntr *pSwIntr, IntrServiceRecord pRecords[179]) {
+static inline void swintrRegisterIntrService_DISPATCH(OBJGPU *pGpu, struct SwIntr *pSwIntr, IntrServiceRecord pRecords[180]) {
     pSwIntr->__nvoc_metadata_ptr->vtable.__swintrRegisterIntrService__(pGpu, pSwIntr, pRecords);
 }
 
@@ -272,7 +272,7 @@ static inline NV_STATUS swintrServiceNotificationInterrupt_DISPATCH(OBJGPU *pGpu
     return pIntrService->__nvoc_metadata_ptr->vtable.__swintrServiceNotificationInterrupt__(pGpu, pIntrService, pParams);
 }
 
-void swintrRegisterIntrService_IMPL(OBJGPU *pGpu, struct SwIntr *pSwIntr, IntrServiceRecord pRecords[179]);
+void swintrRegisterIntrService_IMPL(OBJGPU *pGpu, struct SwIntr *pSwIntr, IntrServiceRecord pRecords[180]);
 
 NvU32 swintrServiceInterrupt_IMPL(OBJGPU *pGpu, struct SwIntr *pSwIntr, IntrServiceServiceInterruptArguments *pParams);
 

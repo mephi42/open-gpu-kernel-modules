@@ -41,6 +41,8 @@
 #include "kernel/gpu/mig_mgr/gpu_instance_subscription.h"
 #include "kernel/gpu/mig_mgr/compute_instance_subscription.h"
 #include "kernel/gpu/mig_mgr/kernel_mig_manager.h"
+#include "kernel/gpu/gr/kernel_watchdog.h"
+#include "kernel/gpu/rc/kernel_rc.h"
 
 #include "ctrl/ctrlc637.h"
 #include "core/locks.h"
@@ -389,6 +391,7 @@ gisubscriptionCtrlCmdExecPartitionsCreate_IMPL
     OBJGPU *pGpu = GPU_RES_GET_GPU(pGPUInstanceSubscription);
     KernelMIGManager *pKernelMIGManager = GPU_GET_KERNEL_MIG_MANAGER(pGpu);
     KERNEL_MIG_GPU_INSTANCE *pKernelMIGGpuInstance = pGPUInstanceSubscription->pKernelMIGGpuInstance;
+    NvU32 i;
 
     NV_ASSERT_OR_RETURN(rmapiLockIsOwner() && rmGpuLockIsOwner(), NV_ERR_INVALID_LOCK_STATE);
 
@@ -465,7 +468,6 @@ gisubscriptionCtrlCmdExecPartitionsCreate_IMPL
         {
             if (pGpu->getProperty(pGpu, PDB_PROP_GPU_MIG_MIRROR_HOST_CI_ON_GUEST))
             {
-                NvU32 i;
                 NVC637_CTRL_EXEC_PARTITIONS_IMPORT_EXPORT_PARAMS export;
                 GPUMGR_SAVE_COMPUTE_INSTANCE save;
 
@@ -512,8 +514,6 @@ gisubscriptionCtrlCmdExecPartitionsCreate_IMPL
         }
 
         {
-            NvU32 i;
-
             for (i = 0; i < pParams->execPartCount; i++)
             {
                 gpumgrCacheCreateComputeInstance(pGpu, pKernelMIGGpuInstance->swizzId,
@@ -523,8 +523,6 @@ gisubscriptionCtrlCmdExecPartitionsCreate_IMPL
     }
     else
     {
-        NvU32 i;
-
         for (i = 0; i < pParams->execPartCount; i++)
         {
             RM_API *pRmApi = GPU_GET_PHYSICAL_RMAPI(pGpu);
@@ -558,6 +556,44 @@ gisubscriptionCtrlCmdExecPartitionsCreate_IMPL
 
             gpumgrCacheCreateComputeInstance(pGpu, pKernelMIGGpuInstance->swizzId,
                                              pParams->execPartId[i]);
+        }
+    }
+
+    if (gpuIsClassSupported(pGpu, KERNEL_WATCHDOG) &&
+        !(IS_GSP_CLIENT(pGpu) && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)))
+    {
+        for (i = 0; i < pParams->execPartCount; i++)
+        {
+            MIG_COMPUTE_INSTANCE *pMIGComputeInstance = &pKernelMIGGpuInstance->MIGComputeInstance[pParams->execPartId[i]];
+
+            // Allocate watchdog channel for each valid GFX-capable CI
+            if (pMIGComputeInstance->bValid && (pMIGComputeInstance->resourceAllocation.gfxGpcCount > 0))
+            {
+                RM_API *pRmApi = rmapiGetInterface(RMAPI_GPU_LOCK_INTERNAL);
+                KernelRc *pKernelRc = GPU_GET_KERNEL_RC(pGpu);
+                RsResourceRef *pKernelWatchdogRef;
+                KernelWatchdog *pKernelWatchdog;
+
+                NV_ASSERT_OK_OR_RETURN(
+                    pRmApi->AllocWithHandle(pRmApi,
+                                            pMIGComputeInstance->instanceHandles.hClient,
+                                            pMIGComputeInstance->instanceHandles.hSubdevice,
+                                            KERNEL_WATCHDOG_OBJECT_ID,
+                                            KERNEL_WATCHDOG,
+                                            NvP64_NULL,
+                                            0));
+
+                NV_ASSERT_OK_OR_RETURN(
+                    serverutilGetResourceRefWithType(pMIGComputeInstance->instanceHandles.hClient,
+                                                     KERNEL_WATCHDOG_OBJECT_ID,
+                                                     classId(KernelWatchdog),
+                                                     &pKernelWatchdogRef));
+
+                pKernelWatchdog = dynamicCast(pKernelWatchdogRef->pResource, KernelWatchdog);
+                NV_ASSERT_OR_RETURN(pKernelWatchdog != NULL, NV_ERR_INVALID_STATE);
+
+                NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, krcWatchdogInit(pGpu, pKernelRc, pKernelWatchdog));
+            }
         }
     }
 
@@ -651,9 +687,36 @@ gisubscriptionCtrlCmdExecPartitionsDelete_IMPL
 
     for (execPartIdx = 0; execPartIdx < pParams->execPartCount; ++execPartIdx)
     {
+        KernelMIGManager *pKernelMIGManager = GPU_GET_KERNEL_MIG_MANAGER(pGpu);
+        if (gpuIsClassSupported(pGpu, KERNEL_WATCHDOG) &&
+            !(IS_GSP_CLIENT(pGpu) && IS_VGPU_GSP_PLUGIN_OFFLOAD_ENABLED(pGpu)))
+        {
+            RM_API *pRmApi = rmapiGetInterface(RMAPI_GPU_LOCK_INTERNAL);
+            MIG_COMPUTE_INSTANCE *pMIGComputeInstance = &pKernelMIGGpuInstance->MIGComputeInstance[pParams->execPartId[execPartIdx]];
+
+            if (pMIGComputeInstance->bValid && (pMIGComputeInstance->resourceAllocation.gfxGpcCount > 0))
+            {
+                KernelRc *pKernelRc = GPU_GET_KERNEL_RC(pGpu);
+                RsResourceRef *pKernelWatchdogRef;
+                KernelWatchdog *pKernelWatchdog;
+
+                NV_ASSERT_OK_OR_RETURN(
+                    serverutilGetResourceRefWithType(pMIGComputeInstance->instanceHandles.hClient,
+                                                     KERNEL_WATCHDOG_OBJECT_ID,
+                                                     classId(KernelWatchdog),
+                                                     &pKernelWatchdogRef));
+  
+                pKernelWatchdog = dynamicCast(pKernelWatchdogRef->pResource, KernelWatchdog);
+                NV_ASSERT_OR_RETURN(pKernelWatchdog != NULL, NV_ERR_INVALID_STATE);
+
+                NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, krcWatchdogShutdown(pGpu, pKernelRc, pKernelWatchdog));
+
+                pRmApi->Free(pRmApi, pMIGComputeInstance->instanceHandles.hClient, KERNEL_WATCHDOG_OBJECT_ID);
+            }
+        }
+
         if (IS_VIRTUAL(pGpu) || IS_GSP_CLIENT(pGpu))
         {
-            KernelMIGManager *pKernelMIGManager = GPU_GET_KERNEL_MIG_MANAGER(pGpu);
             NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
                 kmigmgrDeleteComputeInstance(pGpu, pKernelMIGManager, pKernelMIGGpuInstance,
                                              pParams->execPartId[execPartIdx],

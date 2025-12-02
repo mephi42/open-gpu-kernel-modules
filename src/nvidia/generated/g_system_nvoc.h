@@ -82,7 +82,7 @@ extern "C" {
 #define SYS_GET_HALMGR(p)         ((p)->pHalMgr)
 
 #if RMCFG_FEATURE_GSPRM_BULLSEYE || defined(GSPRM_BULLSEYE_ENABLE)
-#define SYS_GET_CODE_COV_MGR(p)   ((p)->pCodeCovMgr)
+#define SYS_GET_CODE_COV_MGR(p)   ((p)->pInstrumentationManager)
 #else
 #define SYS_GET_CODE_COV_MGR(p)   (NULL)
 #endif
@@ -312,16 +312,16 @@ typedef struct OBJOS OBJOS;
 
 
 
-struct CodeCoverageManager;
+struct InstrumentationManager;
 
-#ifndef __NVOC_CLASS_CodeCoverageManager_TYPEDEF__
-#define __NVOC_CLASS_CodeCoverageManager_TYPEDEF__
-typedef struct CodeCoverageManager CodeCoverageManager;
-#endif /* __NVOC_CLASS_CodeCoverageManager_TYPEDEF__ */
+#ifndef __NVOC_CLASS_InstrumentationManager_TYPEDEF__
+#define __NVOC_CLASS_InstrumentationManager_TYPEDEF__
+typedef struct InstrumentationManager InstrumentationManager;
+#endif /* __NVOC_CLASS_InstrumentationManager_TYPEDEF__ */
 
-#ifndef __nvoc_class_id_CodeCoverageManager
-#define __nvoc_class_id_CodeCoverageManager 0x62cbfb
-#endif /* __nvoc_class_id_CodeCoverageManager */
+#ifndef __nvoc_class_id_InstrumentationManager
+#define __nvoc_class_id_InstrumentationManager 0x30d0c5
+#endif /* __nvoc_class_id_InstrumentationManager */
 
 
 
@@ -487,6 +487,7 @@ struct OBJSYS {
     NvBool bUseDeferredClientListFree;
     NvU32 clientListDeferredFreeLimit;
     OS_RM_CAPS *pOsRmCaps;
+    NvBool bEnableDynamicGranularityPageArrays;
     SYS_MEM_EXPORT_CACHE sysMemExportCache;
     PORT_RWLOCK *pSysMemExportModuleLock;
     volatile NvU64 sysExportObjectCounter;
@@ -509,7 +510,7 @@ struct OBJSYS {
     struct OBJHALMGR *pHalMgr;
     struct Fabric *pFabric;
     struct GpuDb *pGpuDb;
-    struct CodeCoverageManager *pCodeCovMgr;
+    struct InstrumentationManager *pInstrumentationManager;
     NvBool bIsGridBuild;
 };
 

@@ -103,8 +103,9 @@ struct KernelHFRP {
     struct OBJENGSTATE *__nvoc_pbase_OBJENGSTATE;    // engstate super
     struct KernelHFRP *__nvoc_pbase_KernelHFRP;    // khfrp
 
-    // 2 PDB properties
+    // 3 PDB properties
     NvBool PDB_PROP_KHFRP_IS_ENABLED;
+    NvBool PDB_PROP_KHFRP_HDA_IS_ENABLED;
 //  NvBool PDB_PROP_KHFRP_IS_MISSING inherited from OBJENGSTATE
 
     // Data members
@@ -165,6 +166,8 @@ extern const struct NVOC_CLASS_DEF __nvoc_class_def_KernelHFRP;
 // Property macros
 #define PDB_PROP_KHFRP_IS_ENABLED_BASE_CAST
 #define PDB_PROP_KHFRP_IS_ENABLED_BASE_NAME PDB_PROP_KHFRP_IS_ENABLED
+#define PDB_PROP_KHFRP_HDA_IS_ENABLED_BASE_CAST
+#define PDB_PROP_KHFRP_HDA_IS_ENABLED_BASE_NAME PDB_PROP_KHFRP_HDA_IS_ENABLED
 #define PDB_PROP_KHFRP_IS_MISSING_BASE_CAST __nvoc_base_OBJENGSTATE.
 #define PDB_PROP_KHFRP_IS_MISSING_BASE_NAME PDB_PROP_ENGSTATE_IS_MISSING
 

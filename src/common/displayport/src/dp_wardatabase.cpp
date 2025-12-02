@@ -1,4 +1,4 @@
- /*
+/*
  * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
@@ -460,6 +460,11 @@ void Edid::applyEdidWorkArounds(NvU32 warFlag, const DpMonitorDenylistData *pDen
                         DP_PRINTF(DP_NOTICE, "DP-WAR> Sharp EDP implements only Legacy interrupt address range");
                     }
                     break;
+
+                    case 0x157F:
+                    // Bug 5317617 - ALPM doesn't work with Sharp panel at lower link rates.
+                    this->WARFlags.forceMaxLinkConfig = true;
+                    break;
             }
             break;
 
@@ -673,14 +678,6 @@ void Edid::applyEdidWorkArounds(NvU32 warFlag, const DpMonitorDenylistData *pDen
             {
                 this->WARFlags.bDisableDownspread = true;
                 DP_PRINTF(DP_NOTICE, "DP-WAR> VRT monitor does not work with GB20x when downspread is enabled. Disabling downspread.");
-            }
-            break;
-
-        case 0xD94D: // Sony
-            if (ProductID == 0x07EE) // Sony SDM27Q10S
-            {
-                this->WARFlags.bSkipResetMSTMBeforeLt = true;
-                DP_PRINTF(DP_NOTICE, "DP-WAR> Sony SDM27Q10S needs to skip reset MST_EN before LT");
             }
             break;
         case 0xAC10:

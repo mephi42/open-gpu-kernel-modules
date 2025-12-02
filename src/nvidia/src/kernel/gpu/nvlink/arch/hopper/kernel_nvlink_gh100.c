@@ -240,7 +240,7 @@ knvlinkDiscoverPostRxDetLinks_GH100
     // Initialize Mask of links that have made it past RxDet to 0 then
     // request to get all links from the given GPU that have gotted past RxDet
     //
-    pKernelNvlink0->postRxDetLinkMask = 0;
+    bitVectorClrAll(&pKernelNvlink0->postRxDetLinkMask);
     status = knvlinkUpdatePostRxDetectLinkMask(pGpu0, pKernelNvlink0);
     if(status != NV_OK)
     {
@@ -252,7 +252,7 @@ knvlinkDiscoverPostRxDetLinks_GH100
     // Only query if we are not in loopback
     if (pKernelNvlink0 != pKernelNvlink1)
     {
-        pKernelNvlink1->postRxDetLinkMask = 0;
+        bitVectorClrAll(&pKernelNvlink1->postRxDetLinkMask);
         status = knvlinkUpdatePostRxDetectLinkMask(pGpu1, pKernelNvlink1);
         if(status != NV_OK)
         {
@@ -269,8 +269,8 @@ knvlinkDiscoverPostRxDetLinks_GH100
     // there is no chance that we will find links connecting the devices
     // further into discovery.
     //
-    if(pKernelNvlink0->postRxDetLinkMask == 0 ||
-       pKernelNvlink1->postRxDetLinkMask == 0)
+    if(bitVectorTestAllCleared(&pKernelNvlink0->postRxDetLinkMask) ||
+       bitVectorTestAllCleared(&pKernelNvlink1->postRxDetLinkMask))
     {
         NV_PRINTF(LEVEL_INFO, "Got 0 post RxDet Links on GPU %d or GPU %d!\n",
                 gpuGetInstance(pGpu0), gpuGetInstance(pGpu1));
@@ -373,7 +373,7 @@ knvlinkLogAliDebugMessages_GH100
         return status;
     }
 
-    FOR_EACH_INDEX_IN_MASK(32, i, KNVLINK_GET_MASK(pKernelNvlink, postRxDetLinkMask, 32))
+    FOR_EACH_IN_BITVECTOR(&pKernelNvlink->postRxDetLinkMask, i)
     {
         nvErrorLog_va((void *)pGpu, ALI_TRAINING_FAIL,
                 "NVLink: Link training failed for link %u"
@@ -405,7 +405,7 @@ knvlinkLogAliDebugMessages_GH100
                     nvlinkErrInfoParams->linkErrInfo[i].DLStatUC01,
                     nvlinkErrInfoParams->linkErrInfo[i].MinionNvlinkLinkIntr);
     }
-    FOR_EACH_INDEX_IN_MASK_END;
+    FOR_EACH_IN_BITVECTOR_END();
     portMemFree(nvlinkErrInfoParams);
     return NV_OK;
 }

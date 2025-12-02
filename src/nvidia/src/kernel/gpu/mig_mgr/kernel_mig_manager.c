@@ -2170,7 +2170,7 @@ kmigmgrDisableWatchdog_IMPL
     pKernelMigManager->bRestoreWatchdog = NV_TRUE;
     pKernelMigManager->bReenableWatchdog = (wdFlags & WATCHDOG_FLAGS_DISABLED) == 0x0;
 
-    return krcWatchdogShutdown(pGpu, pKernelRc);
+    return krcWatchdogShutdown(pGpu, pKernelRc, NULL);
 }
 
 /*!
@@ -2189,13 +2189,13 @@ kmigmgrRestoreWatchdog_IMPL
 
     if (pKernelMigManager->bReenableWatchdog)
     {
-        krcWatchdogEnable(pKernelRc, NV_FALSE /* bOverRide */);
+        krcWatchdogEnable(pKernelRc, NULL, NV_FALSE /* bOverRide */);
     }
 
     pKernelMigManager->bRestoreWatchdog = NV_FALSE;
     pKernelMigManager->bReenableWatchdog = NV_FALSE;
 
-    return krcWatchdogInit_HAL(pGpu, pKernelRc);
+    return krcWatchdogInit_HAL(pGpu, pKernelRc, NULL);
 }
 
 /*!
@@ -4484,11 +4484,12 @@ kmigmgrCreateComputeInstances_VF
         {
             NvU32 smCount = pMIGComputeInstance->resourceAllocation.smCount;
             NvU32 gpcCount = pMIGComputeInstance->resourceAllocation.gpcCount;
+            NvU32 computeSize = pMIGComputeInstance->computeSize;
 
             NV2080_CTRL_INTERNAL_MIGMGR_COMPUTE_PROFILE ciProfile;
 
             NV_CHECK_OK_OR_ELSE(status, LEVEL_ERROR,
-                kmigmgrGetComputeProfileForRequest(pGpu, pKernelMIGManager, pKernelMIGGpuInstance, smCount, gpcCount, &ciProfile),
+                kmigmgrGetComputeProfileForRequest(pGpu, pKernelMIGManager, pKernelMIGGpuInstance, smCount, gpcCount, computeSize, &ciProfile),
                 goto done; );
 
             inUseGpcCount += ciProfile.gpcCount;
@@ -4531,6 +4532,10 @@ kmigmgrCreateComputeInstances_VF
                 (params.type == KMIGMGR_CREATE_COMPUTE_INSTANCE_PARAMS_TYPE_REQUEST)
                 ? params.inst.request.pReqComputeInstanceInfo[CIIdx].gpcCount
                 : nvPopCount32(params.inst.restore.pComputeInstanceSave->ciInfo.gpcMask);
+        NvU32 computeSize =
+                (params.type == KMIGMGR_CREATE_COMPUTE_INSTANCE_PARAMS_TYPE_REQUEST)
+                ? params.inst.request.pReqComputeInstanceInfo[CIIdx].computeSize
+                : params.inst.restore.pComputeInstanceSave->ciInfo.computeSize;
         pMIGComputeInstance->bValid = NV_TRUE;
         pMIGComputeInstance->sharedEngFlag =
                 (params.type == KMIGMGR_CREATE_COMPUTE_INSTANCE_PARAMS_TYPE_REQUEST)
@@ -4567,7 +4572,7 @@ kmigmgrCreateComputeInstances_VF
         pConfigRequestPerCi[CIIdx].veidSpanStart = spanStart;
         pCIProfile = &pConfigRequestPerCi[CIIdx].profile;
         ctsId = KMIGMGR_CTSID_INVALID;
-        if (kmigmgrGetComputeProfileForRequest(pGpu, pKernelMIGManager, pKernelMIGGpuInstance, smCount, gpcCount, pCIProfile) == NV_OK)
+        if (kmigmgrGetComputeProfileForRequest(pGpu, pKernelMIGManager, pKernelMIGGpuInstance, smCount, gpcCount, computeSize, pCIProfile) == NV_OK)
         {
             // CTS and Span allocation is done early to help prevent spurious requests
             if (bIsCTSRequired)
@@ -4892,9 +4897,11 @@ kmigmgrCreateComputeInstances_VF
             // We can't use kmigmgrGetLocalToGlobalEngineType because these
             // compute instances aren't committed yet
             //
-            NV_ASSERT_OK(
+            NV_ASSERT_OK_OR_GOTO(status,
                 kmigmgrEngineTypeXlate(&pComputeResourceAllocation->localEngines, RM_ENGINE_TYPE_GR(0),
-                                       &pComputeResourceAllocation->engines, &localEngineType));
+                                       &pComputeResourceAllocation->engines, &localEngineType), done);
+
+            NV_ASSERT_OR_ELSE(RM_ENGINE_TYPE_IS_GR(localEngineType), status = NV_ERR_INVALID_STATE; goto done;);
 
             updateEngMask |= NVBIT32(RM_ENGINE_TYPE_GR_IDX(localEngineType));
         }
@@ -4913,9 +4920,11 @@ kmigmgrCreateComputeInstances_VF
                 RM_ENGINE_TYPE localRmEngineType;
                 MIG_COMPUTE_INSTANCE *pMIGComputeInstance = &pComputeInstanceInfo[CIIdx];
                 MIG_RESOURCE_ALLOCATION *pComputeResourceAllocation = &pMIGComputeInstance->resourceAllocation;
-                NV_ASSERT_OK(
+                NV_ASSERT_OK_OR_GOTO(status,
                     kmigmgrEngineTypeXlate(&pComputeResourceAllocation->localEngines, RM_ENGINE_TYPE_GR(0),
-                                           &pComputeResourceAllocation->engines, &localRmEngineType));
+                                           &pComputeResourceAllocation->engines, &localRmEngineType), done);
+                
+                NV_ASSERT_OR_ELSE(RM_ENGINE_TYPE_IS_GR(localRmEngineType), status = NV_ERR_INVALID_STATE; goto done;);
 
                 if (portUtilCountTrailingZeros32(updateEngMaskShadow) == RM_ENGINE_TYPE_GR_IDX(localRmEngineType))
                 {
@@ -5572,7 +5581,7 @@ kmigmgrDeleteComputeInstance_IMPL
     {
         KernelCcu *pKernelCcu = GPU_GET_KERNEL_CCU(pGpu);
         VGPU_STATIC_INFO *pVSI = GPU_GET_STATIC_INFO(pGpu);
-        NV_ASSERT_OR_RETURN(pVSI != NULL, NV_ERR_INVALID_ARGUMENT);
+        NV_ASSERT_OR_ELSE(pVSI != NULL, status = NV_ERR_INVALID_ARGUMENT; goto done;);
         if (pKernelCcu != NULL)
         {
             //GPM Support Check 
@@ -6485,7 +6494,8 @@ kmigmgrSetMIGState_FWCLIENT
                 NvU32 linkId;
 
                 //TODO: Remove below code once a more robust SRT is available to test for this condition
-                FOR_EACH_INDEX_IN_MASK(32, linkId, knvlinkGetEnabledLinkMask(pGpu, pKernelNvlink))
+                NVLINK_BIT_VECTOR *pEnabledLinkMask = knvlinkGetEnabledLinkMask_IMPL(pGpu, pKernelNvlink);
+                FOR_EACH_IN_BITVECTOR(pEnabledLinkMask, linkId)
                 {
                     NV2080_CTRL_INTERNAL_NVLINK_CORE_CALLBACK_PARAMS params;
 
@@ -6502,7 +6512,7 @@ kmigmgrSetMIGState_FWCLIENT
                         NV_PRINTF(LEVEL_ERROR, "Nvlink %d is not asleep upon enteing MIG mode!\n", linkId);
                     }
                 }
-                FOR_EACH_INDEX_IN_MASK_END
+                FOR_EACH_IN_BITVECTOR_END();
             }
             rmStatus = NV_OK;
 #endif
@@ -6633,6 +6643,9 @@ cleanup_destroyInternalChannels:
             NV_ASSERT_OK_OR_CAPTURE_FIRST_ERROR(rmStatus,
                 kgraphicsCreateGoldenImageChannel(pGpu, pKGr));
         }
+
+        // Return to non-MIG CE Mappings
+        kmigmgrApplyDefaultCeMappings_HAL(pGpu, pKernelMIGManager);
 
         //
         // Restore previous kmigmgr MIG state. kmigmgrSetMIGState should not
@@ -8908,9 +8921,15 @@ kmigmgrGetComputeSizeFromCTSId_IMPL
 
     while (computeSize != KMIGMGR_COMPUTE_SIZE_INVALID)
     {
+        NV2080_CTRL_INTERNAL_MIGMGR_COMPUTE_PROFILE unused;
         NV_RANGE range = kmigmgrComputeProfileSizeToCTSIdRange(computeSize);
-        if ((range.lo <= ctsId) && (ctsId <= range.hi))
-            break;
+
+        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, computeSize, &unused) == NV_OK)
+        {
+            if ((range.lo <= ctsId) && (ctsId <= range.hi))
+                break;
+        }
+
         computeSize = kmigmgrGetNextComputeSize(pGpu, pKernelMIGManager, NV_TRUE, computeSize);
     }
 
@@ -9498,7 +9517,8 @@ kmigmgrGetSmallestGpuInstanceSize_IMPL
  * @brief   Function to lookup a compute profile for a sm or gpc count. This function
  *          has the caller provide a KERNEL_MIG_GPU_INSTANCE object, to catch requests
  *          which lie outside the normal bounds of the GPU instance.
- *          If the request is not at (or above) the GPU instances limit, then the CI
+ *          If a non-zero computeSize is provided, it will be used to look up the associated compute profile.
+ *          Else, if the request is not at (or above) the GPU instances limit, then the CI
  *          profile will be selected by using the smCountRequest first, and only use
  *          gpcCount if the SM count look-up fails.
  *
@@ -9507,6 +9527,7 @@ kmigmgrGetSmallestGpuInstanceSize_IMPL
  * @param[in]   pKernelMIGGpuInstance   GPU instance for which the request was made
  * @param[in]   smCountRequest          SM Count to look up the associated compute profile
  * @param[in]   gpcCountRequest         GPC Count to look up the associated compute profile if SM lookup fails
+ * @param[in]   computeSize             Compute size to look up the associated compute profile
  * @param[out]  pProfile                Pointer to  NV2080_CTRL_INTERNAL_MIGMGR_COMPUTE_PROFILE struct filled with
  *                                      a copy of the compute profile info associated with the requested SM or GPC count.
  */
@@ -9518,20 +9539,33 @@ kmigmgrGetComputeProfileForRequest_IMPL
     KERNEL_MIG_GPU_INSTANCE *pKernelMIGGpuInstance,
     NvU32 smCountRequest,
     NvU32 gpcCountRequest,
+    NvU32 computeSize,
     NV2080_CTRL_INTERNAL_MIGMGR_COMPUTE_PROFILE *pProfile
 )
 {
-    NvU32 computeSize;
+    NvU32 giComputeSize;
     NV_ASSERT_OR_RETURN(pProfile != NULL, NV_ERR_INVALID_ARGUMENT);
     NV_ASSERT_OR_RETURN(pKernelMIGGpuInstance != NULL, NV_ERR_INVALID_ARGUMENT);
 
+    //
+    // When computeSize is 0, fall back to smCountRequest to find the compute profile,
+    // since we can't tell if FULL is requested or if computeSize was simply omitted
+    //
+    if (computeSize != 0)
+    {
+        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, computeSize, pProfile) == NV_OK)
+        {
+            return NV_OK;
+        }
+    }
+
     // If SM Count is >= the GI's total size, use GI's computeSize as CI profile
-    computeSize = DRF_VAL(2080_CTRL_GPU, _PARTITION_FLAG, _COMPUTE_SIZE, pKernelMIGGpuInstance->partitionFlag);
+    giComputeSize = DRF_VAL(2080_CTRL_GPU, _PARTITION_FLAG, _COMPUTE_SIZE, pKernelMIGGpuInstance->partitionFlag);
     if (!IS_SILICON(pGpu) &&
         (pKernelMIGGpuInstance->resourceAllocation.smCount <= smCountRequest))
     {
-        NV_PRINTF(LEVEL_INFO, "CI request is at GPU instance's limit. Using GPU instance's size: %d\n", computeSize);
-        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, computeSize, pProfile) == NV_OK)
+        NV_PRINTF(LEVEL_INFO, "CI request is at GPU instance's limit. Using GPU instance's size: %d\n", giComputeSize);
+        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, giComputeSize, pProfile) == NV_OK)
             return NV_OK;
     }
 
@@ -9543,8 +9577,8 @@ kmigmgrGetComputeProfileForRequest_IMPL
 
     if (!IS_SILICON(pGpu) && (pKernelMIGGpuInstance->resourceAllocation.gpcCount == gpcCountRequest))
     {
-        NV_PRINTF(LEVEL_INFO, "CI request is at GPU instance's limit. Using GPU instance's size: %d\n", computeSize);
-        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, computeSize, pProfile) == NV_OK)
+        NV_PRINTF(LEVEL_INFO, "CI request is at GPU instance's limit. Using GPU instance's size: %d\n", giComputeSize);
+        if (kmigmgrGetComputeProfileFromSize(pGpu, pKernelMIGManager, giComputeSize, pProfile) == NV_OK)
             return NV_OK;
     }
 

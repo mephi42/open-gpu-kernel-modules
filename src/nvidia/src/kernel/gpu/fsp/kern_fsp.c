@@ -33,6 +33,7 @@
 #include "nvrm_registry.h"
 #include "gpu_mgr/gpu_mgr.h"
 #include "fsp/fsp_clock_boost_rpc.h"
+#include "fsp/fsp_nvdm_format.h"
 
 #if RMCFG_MODULE_ENABLED (GSP)
 #include "gpu/gsp/gsp.h"
@@ -71,9 +72,13 @@ static NV_STATUS kfspScheduleAsyncResponseCheck(OBJGPU *pGpu, KernelFsp *pKernel
 static void kfspClearAsyncResponseState(KernelFsp *pKernelFsp);
 
 NV_STATUS
-kfspConstructEngine_IMPL(OBJGPU *pGpu, KernelFsp *pKernelFsp, ENGDESCRIPTOR engDesc)
+kfspConstructEngine_IMPL
+(
+    OBJGPU *pGpu,
+    KernelFsp *pKernelFsp,
+    ENGDESCRIPTOR engDesc
+)
 {
-    NV_STATUS status;
 
     // Initialize based on registry keys
     kfspInitRegistryOverrides(pGpu, pKernelFsp);
@@ -86,11 +91,14 @@ kfspConstructEngine_IMPL(OBJGPU *pGpu, KernelFsp *pKernelFsp, ENGDESCRIPTOR engD
     kfspClearAsyncResponseState(pKernelFsp);
 
     OBJTMR *pTmr = GPU_GET_TIMER(pGpu);
-    status = tmrEventCreate(pTmr, &(pKernelFsp->pPollEvent),
-                            kfspPollForAsyncResponse, NULL,
-                            TMR_FLAGS_NONE);
+    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
+                       tmrEventCreate(pTmr, &(pKernelFsp->pPollEvent),
+                                      kfspPollForAsyncResponse, NULL,
+                                      TMR_FLAGS_NONE));
 
-    return status;
+    NV_CHECK_OK_OR_RETURN(LEVEL_ERROR, kfspConstructHal_HAL(pGpu, pKernelFsp));
+
+    return NV_OK;
 }
 
 /*!
@@ -155,28 +163,69 @@ kfspInitRegistryOverrides
         pKernelFsp->setProperty(pKernelFsp, PDB_PROP_KFSP_FSP_FUSE_ERROR_CHECK_ENABLED, NV_FALSE);
     }
 
+    if (osReadRegistryDword(pGpu, NV_REG_STR_RM_FSP_USE_MNOC, &data) == NV_OK)
+    {
+        if ((data & NV_REG_STR_RM_FSP_USE_MNOC_CPU) != 0)
+        {
+            NV_PRINTF(LEVEL_ERROR, "CPU will use MNOC mailbox to communicate with FSP\n");
+            pKernelFsp->setProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_CPU, NV_TRUE);
+        }
+        if ((data & NV_REG_STR_RM_FSP_USE_MNOC_GSP) != 0)
+        {
+            NV_PRINTF(LEVEL_ERROR, "GSP will use MNOC MCTP to communicate with FSP\n");
+            pKernelFsp->setProperty(pKernelFsp, PDB_PROP_KFSP_USE_MNOC_GSP, NV_TRUE);
+        }
+    }
 }
 
 void
 kfspReleaseProxyImage_IMPL
 (
     OBJGPU    *pGpu,
-    KernelFsp *pKernelFsp
+    KernelFsp *pKernelFsp,
+    NvU32      flags
 )
 {
+    //
+    // We are not in a PM transition - GPU_STATE_FLAGS_PRESERVING not set, or 
+    // PDB_PROP_GPU_REUSE_INIT_CONTING_MEM is not set 
+    // = free init mem
+    //
+    NvBool bFreeInitMem = !pGpu->getProperty(pGpu, PDB_PROP_GPU_REUSE_INIT_CONTING_MEM) ||
+                          !(flags & GPU_STATE_FLAGS_PRESERVING);
+
     if (pKernelFsp->pSysmemFrtsMemdesc != NULL)
     {
         kfspFrtsSysmemLocationClear_HAL(pGpu, pKernelFsp);
         memdescUnmap(pKernelFsp->pSysmemFrtsMemdesc, NV_TRUE,
             memdescGetKernelMapping(pKernelFsp->pSysmemFrtsMemdesc),
             memdescGetKernelMappingPriv(pKernelFsp->pSysmemFrtsMemdesc));
-        memdescFree(pKernelFsp->pSysmemFrtsMemdesc);
-        memdescDestroy(pKernelFsp->pSysmemFrtsMemdesc);
-        pKernelFsp->pSysmemFrtsMemdesc = NULL;
+        if (bFreeInitMem)
+        {
+            memdescFree(pKernelFsp->pSysmemFrtsMemdesc);
+            memdescDestroy(pKernelFsp->pSysmemFrtsMemdesc);
+            pKernelFsp->pSysmemFrtsMemdesc = NULL;
+        }
     }
 
-    // With Keep WPR feature, keep the GSP-FMC and BootArgsMemdesc.
-    if (!(pGpu->getProperty(pGpu, PDB_PROP_GPU_KEEP_WPR_ACROSS_GC6_SUPPORTED) && IS_GPU_GC6_STATE_ENTERING(pGpu)))
+    //
+    // Keep GSP-FMC and BootArgsMemdesc when Keep WPR feature is supported
+    // 
+    // Free the descriptors if:
+    // - Keep WPR feature is NOT supported (hardware cannot preserve WPR memory), OR
+    // - Keep WPR IS supported but BOTH of the following are true:
+    //   * NOT entering GC6 state, AND
+    //   * bFreeInitMem is TRUE (should free init memory)
+    //
+    // Keep the descriptors ONLY when:
+    // - Keep WPR feature IS supported (hardware capability), AND
+    // - EITHER:
+    //   * Entering GC6 state (original behavior), OR
+    //   * bFreeInitMem is FALSE (PDB_PROP_GPU_REUSE_INIT_CONTIG_MEM extends 
+    //     the 'keep' behavior to all PM transitions to avoid memory fragmentation)
+    //
+    if (!pGpu->getProperty(pGpu, PDB_PROP_GPU_KEEP_WPR_ACROSS_GC6_SUPPORTED) ||
+        (!IS_GPU_GC6_STATE_ENTERING(pGpu) && bFreeInitMem))
     {
         if (pKernelFsp->pGspFmcMemdesc != NULL)
         {
@@ -213,7 +262,7 @@ kfspCleanupBootState_IMPL
     portMemFree(pKernelFsp->pCotPayload);
     pKernelFsp->pCotPayload = NULL;
 
-    kfspReleaseProxyImage(pGpu, pKernelFsp);
+    kfspReleaseProxyImage(pGpu, pKernelFsp, GPU_STATE_DEFAULT);
 
     if (pKernelFsp->bClockBoostSupported)
     {
@@ -242,7 +291,7 @@ kfspStateUnload_IMPL
     NvU32      flags
 )
 {
-    kfspReleaseProxyImage(pGpu, pKernelFsp);
+    kfspReleaseProxyImage(pGpu, pKernelFsp, flags);
     return NV_OK;
 }
 
@@ -445,6 +494,7 @@ kfspSendMessage
     NvU32 headerSize;
     NvU32 *pHeader;
     NvU32 maxPacketSize;
+    NvU32 packetSize;
     NvBool bSinglePacket;
     NV_STATUS status;
     NvU8 *pBuffer = NULL;
@@ -457,12 +507,13 @@ kfspSendMessage
     //
     headerSize = sizeof(NvU32) * HEADER_DWORD_MAX;
     maxPacketSize = kfspGetMaxSendPacketSize_HAL(pGpu, pKernelFsp);
-    packetPayloadCapacity = maxPacketSize - headerSize;
-    bSinglePacket = (size <= packetPayloadCapacity);
     // Allocate buffer to hold a full packet
-    pBuffer = portMemAllocNonPaged(maxPacketSize);
+    packetSize = NV_MIN(maxPacketSize, size + headerSize);
+    packetPayloadCapacity = packetSize - headerSize;
+    bSinglePacket = (size <= packetPayloadCapacity);
+    pBuffer = portMemAllocNonPaged(packetSize);
     NV_CHECK_OR_RETURN(LEVEL_ERROR, pBuffer != NULL, NV_ERR_NO_MEMORY);
-    portMemSet(pBuffer, 0, maxPacketSize);
+    portMemSet(pBuffer, 0, packetSize);
     pHeader = (NvU32*)pBuffer;
     // First packet
     seid = kfspNvdmToSeid_HAL(pGpu, pKernelFsp, nvdmType);
@@ -776,8 +827,9 @@ kfspPollForAsyncResponse
             pGpu,
             kfspProcessAsyncResponseCallback,
             NULL,
-            OS_QUEUE_WORKITEM_FLAGS_LOCK_SEMA |
-                OS_QUEUE_WORKITEM_FLAGS_LOCK_GPU_GROUP_DEVICE);
+            (OsQueueWorkItemFlags){
+                .bLockSema = NV_TRUE,
+                .bLockGpuGroupDevice = NV_TRUE});
         if (status != NV_OK)
         {
             NV_PRINTF(LEVEL_ERROR, "Failed to schedule work item, status=%x\n", status);

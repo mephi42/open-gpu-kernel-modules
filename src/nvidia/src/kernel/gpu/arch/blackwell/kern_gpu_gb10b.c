@@ -36,7 +36,7 @@
 
 #include "published/blackwell/gb10b/hwproject.h"
 #include "published/blackwell/gb10b/dev_xtl_ep_pcfg_gpu.h"
-#include "published/blackwell/gb10b/dev_boot.h"
+#include "published/blackwell/gb10b/dev_boot_zb.h"
 
 //
 // List of GPU children that present for the chip. List entries contain$

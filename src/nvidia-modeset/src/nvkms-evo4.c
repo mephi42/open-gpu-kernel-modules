@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -40,7 +40,6 @@
 #include "nvkms-vrr.h"
 #include "nvkms-sync.h"
 #include <class/clc37dcrcnotif.h> // NVC37D_NOTIFIER_CRC
-#include <ctrl/ctrlc372/ctrlc372chnc.h>
 #include <ctrl/ctrl0041.h> // NV0041_CTRL_GET_SURFACE_PHYS_ATTR_PARAMS
 #include <nvmisc.h>
 #include <class/clc973.h> // NVC973_DISP_CAPABILITIES
@@ -49,8 +48,6 @@
 #include "class/clc97e.h" // NVC97E_WINDOW_CHANNEL_DMA
 #include "class/clca73.h" // NVCA7D_DISP_CAPABILITIES
 #include "class/clca7d.h" // NVCA7D_CORE_CHANNEL_DMA
-
-#include "displayport/displayport.h"
 
 /*
  * XXX temporary WAR: See Bug 4146656
@@ -749,7 +746,6 @@ static void EvoSetViewportPointInC9(NVDevEvoPtr pDevEvo, const int head,
 }
 
 static void EvoSetOutputScalerC9(const NVDispEvoRec *pDispEvo, const NvU32 head,
-                                 const NvU32 imageSharpeningValue,
                                  NVEvoUpdateState *updateState)
 {
     NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
@@ -1043,7 +1039,10 @@ static void EvoSetDitherC9(NVDispEvoPtr pDispEvo, const int head,
             ditherControl |=
                 DRF_DEF(C97D, _HEAD_SET_DITHER_CONTROL, _BITS, _TO_8_BITS);
             break;
-        /* XXXnvdisplay: Support DITHER_TO_{10,12}_BITS (see also bug 1729668). */
+        case NV0073_CTRL_SPECIFIC_OR_DITHER_TYPE_10_BITS:
+            ditherControl |=
+                DRF_DEF(C97D, _HEAD_SET_DITHER_CONTROL, _BITS, _TO_10_BITS);
+            break;
         default:
             nvAssert(!"Unknown ditherType");
             // Fall through
@@ -1191,7 +1190,6 @@ static void EvoStartHeadCRC32CaptureC9(NVDevEvoPtr pDevEvo,
                                        const enum nvKmsTimingsProtocol protocol,
                                        const NvU32 orIndex,
                                        NvU32 head,
-                                       NvU32 sd,
                                        NVEvoUpdateState *updateState)
 {
     const NvU32 winChannel = head << 1;
@@ -1237,7 +1235,7 @@ static void EvoStartHeadCRC32CaptureC9(NVDevEvoPtr pDevEvo,
         DRF_DEF(C97D, _HEAD_SET_CRC_CONTROL, _CRC_DURING_SNOOZE, _DISABLE));
 
     /* Reset the CRC notifier */
-    nvEvoResetCRC32Notifier(pDma->subDeviceAddress[sd],
+    nvEvoResetCRC32Notifier(pDma->cpuAddress,
                             NVC37D_NOTIFIER_CRC_STATUS_0,
                             DRF_BASE(NVC37D_NOTIFIER_CRC_STATUS_0_DONE),
                             NVC37D_NOTIFIER_CRC_STATUS_0_DONE_FALSE);
@@ -2543,256 +2541,6 @@ static void EvoInitWindowMappingCA(const NVDispEvoRec *pDispEvo,
     nvPopEvoSubDevMask(pDevEvo);
 }
 
-/*
- * The 'type' the timing library writes into the NVT_INFOFRAME_HEADER
- * structure is not the type that the HDMI library expects to see in its
- * NvHdmiPkt_SetupAdvancedInfoframe call; those are NVHDMIPKT_TYPE_*.
- * Map the timing library infoframe type to the
- * NVHDMIPKT_TYPE_SHARED_GENERIC*.
- */
-static NvBool NvtToHdmiLibGenericInfoFramePktType(const NvU32 srcType,
-                                                  NVHDMIPKT_TYPE *pDstType)
-{
-    NVHDMIPKT_TYPE hdmiLibType;
-
-    switch (srcType) {
-        default:
-            return FALSE;
-        case NVT_INFOFRAME_TYPE_EXTENDED_METADATA_PACKET:
-            hdmiLibType = NVHDMIPKT_TYPE_SHARED_GENERIC1;
-            break;
-        case NVT_INFOFRAME_TYPE_VENDOR_SPECIFIC:
-            hdmiLibType = NVHDMIPKT_TYPE_SHARED_GENERIC2;
-            break;
-        case NVT_INFOFRAME_TYPE_DYNAMIC_RANGE_MASTERING:
-            hdmiLibType = NVHDMIPKT_TYPE_SHARED_GENERIC3;
-            break;
-    }
-
-    *pDstType = hdmiLibType;
-
-    return TRUE;
-}
-
-static NvBool ConstructAdvancedInfoFramePacket(
-    const NVT_INFOFRAME_HEADER *pInfoFrameHeader,
-    const NvU32 infoframeSize,
-    const NvBool needChecksum,
-    const NvBool swChecksum,
-    NvU8 *pPacket,
-    const NvU32 packetLen)
-{
-    NvU8 hdmiPacketType;
-    const NvU8 *pPayload;
-    NvU32 payloadLen;
-
-    if (!nvEvo1NvtToHdmiInfoFramePacketType(pInfoFrameHeader->type,
-                                            &hdmiPacketType)) {
-        return FALSE;
-    }
-
-    /*
-     * XXX If required, add support for the large infoframe with
-     * multiple infoframes grouped together.
-     */
-    nvAssert((infoframeSize + 1 /* + HB3 */ + (needChecksum ? 1 : 0)) <=
-             packetLen);
-
-    pPacket[0] = hdmiPacketType; /* HB0 */
-
-    /*
-     * The fields and size of NVT_EXTENDED_METADATA_PACKET_INFOFRAME_HEADER
-     * match with those of NVT_INFOFRAME_HEADER at the time of writing, but
-     * nvtiming.h declares them separately. To be safe, special case
-     * NVT_INFOFRAME_TYPE_EXTENDED_METADATA_PACKET.
-     */
-    if (pInfoFrameHeader->type == NVT_INFOFRAME_TYPE_EXTENDED_METADATA_PACKET) {
-        const NVT_EXTENDED_METADATA_PACKET_INFOFRAME_HEADER *pExtMetadataHeader =
-            (const NVT_EXTENDED_METADATA_PACKET_INFOFRAME_HEADER *)
-            pInfoFrameHeader;
-
-        pPacket[1] = pExtMetadataHeader->firstLast;      /* HB1 */
-        pPacket[2] = pExtMetadataHeader->sequenceIndex;  /* HB2 */
-
-        pPayload = (const NvU8 *)(pExtMetadataHeader + 1);
-        payloadLen = infoframeSize -
-            sizeof(NVT_EXTENDED_METADATA_PACKET_INFOFRAME_HEADER);
-    } else {
-        pPacket[1] = pInfoFrameHeader->version; /* HB1 */
-        pPacket[2] = pInfoFrameHeader->length;  /* HB2 */
-
-        pPayload = (const NvU8 *)(pInfoFrameHeader + 1);
-        payloadLen = infoframeSize - sizeof(NVT_INFOFRAME_HEADER);
-    }
-    pPacket[3] = 0; /* HB3, reserved */
-
-    if (needChecksum) {
-        pPacket[4] = 0; /* PB0: checksum */
-
-        nvkms_memcpy(&pPacket[5], pPayload, payloadLen); /* PB1~ */
-
-        if (swChecksum) {
-            NvU8 checksum = 0;
-
-            for (NvU32 i = 0; i < packetLen; i++) {
-                checksum += pPacket[i];
-            }
-            pPacket[4] = ~checksum + 1;
-        }
-    } else {
-        nvAssert(!swChecksum);
-        nvkms_memcpy(&pPacket[4], pPayload, payloadLen); /* PB0~ */
-    }
-
-    return TRUE;
-}
-
-static void SendHdmiInfoFrameCA(const NVDispEvoRec *pDispEvo,
-                                const NvU32 head,
-                                const NvEvoInfoFrameTransmitControl transmitCtrl,
-                                const NVT_INFOFRAME_HEADER *pInfoFrameHeader,
-                                const NvU32 infoFrameSize,
-                                NvBool needChecksum)
-{
-    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
-    NVHDMIPKT_TYPE hdmiLibType;
-    NVHDMIPKT_RESULT ret;
-    ADVANCED_INFOFRAME advancedInfoFrame = { };
-    NvBool swChecksum;
-    /*
-     * These structures are weird. The NVT_VIDEO_INFOFRAME,
-     * NVT_VENDOR_SPECIFIC_INFOFRAME,
-     * NVT_EXTENDED_METADATA_PACKET_INFOFRAME, etc structures are *kind
-     * of* what we want to send to the hdmipkt library, except the type
-     * in the header is different, and a single checksum byte may need
-     * to be inserted *between* the header and the payload (requiring us
-     * to allocate a buffer one byte larger).
-     */
-    NvU8 packet[36] = { };
-
-    if (!NvtToHdmiLibGenericInfoFramePktType(pInfoFrameHeader->type,
-                                             &hdmiLibType)) {
-        nvEvo1SendHdmiInfoFrame(pDispEvo, head, transmitCtrl, pInfoFrameHeader,
-                                infoFrameSize, needChecksum);
-        return;
-    }
-
-    switch (transmitCtrl) {
-        case NV_EVO_INFOFRAME_TRANSMIT_CONTROL_EVERY_FRAME:
-            advancedInfoFrame.runMode = INFOFRAME_CTRL_RUN_MODE_ALWAYS;
-            break;
-        case NV_EVO_INFOFRAME_TRANSMIT_CONTROL_SINGLE_FRAME:
-            advancedInfoFrame.runMode = INFOFRAME_CTRL_RUN_MODE_ONCE;
-            break;
-    }
-    advancedInfoFrame.location = INFOFRAME_CTRL_LOC_VBLANK;
-    advancedInfoFrame.hwChecksum = needChecksum;
-
-    // Large infoframes are incompatible with hwChecksum
-    nvAssert(!(advancedInfoFrame.isLargeInfoframe &&
-               advancedInfoFrame.hwChecksum));
-
-    // XXX WAR bug 5124145 by always computing checksum in software if needed.
-    swChecksum = needChecksum;
-
-    // If we need a checksum: hwChecksum, swChecksum, or both must be enabled.
-    nvAssert(!needChecksum ||
-             (advancedInfoFrame.hwChecksum || swChecksum));
-
-    if (!ConstructAdvancedInfoFramePacket(pInfoFrameHeader,
-                                          infoFrameSize,
-                                          needChecksum,
-                                          swChecksum,
-                                          packet,
-                                          sizeof(packet))) {
-        return;
-    }
-
-    advancedInfoFrame.packetLen = sizeof(packet);
-    advancedInfoFrame.pPacket = packet;
-
-    ret = NvHdmiPkt_SetupAdvancedInfoframe(pDevEvo->hdmiLib.handle,
-                                           pDispEvo->displayOwner,
-                                           head,
-                                           hdmiLibType,
-                                           &advancedInfoFrame);
-    if (ret != NVHDMIPKT_SUCCESS) {
-        nvAssert(ret == NVHDMIPKT_SUCCESS);
-    }
-}
-
-static void DisableHdmiInfoFrameCA(
-    const NVDispEvoRec *pDispEvo,
-    const NvU32 head,
-    const NvU8 nvtInfoFrameType)
-{
-    const NVDispHeadStateEvoRec *pHeadState = &pDispEvo->headState[head];
-    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
-    NVHDMIPKT_TYPE hdmiLibType;
-    NVHDMIPKT_RESULT ret;
-
-    if (!NvtToHdmiLibGenericInfoFramePktType(nvtInfoFrameType,
-                                             &hdmiLibType)) {
-        return;
-    }
-
-    ret = NvHdmiPkt_PacketCtrl(pDevEvo->hdmiLib.handle,
-                               pDispEvo->displayOwner,
-                               pHeadState->activeRmId,
-                               head,
-                               hdmiLibType,
-                               NVHDMIPKT_TRANSMIT_CONTROL_DISABLE);
-    if (ret != NVHDMIPKT_SUCCESS) {
-        nvAssert(!"Failed to disable vendor specific infoframe");
-    }
-}
-
-static void SendDpInfoFrameSdpCA(const NVDispEvoRec *pDispEvo,
-                                 const NvU32 head,
-                                 const NvEvoInfoFrameTransmitControl transmitCtrl,
-                                 const DPSDP_DESCRIPTOR *sdp)
-{
-    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
-    NVHDMIPKT_RESULT ret;
-    ADVANCED_INFOFRAME advanceInfoFrame = { };
-    NvU8 packet[36] = { };
-
-    /*
-     * XXX Using NVHDMIPKT_TYPE_SHARED_GENERIC1 for DP HDR SDP, add
-     * support for other infoframe as needed.
-     */
-    if (sdp->hb.hb1 != dp_pktType_DynamicRangeMasteringInfoFrame) {
-        nvAssert(!"Unsupported infoframe");
-        return;
-    }
-
-    nvAssert((sizeof(sdp->hb) + sdp->dataSize) <= sizeof(packet));
-
-    nvkms_memcpy(packet, &sdp->hb,
-        NV_MIN((sizeof(sdp->hb) + sdp->dataSize), sizeof(packet)));
-
-    switch (transmitCtrl) {
-        case NV_EVO_INFOFRAME_TRANSMIT_CONTROL_EVERY_FRAME:
-            advanceInfoFrame.runMode = INFOFRAME_CTRL_RUN_MODE_ALWAYS;
-            break;
-        case NV_EVO_INFOFRAME_TRANSMIT_CONTROL_SINGLE_FRAME:
-            advanceInfoFrame.runMode = INFOFRAME_CTRL_RUN_MODE_ONCE;
-            break;
-    }
-    advanceInfoFrame.location = INFOFRAME_CTRL_LOC_VBLANK;
-    advanceInfoFrame.packetLen = sizeof(packet);
-    advanceInfoFrame.pPacket = packet;
-
-    ret = NvHdmiPkt_SetupAdvancedInfoframe(pDevEvo->hdmiLib.handle,
-                                           pDispEvo->displayOwner,
-                                           head,
-                                           NVHDMIPKT_TYPE_SHARED_GENERIC1,
-                                           &advanceInfoFrame);
-    if (ret != NVHDMIPKT_SUCCESS) {
-        nvAssert(ret == NVHDMIPKT_SUCCESS);
-    }
-}
-
 static void EvoSetDpVscSdpCA(const NVDispEvoRec *pDispEvo,
                              const NvU32 head,
                              const DPSDP_DP_VSC_SDP_DESCRIPTOR *pVscSdp,
@@ -3060,7 +2808,6 @@ NVEvoHAL nvEvoC9 = {
     nvEvoSetUsageBoundsC5,                        /* SetUsageBounds */
     nvEvoUpdateC3,                                /* Update */
     nvEvoIsModePossibleC3,                        /* IsModePossible */
-    nvEvoPrePostIMPC3,                            /* PrePostIMP */
     nvEvoSetNotifierC3,                           /* SetNotifier */
     nvEvoGetCapabilitiesC6,                       /* GetCapabilities */
     nvEvoFlipC6,                                  /* Flip */
@@ -3103,9 +2850,9 @@ NVEvoHAL nvEvoC9 = {
     nvEvoComputeWindowScalingTapsC5,              /* ComputeWindowScalingTaps */
     nvEvoGetWindowScalingCapsC3,                  /* GetWindowScalingCaps */
     NULL,                                         /* SetMergeMode */
-    nvEvo1SendHdmiInfoFrame,                      /* SendHdmiInfoFrame */
-    nvEvo1DisableHdmiInfoFrame,                   /* DisableHdmiInfoFrame */
-    nvEvo1SendDpInfoFrameSdp,                     /* SendDpInfoFrameSdp */
+    nvEvoSendHdmiInfoFrameC8,                     /* SendHdmiInfoFrame */
+    nvEvoDisableHdmiInfoFrameC8,                  /* DisableHdmiInfoFrame */
+    nvEvoSendDpInfoFrameSdpC8,                    /* SendDpInfoFrameSdp */
     NULL,                                         /* SetDpVscSdp */
     NULL,                                         /* InitHwHeadMultiTileConfig */
     NULL,                                         /* SetMultiTileConfig */
@@ -3120,30 +2867,14 @@ NVEvoHAL nvEvoC9 = {
     EvoSetSemaphoreSurfaceAddressAndControlC9,    /* SetSemaphoreSurfaceAddressAndControl */
     EvoSetAcqSemaphoreSurfaceAddressAndControlC9, /* SetAcqSemaphoreSurfaceAddressAndControl */
     {                                             /* caps */
-        TRUE,                                     /* supportsNonInterlockedUsageBoundsUpdate */
-        TRUE,                                     /* supportsDisplayRate */
-        FALSE,                                    /* supportsFlipLockRGStatus */
-        TRUE,                                     /* needDefaultLutSurface */
-        TRUE,                                     /* hasUnorm10OLUT */
-        FALSE,                                    /* supportsImageSharpening */
-        TRUE,                                     /* supportsHDMIVRR */
-        FALSE,                                    /* supportsCoreChannelSurface */
         TRUE,                                     /* supportsHDMIFRL */
         FALSE,                                    /* supportsSetStorageMemoryLayout */
         TRUE,                                     /* supportsIndependentAcqRelSemaphore */
-        FALSE,                                    /* supportsCoreLut */
-        TRUE,                                     /* supportsSynchronizedOverlayPositionUpdate */
         TRUE,                                     /* supportsVblankSyncObjects */
-        FALSE,                                    /* requiresScalingTapsInBothDimensions */
         FALSE,                                    /* supportsMergeMode */
         TRUE,                                     /* supportsHDMI10BPC */
         TRUE,                                     /* supportsDPAudio192KHz */
-        TRUE,                                     /* supportsInputColorSpace */
-        TRUE,                                     /* supportsInputColorRange */
         TRUE,                                     /* supportsYCbCr422OverHDMIFRL */
-        NV_EVO3_SUPPORTED_DITHERING_MODES,        /* supportedDitheringModes */
-        sizeof(NVC372_CTRL_IS_MODE_POSSIBLE_PARAMS), /* impStructSize */
-        NV_EVO_SCALER_2TAPS,                      /* minScalerTaps */
         NV_EVO3_X_EMULATED_SURFACE_MEMORY_FORMATS_C6, /* xEmulatedSurfaceMemoryFormats */
     },
 };
@@ -3159,7 +2890,6 @@ NVEvoHAL nvEvoCA = {
     nvEvoSetUsageBoundsC5,                        /* SetUsageBounds */
     nvEvoUpdateC3,                                /* Update */
     EvoIsModePossibleCA,                          /* IsModePossible */
-    nvEvoPrePostIMPC3,                            /* PrePostIMP */
     nvEvoSetNotifierC3,                           /* SetNotifier */
     EvoGetCapabilitiesCA,                         /* GetCapabilities */
     nvEvoFlipC6,                                  /* Flip */
@@ -3202,9 +2932,9 @@ NVEvoHAL nvEvoCA = {
     nvEvoComputeWindowScalingTapsC5,              /* ComputeWindowScalingTaps */
     nvEvoGetWindowScalingCapsC3,                  /* GetWindowScalingCaps */
     NULL,                                         /* SetMergeMode */
-    SendHdmiInfoFrameCA,                          /* SendHdmiInfoFrame */
-    DisableHdmiInfoFrameCA,                       /* DisableHdmiInfoFrame */
-    SendDpInfoFrameSdpCA,                         /* SendDpInfoFrameSdp */
+    nvEvoSendHdmiInfoFrameC8,                     /* SendHdmiInfoFrame */
+    nvEvoDisableHdmiInfoFrameC8,                  /* DisableHdmiInfoFrame */
+    nvEvoSendDpInfoFrameSdpC8,                    /* SendDpInfoFrameSdp */
     EvoSetDpVscSdpCA,                             /* SetDpVscSdp */
     EvoInitHwHeadMultiTileConfigCA,               /* InitHwHeadMultiTileConfig */
     EvoSetMultiTileConfigCA,                      /* SetMultiTileConfig */
@@ -3219,30 +2949,14 @@ NVEvoHAL nvEvoCA = {
     EvoSetSemaphoreSurfaceAddressAndControlC9,    /* SetSemaphoreSurfaceAddressAndControl */
     EvoSetAcqSemaphoreSurfaceAddressAndControlC9, /* SetAcqSemaphoreSurfaceAddressAndControl */
     {                                             /* caps */
-        TRUE,                                     /* supportsNonInterlockedUsageBoundsUpdate */
-        TRUE,                                     /* supportsDisplayRate */
-        FALSE,                                    /* supportsFlipLockRGStatus */
-        TRUE,                                     /* needDefaultLutSurface */
-        TRUE,                                     /* hasUnorm10OLUT */
-        FALSE,                                    /* supportsImageSharpening */
-        TRUE,                                     /* supportsHDMIVRR */
-        FALSE,                                    /* supportsCoreChannelSurface */
         TRUE,                                     /* supportsHDMIFRL */
         FALSE,                                    /* supportsSetStorageMemoryLayout */
         TRUE,                                     /* supportsIndependentAcqRelSemaphore */
-        FALSE,                                    /* supportsCoreLut */
-        TRUE,                                     /* supportsSynchronizedOverlayPositionUpdate */
         TRUE,                                     /* supportsVblankSyncObjects */
-        FALSE,                                    /* requiresScalingTapsInBothDimensions */
         FALSE,                                    /* supportsMergeMode */
         TRUE,                                     /* supportsHDMI10BPC */
         TRUE,                                     /* supportsDPAudio192KHz */
-        TRUE,                                     /* supportsInputColorSpace */
-        TRUE,                                     /* supportsInputColorRange */
         TRUE,                                     /* supportsYCbCr422OverHDMIFRL */
-        NV_EVO3_SUPPORTED_DITHERING_MODES,        /* supportedDitheringModes */
-        sizeof(NVC372_CTRL_IS_MODE_POSSIBLE_PARAMS), /* impStructSize */
-        NV_EVO_SCALER_2TAPS,                      /* minScalerTaps */
         NV_EVO3_X_EMULATED_SURFACE_MEMORY_FORMATS_C6, /* xEmulatedSurfaceMemoryFormats */
     },
 };

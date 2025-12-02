@@ -152,9 +152,10 @@ static NV_STATUS phys_mem_allocate_sysmem(uvm_page_tree_t *tree, NvLength size, 
 }
 
 // The aperture may filter the biggest page size:
-// - UVM_APERTURE_VID       biggest page size on vidmem mappings
-// - UVM_APERTURE_SYS       biggest page size on sysmem mappings
-// - UVM_APERTURE_PEER_0-7  biggest page size on peer mappings
+// - UVM_APERTURE_VID                    biggest page size on vidmem mappings
+// - UVM_APERTURE_SYS                    biggest page size on sysmem mappings
+// - UVM_APERTURE_SYS_NON_COHERENT       biggest page size on BAR1 mappings
+// - UVM_APERTURE_PEER_0-7               biggest page size on peer mappings
 static NvU64 mmu_biggest_page_size(uvm_page_tree_t *tree, uvm_aperture_t aperture)
 {
     UVM_ASSERT(aperture < UVM_APERTURE_DEFAULT);
@@ -306,7 +307,7 @@ static void *uvm_mmu_page_table_cpu_map(uvm_gpu_t *gpu, uvm_mmu_page_table_alloc
     }
     else {
         NvU64 page_offset = offset_in_page(phys_alloc->addr.address);
-        return kmap(uvm_mmu_page_table_page(gpu, phys_alloc)) + page_offset;
+        return (char *)kmap(uvm_mmu_page_table_page(gpu, phys_alloc)) + page_offset;
     }
 }
 
@@ -392,7 +393,7 @@ static void pde_fill_gpu(uvm_page_tree_t *tree,
     NvU64 pde_data[2], entry_size;
     uvm_gpu_address_t pde_entry_addr = uvm_mmu_gpu_address(tree->gpu, directory->phys_alloc.addr);
     NvU32 max_inline_entries;
-    uvm_push_flag_t push_membar_flag = UVM_PUSH_FLAG_COUNT;
+    uvm_membar_t push_membar;
     uvm_gpu_address_t inline_data_addr;
     uvm_push_inline_data_t inline_data;
     NvU32 entry_count, i, j;
@@ -403,12 +404,7 @@ static void pde_fill_gpu(uvm_page_tree_t *tree,
     UVM_ASSERT(sizeof(pde_data) >= entry_size);
 
     max_inline_entries = UVM_PUSH_INLINE_DATA_MAX_SIZE / entry_size;
-
-    if (uvm_push_get_and_reset_flag(push, UVM_PUSH_FLAG_NEXT_MEMBAR_NONE))
-        push_membar_flag = UVM_PUSH_FLAG_NEXT_MEMBAR_NONE;
-    else if (uvm_push_get_and_reset_flag(push, UVM_PUSH_FLAG_NEXT_MEMBAR_GPU))
-        push_membar_flag = UVM_PUSH_FLAG_NEXT_MEMBAR_GPU;
-
+    push_membar = uvm_push_get_and_reset_membar_flag(push);
     pde_entry_addr.address += start_index * entry_size;
 
     for (i = 0; i < pde_count;) {
@@ -420,11 +416,11 @@ static void pde_fill_gpu(uvm_page_tree_t *tree,
         entry_count = min(pde_count - i, max_inline_entries);
 
         // No membar is needed until the last memory operation. Otherwise,
-        // use caller's membar flag.
+        // use caller's membar.
         if ((i + entry_count) < pde_count)
-            uvm_push_set_flag(push, UVM_PUSH_FLAG_NEXT_MEMBAR_NONE);
-        else if (push_membar_flag != UVM_PUSH_FLAG_COUNT)
-            uvm_push_set_flag(push, push_membar_flag);
+            uvm_push_set_membar(push, UVM_MEMBAR_NONE);
+        else
+            uvm_push_set_membar(push, push_membar);
 
         uvm_push_inline_data_begin(push, &inline_data);
         for (j = 0; j < entry_count; j++) {
@@ -456,6 +452,16 @@ static void pde_fill(uvm_page_tree_t *tree,
         pde_fill_gpu(tree, directory, start_index, pde_count, phys_addr, push);
     else
         pde_fill_cpu(tree, directory, start_index, pde_count, phys_addr);
+}
+
+static void phys_mem_init_memset(uvm_gpu_t *gpu, uvm_push_t *push, uvm_page_directory_t *dir, NvU64 value)
+{
+    NvU64 size = dir->phys_alloc.size;
+
+    if (push)
+        gpu->parent->ce_hal->memset_8(push, uvm_mmu_gpu_address(push->gpu, dir->phys_alloc.addr), value, size);
+    else
+        uvm_mmu_page_table_cpu_memset_8(gpu, &dir->phys_alloc, 0, value, size / sizeof(value));
 }
 
 static void phys_mem_init(uvm_page_tree_t *tree, NvU64 page_size, uvm_page_directory_t *dir, uvm_push_t *push)
@@ -490,24 +496,38 @@ static void phys_mem_init(uvm_page_tree_t *tree, NvU64 page_size, uvm_page_direc
         }
 
         // Initialize the memory to a reasonable value.
-        if (push) {
-            tree->gpu->parent->ce_hal->memset_8(push,
-                                                uvm_mmu_gpu_address(tree->gpu, dir->phys_alloc.addr),
-                                                *clear_bits,
-                                                dir->phys_alloc.size);
-        }
-        else {
-            uvm_mmu_page_table_cpu_memset_8(tree->gpu,
-                                            &dir->phys_alloc,
-                                            0,
-                                            *clear_bits,
-                                            dir->phys_alloc.size / sizeof(*clear_bits));
-        }
+        phys_mem_init_memset(tree->gpu, push, dir, *clear_bits);
     }
     else {
+        // Initialize the entire directory allocated page table area due to Bug
+        // 5282495. See comment in ats.gmmu_pt_depth0_init_required declaration.
+        if (dir->depth == 0 && tree->gpu->parent->ats.gmmu_pt_depth0_init_required) {
+            uvm_membar_t push_membar;
+
+            // Retrieve and store the caller's membar, since
+            // phys_mem_init_memset() will consume it.
+            if (push) {
+                push_membar = uvm_push_get_and_reset_membar_flag(push);
+
+                // No membar is required, pde_fill() will push the caller's
+                // membar.
+                uvm_push_set_flag(push, UVM_PUSH_FLAG_NEXT_MEMBAR_NONE);
+            }
+
+            // phys_mem_init_memset() consumes and resets the CE's push pipeline
+            // flag, which is required to avoid WaW issues since pde_fill()
+            // will write to the same range and its first operation is not
+            // pipelined.
+            phys_mem_init_memset(tree->gpu, push, dir, 0);
+
+            if (push) {
+                // Restore the caller's membar for pde_fill().
+                uvm_push_set_membar(push, push_membar);
+            }
+        }
+
         pde_fill(tree, dir, 0, entries_count, phys_allocs, push);
     }
-
 }
 
 static uvm_page_directory_t *allocate_directory(uvm_page_tree_t *tree,
@@ -1671,7 +1691,7 @@ static NV_STATUS poison_ptes(uvm_page_tree_t *tree,
 
     tree->gpu->parent->ce_hal->memset_8(&push,
                                         uvm_mmu_gpu_address(tree->gpu, pte_dir->phys_alloc.addr),
-                                        tree->hal->poisoned_pte(),
+                                        tree->hal->poisoned_pte(tree),
                                         pte_dir->phys_alloc.size);
 
     // If both the new PTEs and the parent PDE are in vidmem, then a GPU-
@@ -2388,23 +2408,21 @@ NV_STATUS uvm_mmu_create_peer_identity_mappings(uvm_gpu_t *gpu, uvm_gpu_t *peer)
     uvm_aperture_t aperture;
     NvU64 phys_offset;
     uvm_gpu_identity_mapping_t *peer_mapping;
+    uvm_gpu_phys_address_t phys_address;
 
     UVM_ASSERT(gpu->parent->peer_copy_mode < UVM_GPU_PEER_COPY_MODE_COUNT);
 
     if (gpu->parent->peer_copy_mode != UVM_GPU_PEER_COPY_MODE_VIRTUAL || peer->mem_info.size == 0)
         return NV_OK;
 
-    aperture = uvm_gpu_peer_aperture(gpu, peer);
+    // Use transformation of address 0 to get offset and aperture for all
+    // other addresses.
+    phys_address = uvm_gpu_peer_phys_address(peer, 0, gpu);
+    aperture = phys_address.aperture;
+    phys_offset = phys_address.address;
     page_size = mmu_biggest_page_size(&gpu->address_space_tree, aperture);
     size = UVM_ALIGN_UP(peer->mem_info.max_allocatable_address + 1, page_size);
     peer_mapping = uvm_gpu_get_peer_mapping(gpu, peer->id);
-    phys_offset = 0ULL;
-
-    if (uvm_parent_gpus_are_nvswitch_connected(gpu->parent, peer->parent)) {
-        // Add the 47-bit physical address routing bits for this peer to the
-        // generated PTEs
-        phys_offset = peer->parent->nvswitch_info.fabric_memory_window_start;
-    }
 
     UVM_ASSERT(page_size);
     UVM_ASSERT(size);
@@ -2983,16 +3001,12 @@ NV_STATUS uvm_mmu_l2_invalidate(uvm_gpu_t *gpu, uvm_aperture_t aperture)
                             UVM_CHANNEL_TYPE_MEMOPS,
                             &push,
                             "L2 cache invalidate");
-    if (status != NV_OK) {
-        UVM_ERR_PRINT("L2 cache invalidation: Failed to begin push, status: %s\n", nvstatusToString(status));
+    if (status != NV_OK) 
         return status;
-    }
 
     gpu->parent->host_hal->l2_invalidate(&push, aperture);
 
     status = uvm_push_end_and_wait(&push);
-    if (status != NV_OK) 
-        UVM_ERR_PRINT("ERROR: L2 cache invalidation: Failed to complete push, status: %s\n", nvstatusToString(status));
 
     return status;
 }

@@ -37,6 +37,16 @@
 #define TEST_ORDERING_ITERS_PER_CHANNEL_TYPE_PER_GPU     1024
 #define TEST_ORDERING_ITERS_PER_CHANNEL_TYPE_PER_GPU_EMU 64
 
+// It is unsafe to destroy the GPU's channel manager of an active uvm_gpu_t
+// object. We sync trackers to avoid having any of the GPU's channels in any
+// trackers. We can only guarantee that because in these tests, we only allow
+// a single reference to the GPU.
+static void channel_manager_destroy(uvm_gpu_t *gpu)
+{
+    uvm_parent_gpu_sync_trackers(gpu->parent);
+    uvm_channel_manager_destroy(gpu->channel_manager);
+}
+
 // Schedule pushes one after another on all GPUs and channel types that copy and
 // increment a counter into an adjacent memory location in a buffer. And then
 // verify that all the values are correct on the CPU.
@@ -177,7 +187,7 @@ static NV_STATUS test_unexpected_completed_values(uvm_va_space_t *va_space)
         uvm_channel_update_progress_all(channel);
         TEST_CHECK_RET(uvm_global_reset_fatal_error() == NV_ERR_INVALID_STATE);
 
-        uvm_channel_manager_destroy(gpu->channel_manager);
+        channel_manager_destroy(gpu);
 
         // Destruction will hit the error again, so clear one more time.
         uvm_global_reset_fatal_error();
@@ -306,7 +316,7 @@ static NV_STATUS test_rc(uvm_va_space_t *va_space)
         test_status = uvm_test_rc_for_gpu(gpu);
         g_uvm_global.disable_fatal_error_assert = false;
 
-        uvm_channel_manager_destroy(gpu->channel_manager);
+        channel_manager_destroy(gpu);
         create_status = uvm_channel_manager_create(gpu, &gpu->channel_manager);
 
         TEST_NV_CHECK_RET(test_status);
@@ -355,7 +365,10 @@ static NV_STATUS uvm_test_iommu_rc_for_gpu(uvm_gpu_t *gpu)
     cpu_ptr = uvm_mem_get_cpu_addr_kernel(sysmem);
     sysmem_dma_addr = uvm_mem_gpu_address_physical(sysmem, gpu, 0, data_size);
 
-    status = uvm_push_begin(gpu->channel_manager, UVM_CHANNEL_TYPE_GPU_TO_CPU, &push, "Test memset to IOMMU mapped sysmem");
+    status = uvm_push_begin(gpu->channel_manager,
+                            UVM_CHANNEL_TYPE_GPU_TO_CPU,
+                            &push,
+                            "Test memset to IOMMU mapped sysmem");
     TEST_NV_CHECK_GOTO(status, done);
 
     gpu->parent->ce_hal->memset_8(&push, sysmem_dma_addr, 0, data_size);
@@ -497,14 +510,15 @@ static NV_STATUS test_iommu(uvm_va_space_t *va_space)
         NV_STATUS test_status, create_status;
 
         // The GPU channel manager is destroyed and then re-created after
-        // testing ATS RC fault, so this test requires exclusive access to the GPU.
+        // testing ATS RC fault, so this test requires exclusive access to the
+        // GPU.
         TEST_CHECK_RET(uvm_gpu_retained_count(gpu) == 1);
 
         g_uvm_global.disable_fatal_error_assert = true;
         test_status = uvm_test_iommu_rc_for_gpu(gpu);
         g_uvm_global.disable_fatal_error_assert = false;
 
-        uvm_channel_manager_destroy(gpu->channel_manager);
+        channel_manager_destroy(gpu);
         create_status = uvm_channel_manager_create(gpu, &gpu->channel_manager);
 
         TEST_NV_CHECK_RET(test_status);
@@ -989,7 +1003,9 @@ static NV_STATUS test_channel_iv_rotation(uvm_va_space_t *va_space)
                 uvm_conf_computing_dma_buffer_t *cipher_text;
                 void *cipher_cpu_va, *plain_cpu_va, *tag_cpu_va;
                 uvm_gpu_address_t cipher_gpu_address, plain_gpu_address, tag_gpu_address;
-                uvm_channel_t *work_channel = uvm_channel_is_lcic(channel) ? uvm_channel_lcic_get_paired_wlc(channel) : channel;
+                uvm_channel_t *work_channel = uvm_channel_is_lcic(channel) ?
+                                              uvm_channel_lcic_get_paired_wlc(channel) :
+                                              channel;
 
                 plain_cpu_va = &status;
                 data_size = sizeof(status);
@@ -1037,8 +1053,8 @@ release:
             if (status != NV_OK)
                 return status;
 
-            // All channels except SEC2 used at least a single IV to release tracking.
-            // SEC2 doesn't support decrypt direction.
+            // All channels except SEC2 used at least a single IV to release
+            // tracking. SEC2 doesn't support decrypt direction.
             if (uvm_channel_is_sec2(channel))
                 TEST_CHECK_RET(before_rotation_dec == after_rotation_dec);
             else
@@ -1557,7 +1573,7 @@ static NV_STATUS test_channel_pushbuffer_extension_base(uvm_va_space_t *va_space
         TEST_CHECK_RET(uvm_gpu_retained_count(gpu) == 1);
 
         gpu->uvm_test_force_upper_pushbuffer_segment = 1;
-        uvm_channel_manager_destroy(gpu->channel_manager);
+        channel_manager_destroy(gpu);
         TEST_NV_CHECK_GOTO(uvm_channel_manager_create(gpu, &gpu->channel_manager), error);
         gpu->uvm_test_force_upper_pushbuffer_segment = 0;
 

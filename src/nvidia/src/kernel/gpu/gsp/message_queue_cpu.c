@@ -239,6 +239,16 @@ GspMsgQueuesInit
     memdescSetPageSize(pMQCollection->pSharedMemDesc, AT_GPU, RM_PAGE_SIZE_HUGE);
     memdescTagAlloc(nvStatus, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_58,
                     pMQCollection->pSharedMemDesc);
+
+    if (nvStatus == NV_ERR_NO_MEMORY)
+    {
+        // TODO: Bug 5299603
+        NV_PRINTF(LEVEL_ERROR, "Allocation failed with big page size, retrying with default page size\n");
+        memdescSetPageSize(pMQCollection->pSharedMemDesc, AT_GPU, RM_PAGE_SIZE);
+        memdescTagAlloc(nvStatus, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_58,
+                        pMQCollection->pSharedMemDesc);
+    }
+
     NV_ASSERT_OK_OR_GOTO(nvStatus, nvStatus, error_ret);
 
     // Create kernel mapping for command queue.

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -175,6 +175,11 @@ subdeviceDestruct_IMPL
     RsResourceRef          *pResourceRef    = RES_GET_REF(pSubdevice);
     OBJGPU                 *pGpu            = GPU_RES_GET_GPU(pSubdevice);
     NV_STATUS               status          = NV_OK;
+
+    if (pSubdevice == pGpu->pCachedSubdevice)
+    {
+        pGpu->pCachedSubdevice = NULL;
+    }
 
     if (pSubdevice->bGcoffDisallowed)
     {

@@ -27,6 +27,7 @@
 #include "library/debuglib.h"
 #include "library/memlib.h"
 #include "library/cryptlib.h"
+#include "library/spdm_crypt_lib.h"
 #include "libraries/utils/nvprintf.h"
 #include <rmconfig.h>
 #include "industry_standard/spdm.h"
@@ -117,9 +118,11 @@ bool libspdm_requester_data_sign
     }
 
     // RSA-PSS signature generation.
-    status = libspdm_rsa_pss_sign(rsa, LIBSPDM_CRYPTO_NID_SHA384,
-                                  message, message_size,
-                                  signature, sig_size);
+    status = libspdm_req_asym_sign_hash(spdm_version, op_code,
+                                        req_base_asym_alg,
+                                        base_hash_algo, rsa,
+                                        message, message_size,
+                                        signature, sig_size);
 
     if (!status)
     {

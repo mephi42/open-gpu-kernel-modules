@@ -530,6 +530,18 @@ void pmaUnregisterEvictionCb(PMA *pPma);
 void pmaGetTotalMemory(PMA *pPma, NvU64 *pBytesTotal);
 
 /*!
+ * @brief Returns information about the total FB memory available for localized allocations on the requested uGPU core.
+ *
+ * @param[in]  pPma           PMA pointer
+ * @param[in]  ugpuId         uGPU core identifier
+ * @param[in]  pBytesTotal    Pointer that will return the total FB memory size.
+ *
+ * @return
+ *      void
+ */
+void pmaGetUgpuTotalMemory(PMA *pPma, NvU32 ugpuId, NvU64 *pBytesTotal);
+
+/*!
  * @brief Returns information about each region managed by PMA
  *
  * @param[in]  pPma           PMA pointer
@@ -561,6 +573,19 @@ PMA_STATS *pmaGetStats(PMA *pPma);
  *      void
  */
 void pmaGetFreeMemory(PMA *pPma, NvU64 *pBytesFree);
+
+/*!
+ * @brief Returns information about the total free FB memory available
+ * for localized allocations on the requested uGPU core.
+ *
+ * @param[in]  pPma           PMA pointer
+ * @param[in]  ugpuId         uGPU core identifier
+ * @param[in]  pBytesFree     Pointer that will return the free FB memory size.
+ *
+ * @return
+ *      void
+ */
+void pmaGetUgpuFreeMemory(PMA *pPma, NvU32 ugpuId, NvU64 *pBytesFree);
 
 /*!
  * @brief Returns information about the client address space size

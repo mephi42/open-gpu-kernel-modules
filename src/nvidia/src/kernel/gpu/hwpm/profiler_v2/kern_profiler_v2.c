@@ -292,7 +292,6 @@ profilerBaseDestructState_VF
     }
 
     portMemFree(pProf->pPmaStreamList);
-    portMemFree(pProf->pBindPointAllocated);
 }
 
 NV_STATUS
@@ -342,9 +341,10 @@ profilerBaseQueryCapabilities_IMPL
     NvBool               bAnyProfilingPermitted = NV_FALSE;
     KernelHwpm *pKernelHwpm = GPU_GET_KERNEL_HWPM(pGpu);
 
-    // SYS memory profiling is permitted if video memory profiling is permitted.
+    // SYS memory profiling and Async CE profiling is permitted if video memory profiling is permitted.
     pClientPermissions->bVideoMemoryProfilingPermitted = _isMemoryProfilingPermitted(pGpu, pProfBase);
     pClientPermissions->bSysMemoryProfilingPermitted = pClientPermissions->bVideoMemoryProfilingPermitted;
+    pClientPermissions->bAsyncCeProfilingPermitted = pClientPermissions->bVideoMemoryProfilingPermitted;
 
     //
     // bAdminProfilingPermitted controls access to privileged profiling registers.
@@ -380,7 +380,7 @@ profilerBaseQueryCapabilities_IMPL
  * Initialize pPmaStreamList on guest to store details PMA stream
  */
 static NV_STATUS
-_profilerDevConstructVgpuGuest
+_profilerBaseConstructVgpuGuest
 (
     ProfilerBase *pProfBase,
     RS_RES_ALLOC_PARAMS_INTERNAL *pParams
@@ -388,7 +388,6 @@ _profilerDevConstructVgpuGuest
 {
     OBJGPU *pGpu = GPU_RES_GET_GPU(pProfBase);
     HWPM_PMA_STREAM *pPmaStreamList = NULL;
-    NvBool *pBindPointAllocated = NULL;
 
     // Allocate the pPmaStreamList to store info about memaddr buffer CPU mapping
     pPmaStreamList = portMemAllocNonPaged(sizeof(HWPM_PMA_STREAM) * GPU_GET_KERNEL_HWPM(pGpu)->maxPmaChannels);
@@ -399,17 +398,7 @@ _profilerDevConstructVgpuGuest
 
     portMemSet(pPmaStreamList, 0, sizeof(HWPM_PMA_STREAM) * GPU_GET_KERNEL_HWPM(pGpu)->maxPmaChannels);
 
-    pBindPointAllocated = portMemAllocNonPaged(sizeof(NvBool) * GPU_GET_KERNEL_HWPM(pGpu)->maxPmaChannels);
-    if (pBindPointAllocated == NULL)
-    {
-        portMemFree(pPmaStreamList);
-        return NV_ERR_NO_MEMORY;
-    }
-
-    portMemSet(pBindPointAllocated, NV_FALSE, sizeof(NvBool) * GPU_GET_KERNEL_HWPM(pGpu)->maxPmaChannels);
-
     pProfBase->pPmaStreamList = pPmaStreamList;
-    pProfBase->pBindPointAllocated = pBindPointAllocated;
 
     return NV_OK;
 }
@@ -428,7 +417,7 @@ profilerDevConstructState_VF
     NV_STATUS        rmStatus   = NV_OK;
 
     NV_ASSERT_OK_OR_GOTO(rmStatus,
-                         _profilerDevConstructVgpuGuest(pProfBase, pParams),
+                         _profilerBaseConstructVgpuGuest(pProfBase, pParams),
                          profilerDevConstruct_VF_exit);
 
     // Issue RPC to allocate Profiler object on vGPU host as well
@@ -506,6 +495,7 @@ profilerDevConstructStateInterlude_IMPL
     params.bDevProfilingPermitted = clientPermissions.bDevProfilingPermitted;
     params.bAdminProfilingPermitted = clientPermissions.bAdminProfilingPermitted;
     params.bVideoMemoryProfilingPermitted = clientPermissions.bVideoMemoryProfilingPermitted;
+    params.bAsyncCeProfilingPermitted = clientPermissions.bAsyncCeProfilingPermitted;
     params.bSysMemoryProfilingPermitted = clientPermissions.bSysMemoryProfilingPermitted;
 
     return pRmApi->Control(pRmApi,
@@ -534,6 +524,7 @@ profilerCtxConstructStateInterlude_IMPL
     params.bCtxProfilingPermitted = clientPermissions.bCtxProfilingPermitted;
     params.bAdminProfilingPermitted = clientPermissions.bAdminProfilingPermitted;
     params.bVideoMemoryProfilingPermitted = clientPermissions.bVideoMemoryProfilingPermitted;
+    params.bAsyncCeProfilingPermitted = clientPermissions.bAsyncCeProfilingPermitted;
     params.bSysMemoryProfilingPermitted = clientPermissions.bSysMemoryProfilingPermitted;
 
     return pRmApi->Control(pRmApi,
@@ -587,6 +578,37 @@ profilerDevDestructState_FWCLIENT
     hObject = pCallContext->pResourceRef->hResource;
 
     NV_RM_RPC_FREE(pGpu, hClient, hParent, hObject, status);
+}
+
+NV_STATUS
+profilerCtxConstructState_VF
+(
+    ProfilerCtx *pProfCtx,
+    CALL_CONTEXT *pCallContext,
+    RS_RES_ALLOC_PARAMS_INTERNAL *pParams,
+    PROFILER_CLIENT_PERMISSIONS clientPermissions
+)
+{
+    OBJGPU          *pGpu       = GPU_RES_GET_GPU(pProfCtx);
+    ProfilerBase    *pProfBase  = staticCast(pProfCtx, ProfilerBase);
+    NV_STATUS        rmStatus   = NV_OK;
+
+    NV_ASSERT_OK_OR_GOTO(rmStatus,
+                         _profilerBaseConstructVgpuGuest(pProfBase, pParams),
+                         profilerCtxConstruct_VF_exit);
+
+    // Issue RPC to allocate Profiler object on vGPU host as well
+    NV_RM_RPC_ALLOC_OBJECT(pGpu,
+                           pCallContext->pClient->hClient,
+                           pCallContext->pResourceRef->pParentRef->hResource,
+                           pCallContext->pResourceRef->hResource,
+                           MAXWELL_PROFILER_CONTEXT,
+                           pParams->pAllocParams,
+                           pParams->paramsSize,
+                           rmStatus);
+
+profilerCtxConstruct_VF_exit:
+    return rmStatus;
 }
 
 NV_STATUS

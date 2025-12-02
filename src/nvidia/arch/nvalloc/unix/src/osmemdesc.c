@@ -241,13 +241,13 @@ osCreateMemdescFromPages
     memdescSetFlag(pMemDesc, MEMDESC_FLAGS_KERNEL_MODE, NV_FALSE);
     memdescSetFlag(pMemDesc, MEMDESC_FLAGS_EXT_PAGE_ARRAY_MEM, NV_TRUE);
 
+    NV_ASSERT_OK_OR_GOTO(rmStatus, memdescSetAllocSizeFields(pMemDesc, size, NV_RM_PAGE_SIZE), cleanup);
+
     if (!NV_IS_ALIGNED64(memdescGetPhysAddr(pMemDesc, AT_CPU, 0), os_page_size))
     {
         rmStatus = NV_ERR_INVALID_ARGUMENT;
         NV_ASSERT_OR_GOTO(0, cleanup);
     }
-
-    NV_ASSERT_OK_OR_GOTO(rmStatus, memdescSetAllocSizeFields(pMemDesc, size, NV_RM_PAGE_SIZE), cleanup);
 
 
     //
@@ -368,7 +368,7 @@ osCheckGpuBarsOverlapAddrRange
     gpuInstance = 0;
     while ((pGpu = gpumgrGetNextGpu(gpuMask, &gpuInstance)) != NULL)
     {
-        if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+        if (pGpu->pGpuArch->bGpuArchIsZeroFb)
         {
             continue;
         }
@@ -826,14 +826,13 @@ _createMemdescFromDmaBufSgtHelper
         return rmStatus;
     }
 
+    NV_ASSERT_OK_OR_GOTO(rmStatus, memdescSetAllocSizeFields(pMemDesc, size, NV_RM_PAGE_SIZE), cleanup);
 
     if (!NV_IS_ALIGNED64(memdescGetPhysAddr(pMemDesc, AT_CPU, 0), os_page_size))
     {
         rmStatus = NV_ERR_INVALID_ARGUMENT;
         NV_ASSERT_OR_GOTO(0, cleanup);
     }
-
-    NV_ASSERT_OK_OR_GOTO(rmStatus, memdescSetAllocSizeFields(pMemDesc, size, NV_RM_PAGE_SIZE), cleanup);
 
     //
     // If the OS layer doesn't think in RM page size, we need to inflate the

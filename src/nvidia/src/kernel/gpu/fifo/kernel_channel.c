@@ -89,6 +89,8 @@
 #include "nvstatuscodes.h"
 #include "vgpu/rpc.h"
 
+#include "gpu/gpu_user_shared_data.h"
+
 // Instmem static functions
 static NV_STATUS _kchannelAllocHalData(OBJGPU *pGpu, KernelChannel *pKernelChannel);
 static void      _kchannelFreeHalData(OBJGPU *pGpu, KernelChannel *pKernelChannel);
@@ -429,6 +431,7 @@ kchannelConstruct_IMPL
         }
     }
     pKernelChannel->pKernelChannelGroupApi = pKernelChannelGroupApi;
+    pKernelChannel->pKernelChannelGroup    = pKernelChannelGroup;
 
     NV_ASSERT_OR_RETURN(pKernelChannelGroupApi != NULL, NV_ERR_INVALID_STATE);
     NV_ASSERT_OR_RETURN(pKernelChannelGroup != NULL, NV_ERR_INVALID_STATE);
@@ -1051,8 +1054,18 @@ kchannelConstruct_IMPL
 
 cleanup:
     if (bLockAcquired)
-        rmDeviceGpuLocksRelease(pGpu, GPUS_LOCK_FLAGS_NONE, NULL);
+    {
+        if ((status == NV_OK) &&
+            ((pKernelChannel->privilegeLevel == NV_KERNELCHANNEL_ALLOC_INTERNALFLAGS_PRIVILEGE_ADMIN) ||
+                (pKernelChannel->privilegeLevel == NV_KERNELCHANNEL_ALLOC_INTERNALFLAGS_PRIVILEGE_USER)))
+        {
+            pGpu->numUserKernelChannel++;
+            if (pGpu->numUserKernelChannel == 1)
+                gpuRusdRequestPermanentDataPoll(pGpu);
+        }
 
+        rmDeviceGpuLocksRelease(pGpu, GPUS_LOCK_FLAGS_NONE, NULL);
+    }
     // These fields are only needed internally; clear them here
     pChannelGpfifoParams->hPhysChannelGroup = 0;
     pChannelGpfifoParams->internalFlags = 0;
@@ -1162,6 +1175,17 @@ kchannelDestruct_IMPL
     {
         NV_PRINTF(LEVEL_ERROR, "Caller missing proper locks\n");
         return;
+    }
+
+    if ((pKernelChannel->privilegeLevel == NV_KERNELCHANNEL_ALLOC_INTERNALFLAGS_PRIVILEGE_ADMIN) ||
+        (pKernelChannel->privilegeLevel == NV_KERNELCHANNEL_ALLOC_INTERNALFLAGS_PRIVILEGE_USER))
+    {
+        NV_ASSERT_OR_GOTO(pGpu->numUserKernelChannel > 0, skipChannelCounterDecrement);
+        pGpu->numUserKernelChannel--;
+        if (pGpu->numUserKernelChannel == 0)
+            gpuRusdRequestPermanentDataPoll(pGpu);
+
+skipChannelCounterDecrement:;
     }
 
     ConfidentialCompute *pConfCompute = GPU_GET_CONF_COMPUTE(pGpu);
@@ -1873,7 +1897,7 @@ NV_STATUS kchannelUpdateNotifierMem_IMPL
         return NV_OK;
 
     addressSpace = memdescGetAddressSpace(pNotifierMemDesc);
-    if (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+    if (RMCFG_FEATURE_PLATFORM_GSP && !pGpu->pGpuArch->bGpuArchIsZeroFb)
         NV_ASSERT_OR_RETURN(addressSpace == ADDR_FBMEM, NV_ERR_INVALID_STATE);
 
     //

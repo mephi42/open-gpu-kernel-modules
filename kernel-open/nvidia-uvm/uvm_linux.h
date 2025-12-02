@@ -40,10 +40,6 @@
 #include "nv-linux.h"
 
 #include <linux/log2.h>
-#if defined(NV_PRIO_TREE_PRESENT)
-#include <linux/prio_tree.h>
-#endif
-
 #include <linux/jhash.h>
 #include <linux/rwsem.h>
 #include <linux/rbtree.h>
@@ -117,19 +113,6 @@
 #define NVIDIA_UVM_PRETTY_PRINTING_PREFIX "nvidia-uvm: "
 #define pr_fmt(fmt) NVIDIA_UVM_PRETTY_PRINTING_PREFIX fmt
 
-// Dummy printing function that maintains syntax and format specifier checking
-// but doesn't print anything and doesn't evaluate the print parameters. This is
-// roughly equivalent to the kernel's no_printk function. We use this instead
-// because:
-// 1) no_printk was not available until 2.6.36
-// 2) Until 4.5 no_printk was implemented as a static function, meaning its
-//    parameters were always evaluated
-#define UVM_NO_PRINT(fmt, ...)          \
-    do {                                \
-        if (0)                          \
-            printk(fmt, ##__VA_ARGS__); \
-    } while (0)
-
 #define NV_UVM_GFP_FLAGS (GFP_KERNEL | __GFP_NOMEMALLOC)
 
 /* Return a nanosecond-precise value */
@@ -139,25 +122,6 @@ static inline NvU64 NV_GETTIME(void)
 
     ktime_get_raw_ts64(&tm);
     return (NvU64) timespec64_to_ns(&tm);
-}
-
-// atomic_long_read_acquire and atomic_long_set_release were added in commit
-// b5d47ef9ea5c5fe31d7eabeb79f697629bd9e2cb ("locking/atomics: Switch to
-// generated atomic-long") in v5.1 (2019-05-05).
-// TODO: Bug 3849079: We always use these definitions on newer kernels.
-#define atomic_long_read_acquire uvm_atomic_long_read_acquire
-static inline long uvm_atomic_long_read_acquire(atomic_long_t *p)
-{
-    long val = atomic_long_read(p);
-    smp_mb();
-    return val;
-}
-
-#define atomic_long_set_release uvm_atomic_long_set_release
-static inline void uvm_atomic_long_set_release(atomic_long_t *p, long v)
-{
-    smp_mb();
-    atomic_long_set(p, v);
 }
 
 typedef struct

@@ -606,10 +606,6 @@ static NV_STATUS translateAllocFlagsToVASpaceFlags(NvU32 allocFlags, NvU32 *tran
     {
         flags |= VASPACE_FLAGS_SHARED_MANAGEMENT;
     }
-    if (allocFlags & NV_VASPACE_ALLOCATION_FLAGS_IS_MIRRORED)
-    {
-        flags |= VASPACE_FLAGS_SET_MIRRORED;
-    }
     if (allocFlags & NV_VASPACE_ALLOCATION_FLAGS_ENABLE_PAGE_FAULTING)
     {
         flags |= VASPACE_FLAGS_ENABLE_FAULTING;
@@ -648,12 +644,6 @@ static NV_STATUS translateAllocFlagsToVASpaceFlags(NvU32 allocFlags, NvU32 *tran
         flags |= VASPACE_FLAGS_RESTRICTED_RM_INTERNAL_VALIMITS;
     }
     flags |= VASPACE_FLAGS_ENABLE_VMM;
-
-    // Validate the flag combinations
-    NV_CHECK_OR_RETURN(LEVEL_WARNING,
-        !((flags & VASPACE_FLAGS_IS_EXTERNALLY_OWNED) &&
-            (flags & VASPACE_FLAGS_SET_MIRRORED)),
-        NV_ERR_INVALID_ARGUMENT);
 
     if (!RMCFG_FEATURE_MODS_FEATURES &&
         !pSys->getProperty(pSys, PDB_PROP_SYS_ENABLE_RM_TEST_ONLY_CODE))

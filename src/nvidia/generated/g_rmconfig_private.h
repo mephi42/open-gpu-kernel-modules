@@ -8,7 +8,7 @@
 // Profile:  shipping-gpus-openrm
 // Template: templates/gt_rmconfig_private.h
 //
-// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD102, AD103, AD104, AD106, AD107, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
+// Chips:    TU10X, GA100, GA102, GA103, GA104, GA106, GA107, AD10X, GH10X, GB100, GB102, GB10B, GB110, GB112, GB202, GB203, GB205, GB206, GB207, GB20B, GB20C, T234D, T26XD
 //
 
 #ifndef _G_RMCFG_PRIVATE_H_
@@ -487,10 +487,6 @@
 #define IsdPASCALorBetter(pGpu)        rmcfg_IsdPASCALorBetter(pGpu)
 
 
-// Any COMPUTE chip?
-#define IsCOMPUTE(pGpu)                rmcfg_IsCOMPUTE(pGpu)
-
-
 // Any PASCAL chip?
 #define IsPASCAL(pGpu)                 (IsPASCAL_CLASSIC_GPUS(pGpu) || IsPASCAL_TEGRA_BIG_GPUS(pGpu))
 #define IsPASCALorBetter(pGpu)         (IsPASCAL_CLASSIC_GPUSorBetter(pGpu) || IsPASCAL_TEGRA_BIG_GPUSorBetter(pGpu))
@@ -499,6 +495,10 @@
 // Any PASCAL_CLASSIC_GPUS chip?
 #define IsPASCAL_CLASSIC_GPUS(pGpu)    (0 && (pGpu))
 #define IsPASCAL_CLASSIC_GPUSorBetter(pGpu) rmcfg_IsPASCAL_CLASSIC_GPUSorBetter(pGpu)
+
+
+// Any COMPUTE chip?
+#define IsCOMPUTE(pGpu)                rmcfg_IsCOMPUTE(pGpu)
 
 
 // Any dVOLTA chip?
@@ -675,11 +675,6 @@
 #define IsPASCAL_TEGRA_BIG_GPUSorBetter(pGpu) (0 && (pGpu))
 
 
-// Any DISPLAYLESS_TEGRA_BIG_GPUS chip?
-#define IsDISPLAYLESS_TEGRA_BIG_GPUS(pGpu) (0 && (pGpu))
-#define IsDISPLAYLESS_TEGRA_BIG_GPUSorBetter(pGpu) (0 && (pGpu))
-
-
 // Any tVOLTA chip?
 #define IstVOLTA(pGpu)                 (0 && (pGpu))
 #define IstVOLTAorBetter(pGpu)         (0 && (pGpu))
@@ -688,6 +683,11 @@
 // Any VOLTA_TEGRA_BIG_GPUS chip?
 #define IsVOLTA_TEGRA_BIG_GPUS(pGpu)   (0 && (pGpu))
 #define IsVOLTA_TEGRA_BIG_GPUSorBetter(pGpu) (0 && (pGpu))
+
+
+// Any DISPLAYLESS_TEGRA_BIG_GPUS chip?
+#define IsDISPLAYLESS_TEGRA_BIG_GPUS(pGpu) (0 && (pGpu))
+#define IsDISPLAYLESS_TEGRA_BIG_GPUSorBetter(pGpu) (0 && (pGpu))
 
 
 // Any TURING_TEGRA_BIG_GPUS chip?

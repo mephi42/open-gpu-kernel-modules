@@ -80,13 +80,13 @@ struct GpuArch {
     struct GpuHalspecOwner *__nvoc_pbase_GpuHalspecOwner;    // gpuhalspecowner super
     struct GpuArch *__nvoc_pbase_GpuArch;    // gpuarch
 
-    // Vtable with 4 per-object function pointers
+    // Vtable with 2 per-object function pointers
     NvU32 (*__gpuarchGetSystemPhysAddrWidth__)(struct GpuArch * /*this*/);  // halified (4 hals)
     NvU32 (*__gpuarchGetDmaAddrWidth__)(struct GpuArch * /*this*/);  // halified (2 hals) body
-    NvBool (*__gpuarchIsZeroFb__)(struct GpuArch * /*this*/);  // halified (2 hals) body
-    NvBool (*__gpuarchSupportsIgpuRg__)(struct GpuArch * /*this*/);  // halified (2 hals) body
 
     // Data members
+    NvBool bGpuArchIsZeroFb;
+    NvBool bGpuarchSupportsIgpuRg;
     NvU32 chipArch;
     NvU32 chipImpl;
     NvU32 hidrev;
@@ -144,12 +144,6 @@ NV_STATUS gpuarchConstruct_IMPL(struct GpuArch *arg_pGpuArch, NvU32 arg_chipArch
 #define gpuarchGetDmaAddrWidth_FNPTR(pGpuArch) pGpuArch->__gpuarchGetDmaAddrWidth__
 #define gpuarchGetDmaAddrWidth(pGpuArch) gpuarchGetDmaAddrWidth_DISPATCH(pGpuArch)
 #define gpuarchGetDmaAddrWidth_HAL(pGpuArch) gpuarchGetDmaAddrWidth_DISPATCH(pGpuArch)
-#define gpuarchIsZeroFb_FNPTR(pGpuArch) pGpuArch->__gpuarchIsZeroFb__
-#define gpuarchIsZeroFb(pGpuArch) gpuarchIsZeroFb_DISPATCH(pGpuArch)
-#define gpuarchIsZeroFb_HAL(pGpuArch) gpuarchIsZeroFb_DISPATCH(pGpuArch)
-#define gpuarchSupportsIgpuRg_FNPTR(pGpuArch) pGpuArch->__gpuarchSupportsIgpuRg__
-#define gpuarchSupportsIgpuRg(pGpuArch) gpuarchSupportsIgpuRg_DISPATCH(pGpuArch)
-#define gpuarchSupportsIgpuRg_HAL(pGpuArch) gpuarchSupportsIgpuRg_DISPATCH(pGpuArch)
 
 // Dispatch functions
 static inline NvU32 gpuarchGetSystemPhysAddrWidth_DISPATCH(struct GpuArch *pGpuArch) {
@@ -158,14 +152,6 @@ static inline NvU32 gpuarchGetSystemPhysAddrWidth_DISPATCH(struct GpuArch *pGpuA
 
 static inline NvU32 gpuarchGetDmaAddrWidth_DISPATCH(struct GpuArch *pGpuArch) {
     return pGpuArch->__gpuarchGetDmaAddrWidth__(pGpuArch);
-}
-
-static inline NvBool gpuarchIsZeroFb_DISPATCH(struct GpuArch *pGpuArch) {
-    return pGpuArch->__gpuarchIsZeroFb__(pGpuArch);
-}
-
-static inline NvBool gpuarchSupportsIgpuRg_DISPATCH(struct GpuArch *pGpuArch) {
-    return pGpuArch->__gpuarchSupportsIgpuRg__(pGpuArch);
 }
 
 NvU32 gpuarchGetSystemPhysAddrWidth_TU102(struct GpuArch *pGpuArch);
@@ -180,22 +166,6 @@ NvU32 gpuarchGetDmaAddrWidth_GB10B(struct GpuArch *pGpuArch);
 
 static inline NvU32 gpuarchGetDmaAddrWidth_4a4dee(struct GpuArch *pGpuArch) {
     return 0;
-}
-
-static inline NvBool gpuarchIsZeroFb_cbe027(struct GpuArch *pGpuArch) {
-    return ((NvBool)(0 == 0));
-}
-
-static inline NvBool gpuarchIsZeroFb_491d52(struct GpuArch *pGpuArch) {
-    return ((NvBool)(0 != 0));
-}
-
-static inline NvBool gpuarchSupportsIgpuRg_cbe027(struct GpuArch *pGpuArch) {
-    return ((NvBool)(0 == 0));
-}
-
-static inline NvBool gpuarchSupportsIgpuRg_491d52(struct GpuArch *pGpuArch) {
-    return ((NvBool)(0 != 0));
 }
 
 #undef PRIVATE_FIELD

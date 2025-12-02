@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -126,7 +126,8 @@ _nv8deCtrlCmdReadWriteSurface
             NvU8 *pKernBuffer = portMemAllocNonPaged(curSize);
             NV_CHECK_OR_RETURN(LEVEL_ERROR, pKernBuffer != NULL, NV_ERR_INSUFFICIENT_RESOURCES);
 
-            NvU32 transferFlags = TRANSFER_FLAGS_NONE;
+            // Force BAR instead of GSP-DMA copy in CC case
+            NvU32 transferFlags = TRANSFER_FLAGS_PREFER_PROCESSOR;
             if (!memmgrIsKind_HAL(pMemoryManager, FB_IS_KIND_SWIZZLED, memdescGetPteKind(pDmaMappingInfo->pMemDesc)) &&
                 !IS_SIMULATION(pGpu))
             {
@@ -252,6 +253,18 @@ _nv83deFlushAllGpusL2Cache(MEMORY_DESCRIPTOR *pMemDesc)
 
     while ((pTempGpu = gpumgrGetNextGpu(gpuMask, &gpuInstance)) != NULL)
     {
+        //
+        // Skip kmemsysCacheOp_HAL() for TEGRA_SOC_NVDISPLAY.
+        // The GPU_GET_KERNEL_MEMORY_SYSTEM(pTempGpu) returns NULL for TEGRA_SOC_NVDISPLAY.
+        // To prevent a kernel panic, the call to kmemsysCacheOp_HAL() is skipped in this case.
+        // Additionally, kmemsysCacheOp_HAL() appears to be irrelevant for the TEGRA_SOC_NVDISPLAY use case,
+        // so skipping it has no functional impact.
+        //
+        if (pTempGpu->getProperty(pGpu, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY))
+        {
+            continue;
+        }
+
         //
         // On GPUs with write-back caches, FB_CACHE_INVALIDATE is reduced
         // to FB_CACHE_EVICT, which first writes back dirty lines and then
@@ -530,13 +543,19 @@ cleanup_mapping:
     {
         MemoryManager *pMemoryManager = GPU_GET_MEMORY_MANAGER(pTargetGpu);
         TRANSFER_SURFACE surf = { .pMemDesc = pMemDesc, .offset = offset };
-        // Prefer CE, but use BAR2 if not available; disable for maxwell due to undebugged issues in specific tests
-        NvU32 transferFlags = (IsMAXWELL(pTargetGpu) ? TRANSFER_FLAGS_NONE : TRANSFER_FLAGS_PREFER_CE);
+        // Force BAR instead of GSP-DMA copy in CC case
+        NvU32 transferFlags = TRANSFER_FLAGS_PREFER_PROCESSOR;
 
-        if (gpuIsCCFeatureEnabled(pTargetGpu))
+        if (!IsMAXWELL(pTargetGpu))
         {
-            transferFlags = TRANSFER_FLAGS_NONE;
+            // Prefer CE, but use BAR2 if not available; disable for maxwell due to undebugged issues in specific tests
+            transferFlags |= TRANSFER_FLAGS_PREFER_CE;
+            if (gpuIsCCFeatureEnabled(pTargetGpu))
+            {
+                transferFlags = TRANSFER_FLAGS_NONE;
+            }
         }
+
         if (accessType == GRDBG_MEM_ACCESS_TYPE_READ)
         {
             NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,

@@ -127,6 +127,7 @@ intrStateLoad_TU102
         if ((pEntry->intrVectorNonStall != NV_INTR_VECTOR_INVALID)
             )
         {
+            NV_PRINTF(LEVEL_INFO, "Enabling non-stall interrupt vector 0x%x\n", pEntry->intrVectorNonStall);
             intrEnableLeaf_HAL(pGpu, pIntr, pEntry->intrVectorNonStall);
         }
     }
@@ -1263,7 +1264,8 @@ intrDumpState_TU102
     }
 
     NV_PRINTF(LEVEL_INFO, "MC Interrupt table:\n");
-    intrGetInterruptTable_HAL(pGpu, pIntr, &pIntrTable);
+    NV_ASSERT_OR_RETURN_VOID(
+        intrGetInterruptTable_HAL(pGpu, pIntr, &pIntrTable) == NV_OK);
 
     for (i = 0, iter = vectIterAll(pIntrTable); vectIterNext(&iter); i++)
     {

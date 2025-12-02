@@ -793,7 +793,7 @@ cleanup:
         //
         if (!pKernelGraphics->globalCtxBuffersInfo.pGlobalCtxBuffers[gfid].bAllocated &&
             (!gpuIsClientRmAllocatedCtxBufferEnabled(pGpu) ||
-             (gpuIsSriovEnabled(pGpu) && IS_GFID_PF(gfid) && 
+             (gpuIsSriovEnabled(pGpu) && IS_GFID_PF(gfid) &&
               !(IS_MIG_IN_USE(pGpu) && hypervisorIsType(OS_HYPERVISOR_VMWARE)))))
         {
             NV_CHECK_OK_OR_RETURN(LEVEL_ERROR,
@@ -2148,12 +2148,6 @@ kgraphicsCreateGoldenImageChannel_IMPL
     NvHandle                               hClientId = NV01_NULL_OBJECT;
     NvHandle                               hDeviceId;
     NvHandle                               hSubdeviceId;
-    NvHandle                               hVASpace = 0xbaba0042;
-    NvHandle                               hPBVirtMemId = 0xbaba0043;
-    NvHandle                               hPBPhysMemId = 0xbaba0044;
-    NvHandle                               hChannelId = 0xbaba0045;
-    NvHandle                               hObj3D = 0xbaba0046;
-    NvHandle                               hUserdId = 0xbaba0049;
     NvU32                                  gpFifoEntries = 32;       // power-of-2 random choice
     NvU64                                  gpFifoSize = NVA06F_GP_ENTRY__SIZE * gpFifoEntries;
     NvU64                                  chSize = gpFifoSize;
@@ -2165,9 +2159,9 @@ kgraphicsCreateGoldenImageChannel_IMPL
     NvBool                                 bClientUserd = IsVOLTAorBetter(pGpu);
     NvBool                                 bAcquireLock = NV_FALSE;
     NvU32                                  sliLoopReentrancy;
-    NV_VASPACE_ALLOCATION_PARAMETERS       vaParams;
-    NV_MEMORY_ALLOCATION_PARAMS            memAllocParams;
-    NV_CHANNEL_ALLOC_PARAMS channelGPFIFOAllocParams;
+    NV_VASPACE_ALLOCATION_PARAMETERS       *pVaParams = NULL;
+    NV_MEMORY_ALLOCATION_PARAMS            *pMemAllocParams = NULL;
+    NV_CHANNEL_ALLOC_PARAMS                *pChannelGPFIFOAllocParams = NULL;
     NvU32                                  classNum;
     MIG_INSTANCE_REF                       ref;
     NvU32                                  objectType;
@@ -2193,6 +2187,21 @@ kgraphicsCreateGoldenImageChannel_IMPL
 
     // As we have forced here SLI broadcast mode, temporarily reset the reentrancy count
     sliLoopReentrancy = gpumgrSLILoopReentrancyPop(pGpu);
+
+    pVaParams = portMemAllocNonPaged(sizeof(NV_VASPACE_ALLOCATION_PARAMETERS));
+    NV_ASSERT_OR_ELSE(pVaParams != NULL,
+        status = NV_ERR_NO_MEMORY;
+        goto cleanup;);
+
+    pMemAllocParams = portMemAllocNonPaged(sizeof(NV_MEMORY_ALLOCATION_PARAMS));
+    NV_ASSERT_OR_ELSE(pMemAllocParams != NULL,
+        status = NV_ERR_NO_MEMORY;
+        goto cleanup;);
+
+    pChannelGPFIFOAllocParams = portMemAllocNonPaged(sizeof(NV_CHANNEL_ALLOC_PARAMS));
+    NV_ASSERT_OR_ELSE(pChannelGPFIFOAllocParams != NULL,
+        status = NV_ERR_NO_MEMORY;
+        goto cleanup;);
 
     bNeedMIGWar = IS_MIG_IN_USE(pGpu);
 
@@ -2228,8 +2237,6 @@ kgraphicsCreateGoldenImageChannel_IMPL
 
     if (bNeedMIGWar)
     {
-        NvHandle hPartitionRef = 0xbaba0048;
-        NvHandle hExecPartitionRef = 0xbaba004a;
         NVC637_ALLOCATION_PARAMETERS nvC637AllocParams = {0};
 
         // Get swizzId for this GR
@@ -2246,7 +2253,7 @@ kgraphicsCreateGoldenImageChannel_IMPL
             pRmApi->AllocWithHandle(pRmApi,
                                     hClientId,
                                     hSubdeviceId,
-                                    hPartitionRef,
+                                    KGRAPHICS_CHANNEL_HANDLE_PARTITIONREF,
                                     AMPERE_SMC_PARTITION_REF,
                                     &nvC637AllocParams,
                                     sizeof(nvC637AllocParams)),
@@ -2259,8 +2266,8 @@ kgraphicsCreateGoldenImageChannel_IMPL
             NV_ASSERT_OK_OR_GOTO(status,
                 pRmApi->AllocWithHandle(pRmApi,
                                         hClientId,
-                                        hPartitionRef,
-                                        hExecPartitionRef,
+                                        KGRAPHICS_CHANNEL_HANDLE_PARTITIONREF,
+                                        KGRAPHICS_CHANNEL_HANDLE_EXECPARTITIONREF,
                                         AMPERE_SMC_EXEC_PARTITION_REF,
                                         &nvC638AllocParams,
                                         sizeof(nvC638AllocParams)),
@@ -2287,24 +2294,26 @@ kgraphicsCreateGoldenImageChannel_IMPL
     else
     {
         NV_PRINTF(LEVEL_ERROR, "Caller missing proper locks\n");
-        return NV_ERR_INVALID_LOCK_STATE;
+        status = NV_ERR_INVALID_LOCK_STATE;
+        goto cleanup;
     }
 
     // Create a new VAspace for channel
-    portMemSet(&vaParams, 0, sizeof(NV_VASPACE_ALLOCATION_PARAMETERS));
-    vaParams.flags |= NV_VASPACE_ALLOCATION_FLAGS_PTETABLE_HEAP_MANAGED;
+    portMemSet(pVaParams, 0, sizeof(NV_VASPACE_ALLOCATION_PARAMETERS));
+    pVaParams->flags |= NV_VASPACE_ALLOCATION_FLAGS_PTETABLE_HEAP_MANAGED;
 
     NV_ASSERT_OK_OR_GOTO(status,
-        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, hVASpace, FERMI_VASPACE_A, &vaParams, sizeof(vaParams)),
+        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, KGRAPHICS_CHANNEL_HANDLE_VAS,
+                                FERMI_VASPACE_A, pVaParams, sizeof(NV_VASPACE_ALLOCATION_PARAMETERS)),
         cleanup);
 
     // Allocate gpfifo entries
-    portMemSet(&memAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
-    memAllocParams.owner     = HEAP_OWNER_RM_CLIENT_GENERIC;
-    memAllocParams.type      = NVOS32_TYPE_IMAGE;
-    memAllocParams.size      = chSize;
-    memAllocParams.attr      = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
-    memAllocParams.hVASpace  = 0; // Physical allocations don't expect vaSpace handles
+    portMemSet(pMemAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
+    pMemAllocParams->owner     = HEAP_OWNER_RM_CLIENT_GENERIC;
+    pMemAllocParams->type      = NVOS32_TYPE_IMAGE;
+    pMemAllocParams->size      = chSize;
+    pMemAllocParams->attr      = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
+    pMemAllocParams->hVASpace  = 0; // Physical allocations don't expect vaSpace handles
 
     //
     // When APM feature is enabled all RM internal sysmem allocations must
@@ -2314,23 +2323,25 @@ kgraphicsCreateGoldenImageChannel_IMPL
     // Other sysmem allocations that are not required to be accessed from GPU
     // must be in protected memory
     //
-    memAllocParams.attr2 |= DRF_DEF(OS32, _ATTR2, _MEMORY_PROTECTION, _UNPROTECTED);
+    pMemAllocParams->attr2 |= DRF_DEF(OS32, _ATTR2, _MEMORY_PROTECTION, _UNPROTECTED);
 
     NV_ASSERT_OK_OR_GOTO(status,
-        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, hPBPhysMemId, NV01_MEMORY_SYSTEM, &memAllocParams, sizeof(memAllocParams)),
+        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, KGRAPHICS_CHANNEL_HANDLE_PBPHYS,
+                                NV01_MEMORY_SYSTEM, pMemAllocParams, sizeof(NV_MEMORY_ALLOCATION_PARAMS)),
         cleanup);
 
-    portMemSet(&memAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
-    memAllocParams.owner     = HEAP_OWNER_RM_CLIENT_GENERIC;
-    memAllocParams.type      = NVOS32_TYPE_IMAGE;
-    memAllocParams.size      = chSize;
-    memAllocParams.attr      = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
-    memAllocParams.flags     = NVOS32_ALLOC_FLAGS_VIRTUAL;
-    memAllocParams.hVASpace  = hVASpace; // Virtual allocation expect vaSpace handles
-                                         // 0 handle = allocations on gpu default vaSpace
+    portMemSet(pMemAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
+    pMemAllocParams->owner     = HEAP_OWNER_RM_CLIENT_GENERIC;
+    pMemAllocParams->type      = NVOS32_TYPE_IMAGE;
+    pMemAllocParams->size      = chSize;
+    pMemAllocParams->attr      = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
+    pMemAllocParams->flags     = NVOS32_ALLOC_FLAGS_VIRTUAL;
+    pMemAllocParams->hVASpace  = KGRAPHICS_CHANNEL_HANDLE_VAS; // Virtual allocation expect vaSpace handles
+                                                               // 0 handle = allocations on gpu default vaSpace
 
     NV_ASSERT_OK_OR_GOTO(status,
-        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, hPBVirtMemId, NV50_MEMORY_VIRTUAL, &memAllocParams, sizeof(memAllocParams)),
+        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, KGRAPHICS_CHANNEL_HANDLE_PBVIRT,
+                                NV50_MEMORY_VIRTUAL, pMemAllocParams, sizeof(NV_MEMORY_ALLOCATION_PARAMS)),
         cleanup);
 
     // Allocate Userd
@@ -2369,10 +2380,10 @@ kgraphicsCreateGoldenImageChannel_IMPL
             goto cleanup;
         }
 
-        portMemSet(&memAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
-        memAllocParams.owner = HEAP_OWNER_RM_CLIENT_GENERIC;
-        memAllocParams.size  = ctrlSize;
-        memAllocParams.type  = NVOS32_TYPE_IMAGE;
+        portMemSet(pMemAllocParams, 0, sizeof(NV_MEMORY_ALLOCATION_PARAMS));
+        pMemAllocParams->owner = HEAP_OWNER_RM_CLIENT_GENERIC;
+        pMemAllocParams->size  = ctrlSize;
+        pMemAllocParams->type  = NVOS32_TYPE_IMAGE;
 
         // Apply registry overrides to USERD.
         switch (DRF_VAL(_REG_STR_RM, _INST_LOC, _USERD, pGpu->instLocOverrides))
@@ -2380,14 +2391,14 @@ kgraphicsCreateGoldenImageChannel_IMPL
             case NV_REG_STR_RM_INST_LOC_USERD_NCOH:
             case NV_REG_STR_RM_INST_LOC_USERD_COH:
                 userdMemClass = NV01_MEMORY_SYSTEM;
-                memAllocParams.attr = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
+                pMemAllocParams->attr = DRF_DEF(OS32, _ATTR, _LOCATION, _PCI);
                 break;
 
             case NV_REG_STR_RM_INST_LOC_USERD_VID:
             case NV_REG_STR_RM_INST_LOC_USERD_DEFAULT:
-                memAllocParams.attr = DRF_DEF(OS32, _ATTR, _LOCATION, _VIDMEM);
-                memAllocParams.attr2 = DRF_DEF(OS32, _ATTR2, _INTERNAL, _YES);
-                memAllocParams.flags = NVOS32_ALLOC_FLAGS_FORCE_MEM_GROWS_DOWN;
+                pMemAllocParams->attr = DRF_DEF(OS32, _ATTR, _LOCATION, _VIDMEM);
+                pMemAllocParams->attr2 = DRF_DEF(OS32, _ATTR2, _INTERNAL, _YES);
+                pMemAllocParams->flags = NVOS32_ALLOC_FLAGS_FORCE_MEM_GROWS_DOWN;
                 break;
         }
 
@@ -2399,16 +2410,16 @@ kgraphicsCreateGoldenImageChannel_IMPL
         // and all vidmem allocations must go to protected memory
         //
         if (gpuIsApmFeatureEnabled(pGpu) ||
-            FLD_TEST_DRF(OS32, _ATTR, _LOCATION, _PCI, memAllocParams.attr))
+            FLD_TEST_DRF(OS32, _ATTR, _LOCATION, _PCI, pMemAllocParams->attr))
         {
-            memAllocParams.attr2 |= DRF_DEF(OS32, _ATTR2, _MEMORY_PROTECTION,
-                                            _UNPROTECTED);
+            pMemAllocParams->attr2 |= DRF_DEF(OS32, _ATTR2, _MEMORY_PROTECTION,
+                                              _UNPROTECTED);
         }
-        memAllocParams.attr |= DRF_DEF(OS32, _ATTR, _ALLOCATE_FROM_RESERVED_HEAP, _YES);
+        pMemAllocParams->attr |= DRF_DEF(OS32, _ATTR, _ALLOCATE_FROM_RESERVED_HEAP, _YES);
 
         NV_ASSERT_OK_OR_GOTO(status,
-            pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, hUserdId,
-                                    userdMemClass, &memAllocParams, sizeof(memAllocParams)),
+            pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, KGRAPHICS_CHANNEL_HANDLE_USERD,
+                                    userdMemClass, pMemAllocParams, sizeof(NV_MEMORY_ALLOCATION_PARAMS)),
             cleanup);
     }
 
@@ -2417,19 +2428,19 @@ kgraphicsCreateGoldenImageChannel_IMPL
     NV_ASSERT_OR_GOTO(classNum != 0, cleanup);
 
     // Allocate a bare channel
-    portMemSet(&channelGPFIFOAllocParams, 0, sizeof(NV_CHANNEL_ALLOC_PARAMS));
-    channelGPFIFOAllocParams.hVASpace      = hVASpace;
-    channelGPFIFOAllocParams.hObjectBuffer = hPBVirtMemId;
-    channelGPFIFOAllocParams.gpFifoEntries = gpFifoEntries;
+    portMemSet(pChannelGPFIFOAllocParams, 0, sizeof(NV_CHANNEL_ALLOC_PARAMS));
+    pChannelGPFIFOAllocParams->hVASpace      = KGRAPHICS_CHANNEL_HANDLE_VAS;
+    pChannelGPFIFOAllocParams->hObjectBuffer = KGRAPHICS_CHANNEL_HANDLE_PBVIRT;
+    pChannelGPFIFOAllocParams->gpFifoEntries = gpFifoEntries;
     //
     // Set the gpFifoOffset to zero intentionally since we only need this channel
     // to be created, but will not submit any work to it. So it's fine not to
     // provide a valid offset here.
     //
-    channelGPFIFOAllocParams.gpFifoOffset  = 0;
+    pChannelGPFIFOAllocParams->gpFifoOffset  = 0;
     if (bClientUserd)
     {
-        channelGPFIFOAllocParams.hUserdMemory[0] = hUserdId;
+        pChannelGPFIFOAllocParams->hUserdMemory[0] = KGRAPHICS_CHANNEL_HANDLE_USERD;
     }
 
     if (bNeedMIGWar)
@@ -2446,19 +2457,20 @@ kgraphicsCreateGoldenImageChannel_IMPL
             cleanup);
 
         NV_ASSERT_OK_OR_GOTO(status,
-            kmigmgrGetGlobalToLocalEngineType(pGpu, pKernelMIGManager, ref, RM_ENGINE_TYPE_GR(pKernelGraphics->instance), &localRmEngineType),
+            kmigmgrGetGlobalToLocalEngineType(pGpu, pKernelMIGManager, ref,
+                                              RM_ENGINE_TYPE_GR(pKernelGraphics->instance), &localRmEngineType),
             cleanup);
 
-        channelGPFIFOAllocParams.engineType = gpuGetNv2080EngineType(localRmEngineType);
+        pChannelGPFIFOAllocParams->engineType = gpuGetNv2080EngineType(localRmEngineType);
     }
     else
     {
-        channelGPFIFOAllocParams.engineType = gpuGetNv2080EngineType(RM_ENGINE_TYPE_GR0);
+        pChannelGPFIFOAllocParams->engineType = gpuGetNv2080EngineType(RM_ENGINE_TYPE_GR0);
     }
 
     NV_ASSERT_OK_OR_GOTO(status,
-        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, hChannelId,
-                                classNum, &channelGPFIFOAllocParams, sizeof(channelGPFIFOAllocParams)),
+        pRmApi->AllocWithHandle(pRmApi, hClientId, hDeviceId, KGRAPHICS_CHANNEL_HANDLE_CHANNELID,
+                                classNum, pChannelGPFIFOAllocParams, sizeof(NV_CHANNEL_ALLOC_PARAMS)),
         cleanup);
 
     //
@@ -2475,7 +2487,7 @@ kgraphicsCreateGoldenImageChannel_IMPL
         const KGRAPHICS_STATIC_INFO *pKernelGraphicsStaticInfo = kgraphicsGetStaticInfo(pGpu, pKernelGraphics);
         NvU32 i;
 
-        NV_ASSERT_OK(CliGetKernelChannel(pClientId, hChannelId, &pKernelChannel));
+        NV_ASSERT_OK(CliGetKernelChannel(pClientId, KGRAPHICS_CHANNEL_HANDLE_CHANNELID, &pKernelChannel));
 
         NV_ASSERT_OR_ELSE(pKernelGraphicsStaticInfo != NULL,
             status = NV_ERR_INVALID_STATE;
@@ -2522,7 +2534,8 @@ kgraphicsCreateGoldenImageChannel_IMPL
 
     // Allocate a GR object on the channel
     NV_ASSERT_OK_OR_GOTO(status,
-        pRmApi->AllocWithHandle(pRmApi, hClientId, hChannelId, hObj3D, classNum, NULL, 0),
+        pRmApi->AllocWithHandle(pRmApi, hClientId, KGRAPHICS_CHANNEL_HANDLE_CHANNELID,
+                                KGRAPHICS_CHANNEL_HANDLE_3DOBJ, classNum, NULL, 0),
         cleanup);
 
 cleanup:
@@ -2532,6 +2545,15 @@ cleanup:
         NV_ASSERT_OK_OR_CAPTURE_FIRST_ERROR(status,
             rmGpuLocksAcquire(GPUS_LOCK_FLAGS_NONE, RM_LOCK_MODULES_GR));
     }
+
+    if (pVaParams != NULL)
+        portMemFree(pVaParams);
+
+    if (pMemAllocParams != NULL)
+        portMemFree(pMemAllocParams);
+
+    if (pChannelGPFIFOAllocParams != NULL)
+        portMemFree(pChannelGPFIFOAllocParams);
 
     // Free all handles
     NV_ASSERT_OK_OR_CAPTURE_FIRST_ERROR(status,
@@ -4551,5 +4573,28 @@ NvBool kgraphicsIsCtxswLoggingEnabled_FWCLIENT(OBJGPU *pGpu, KernelGraphics *pKe
 
     pKernelGraphics->bCtxswLoggingEnabled = bEnabled;
     return pKernelGraphics->bCtxswLoggingEnabled;
+}
+
+// Map per-context buffer regkeys defined in nvrm_registry to ctx buffer ids defined in kernel_graphics_context_buffers.h
+NvU32 kgraphicsMapCtxBufferToRegkey_IMPL(OBJGPU* pGpu, KernelGraphics* pKernelGraphics, NvU32 ctxBuff)
+{
+    // Global and per-context buffers have overlapping enum values, so we have to separate the switch cases
+    switch (ctxBuff) {
+    default:
+        return 0;
+    }
+}
+
+// Map global buffer regkeys defined in nvrm_registry to context buffer ids defined in kernel_graphics_context_buffers.h
+NvU32 kgraphicsMapGlobalCtxBufferToRegkey_IMPL(OBJGPU* pGpu, KernelGraphics* pKernelGraphics, NvU32 ctxBuff)
+{
+    switch (ctxBuff) {
+    default:
+        return 0;
+    }
+}
+
+void kgraphicsSetContextBufferPteKind_IMPL(OBJGPU* pGpu, KernelGraphics* pKernelGraphics, MEMORY_DESCRIPTOR** ppMemDesc, NvU32 bufferType, NvBool globalBuffer, NvU32 pteKind)
+{
 }
 
