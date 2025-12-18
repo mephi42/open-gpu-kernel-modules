@@ -3917,6 +3917,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_PCI_REBAR_GET_POSSIBLE_SIZES_PRESENT" "" "functions"
         ;;
 
+        pci_resize_resource_has_exclude_bars_arg)
+            #
+            # Determine if pci_resize_resource() has exclude_bars argument.
+            #
+            # exclude_bars argument was added to pci_resize_resource by commit
+            # 337b1b566db0 (11/14/2025) ("PCI: Fix restoring BARs on BAR resize rollback path")
+            # in linux-next.
+            #
+            CODE="
+            #include <linux/pci.h>
+
+            typeof(pci_resize_resource) conftest_pci_resize_resource_has_exclude_bars_arg;
+            int __must_check conftest_pci_resize_resource_has_exclude_bars_arg(struct pci_dev *dev,
+                                                                               int i, int size,
+                                                                               int exclude_bars) {
+                return 0;
+            }"
+
+            compile_check_conftest "$CODE" "NV_PCI_RESIZE_RESOURCE_HAS_EXCLUDE_BARS_ARG" "" "types"
+        ;;
+
         drm_connector_has_override_edid)
             #
             # Determine if 'struct drm_connector' has an 'override_edid' member.
