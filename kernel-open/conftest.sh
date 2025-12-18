@@ -2202,6 +2202,35 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_GET_BACKLIGHT_DEVICE_BY_NAME_PRESENT" "" "functions"
         ;;
 
+        dma_map_ops_has_map_phys)
+            #
+            # Determine if .map_phys exists in struct dma_map_ops.
+            #
+            # Commit 14cb413af00c ("dma-mapping: remove unused mapping resource callbacks")
+            # removed .map_resource operation and replaced it with .map_phys.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/dma-map-ops.h>
+            int conftest_dma_map_ops_has_map_phys(void) {
+                return offsetof(struct dma_map_ops, map_phys);
+            }
+            int conftest_dma_map_ops_has_unmap_phys(void) {
+                return offsetof(struct dma_map_ops, unmap_phys);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_DMA_MAP_OPS_HAS_MAP_PHYS" | append_conftest "types"
+                rm -f conftest$$.o
+                return
+            else
+                echo "#undef NV_DMA_MAP_OPS_HAS_MAP_PHYS" | append_conftest "types"
+                return
+            fi
+        ;;
+
         dma_buf_ops_has_map)
             #
             # Determine if .map exists in dma_buf_ops.
