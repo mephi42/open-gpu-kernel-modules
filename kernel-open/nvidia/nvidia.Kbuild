@@ -221,6 +221,7 @@ NV_CONFTEST_TYPE_COMPILE_TESTS += devfreq_has_suspend_freq
 NV_CONFTEST_TYPE_COMPILE_TESTS += has_enum_pidtype_tgid
 NV_CONFTEST_TYPE_COMPILE_TESTS += bpmp_mrq_has_strap_set
 NV_CONFTEST_TYPE_COMPILE_TESTS += register_shrinker_has_format_arg
+NV_CONFTEST_TYPE_COMPILE_TESTS += pci_resize_resource_has_exclude_bars_arg
 
 NV_CONFTEST_GENERIC_COMPILE_TESTS += dom0_kernel_present
 NV_CONFTEST_GENERIC_COMPILE_TESTS += nvidia_vgpu_kvm_build
