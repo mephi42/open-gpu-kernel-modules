@@ -162,6 +162,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += iommu_sva_bind_device_has_drvdata_arg
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += vm_flags_set
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += vma_flags_set_word
 NV_CONFTEST_FUNCTION_COMPILE_TESTS += zone_device_page_init
+NV_CONFTEST_FUNCTION_COMPILE_TESTS += dev_pagemap_ops_has_page_free
 
 NV_CONFTEST_SYMBOL_COMPILE_TESTS += is_export_symbol_gpl_sme_active
 NV_CONFTEST_SYMBOL_COMPILE_TESTS += is_export_symbol_present_swiotlb_map_sg_attrs

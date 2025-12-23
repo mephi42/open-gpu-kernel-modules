@@ -4980,6 +4980,18 @@ compile_test() {
             fi
         ;;
 
+        dev_pagemap_ops_has_page_free)
+            CODE="
+            #include <linux/memremap.h>
+
+            int conftest_dev_pagemap_ops_has_page_free(void) {
+                return offsetof(struct dev_pagemap_ops, page_free);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DEV_PAGEMAP_OPS_HAS_PAGE_FREE" "" "types"
+        ;;
+
+
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.  Please
         # avoid specifying -rc kernels, and only use SHAs that actually exist
