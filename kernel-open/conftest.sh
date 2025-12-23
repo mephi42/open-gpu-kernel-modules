@@ -4959,6 +4959,26 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MEMORY_DEVICE_COHERENT_PRESENT" "" "types"
         ;;
 
+        zone_device_page_init)
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/memremap.h>
+
+	    void conftest_zone_device_page_init(void) {
+	        zone_device_page_init(NULL);
+            }
+            " > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c >/dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                rm -f conftest$$.o
+
+                echo "#define NV_ZONE_DEVICE_PAGE_INIT_ARGUMENT_COUNT 1" | append_conftest "functions"
+            else
+                echo "#define NV_ZONE_DEVICE_PAGE_INIT_ARGUMENT_COUNT 2" | append_conftest "functions"
+            fi
+        ;;
 
         # When adding a new conftest entry, please use the correct format for
         # specifying the relevant upstream Linux kernel commit.  Please
